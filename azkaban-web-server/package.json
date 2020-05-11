@@ -12,7 +12,7 @@
     "rewire": "2.5.2",
     "underscore": "1.8.3",
     "ycssmin": "1.0.1",
-    "minimist": ">=0.2.1",
+    "minimist": ">=1.2.3",
     "jquery": ">=3.5.0",
     "bootstrap": ">=3.4.1"
   },
