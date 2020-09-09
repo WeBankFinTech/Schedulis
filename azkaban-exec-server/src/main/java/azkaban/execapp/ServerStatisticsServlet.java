@@ -198,10 +198,13 @@ public class ServerStatisticsServlet extends HttpServlet {
     //check again before starting the work.
     if (noCache || System.currentTimeMillis() - lastRefreshedTime > cacheTimeInMilliseconds) {
       final ExecutorInfo stats = new ExecutorInfo();
-
-      fillRemainingMemoryPercent(stats);
+//      fillRemainingMemoryPercent(stats);
       fillRemainingFlowCapacityAndLastDispatchedTime(stats);
-      fillCpuUsage(stats);
+//      fillCpuUsage(stats);
+      // 兼容 mac 和 windows
+      stats.setCpuUpsage(SystemUsageUtil.getCpuUsage());
+      stats.setRemainingMemoryInMB(SystemUsageUtil.getMemoryMB());
+      stats.setRemainingMemoryPercent(SystemUsageUtil.getMemoryUsage());
 
       cachedstats = stats;
       lastRefreshedTime = System.currentTimeMillis();

@@ -327,6 +327,18 @@
     </exclusions>
   </dependency>
 
+  <!-- https://mvnrepository.com/artifact/com.github.oshi/oshi-json -->
+  <dependency>
+    <groupId>com.github.oshi</groupId>
+    <artifactId>oshi-json</artifactId>
+    <version>3.13.5</version>
+  </dependency>
+  <dependency>
+    <groupId>cn.hutool</groupId>
+    <artifactId>hutool-all</artifactId>
+    <version>5.3.7</version>
+  </dependency>
+
 </dependencies>
 
 <build>
