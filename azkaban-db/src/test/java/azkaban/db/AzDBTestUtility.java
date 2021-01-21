@@ -56,7 +56,7 @@ public class AzDBTestUtility {
 
     public EmbeddedMysqlDataSource() {
       super();
-      final String url = "jdbc:mysql://localhost:port/bdp_scheduler_01?useUnicode=true&characterEncoding=UTF-8";
+      final String url = "jdbc:mysql://localhost:port/database?useUnicode=true&characterEncoding=UTF-8";
       setDriverClassName("com.mysql.jdbc.Driver");
       setUrl(url);
       setUsername("username");

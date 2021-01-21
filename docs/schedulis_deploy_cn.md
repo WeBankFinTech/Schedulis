@@ -406,7 +406,7 @@ sudo sh 2.hdp_wtss_deploy_web.sh 10.255.10.99:bdphdp02jobs05 1.0.0
 参数6：数据库密码(base64加密)
 
 例： （初始化部署1.5.0版本数据库）：
-sudo sh 3.hdp_wtss_deploy_script.sh 1.0.0 10.255.0.76 3306 wtssdb root 123456
+sudo sh 3.hdp_wtss_deploy_script.sh 1.0.0 127.0.0.1 3306 wtssdb root 123456
 ```
 
 #### 4. 进程启动

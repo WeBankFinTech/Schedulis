@@ -1,5 +1,5 @@
 -- --------------------------------------------------------
--- 主机:                           10.255.4.29
+-- 主机:                           127.0.0.1
 -- 服务器版本:                        10.1.9-MariaDBV1.0R030D002-20161207-1922 - Source distribution
 -- 服务器操作系统:                      Linux
 -- HeidiSQL 版本:                  9.4.0.5125
@@ -11,7 +11,7 @@
 /*!40014 SET @OLD_FOREIGN_KEY_CHECKS=@@FOREIGN_KEY_CHECKS, FOREIGN_KEY_CHECKS=0 */;
 /*!40101 SET @OLD_SQL_MODE=@@SQL_MODE, SQL_MODE='NO_AUTO_VALUE_ON_ZERO' */;
 
--- 导出  表 bdp_scheduler_01.active_executing_flows 结构
+-- 导出  表 database.active_executing_flows 结构
 CREATE TABLE IF NOT EXISTS `active_executing_flows` (
   `exec_id` int(11) NOT NULL,
   `update_time` bigint(20) DEFAULT NULL,
@@ -19,7 +19,7 @@ CREATE TABLE IF NOT EXISTS `active_executing_flows` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
 -- 数据导出被取消选择。
--- 导出  表 bdp_scheduler_01.active_sla 结构
+-- 导出  表 database.active_sla 结构
 CREATE TABLE IF NOT EXISTS `active_sla` (
   `exec_id` int(11) NOT NULL,
   `job_name` varchar(128) NOT NULL,
@@ -31,7 +31,7 @@ CREATE TABLE IF NOT EXISTS `active_sla` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
 -- 数据导出被取消选择。
--- 导出  表 bdp_scheduler_01.cfg_webank_all_users 结构
+-- 导出  表 database.cfg_webank_all_users 结构
 CREATE TABLE IF NOT EXISTS `cfg_webank_all_users` (
   `app_id` smallint(5) unsigned NOT NULL,
   `user_id` varchar(50) NOT NULL,
@@ -62,7 +62,7 @@ CREATE TABLE IF NOT EXISTS `cfg_webank_all_users` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COMMENT='全行用户表';
 
 -- 数据导出被取消选择。
--- 导出  表 bdp_scheduler_01.cfg_webank_hrgetmd5 结构
+-- 导出  表 database.cfg_webank_hrgetmd5 结构
 CREATE TABLE IF NOT EXISTS `cfg_webank_hrgetmd5` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
   `last_updated` varchar(35) NOT NULL COMMENT 'ESB数据更新时间',
@@ -72,7 +72,7 @@ CREATE TABLE IF NOT EXISTS `cfg_webank_hrgetmd5` (
 ) ENGINE=InnoDB AUTO_INCREMENT=0 DEFAULT CHARSET=utf8 COMMENT='ESB签名（用于查看上面人员和组织数据有无改动）';
 
 -- 数据导出被取消选择。
--- 导出  表 bdp_scheduler_01.cfg_webank_organization 结构
+-- 导出  表 database.cfg_webank_organization 结构
 CREATE TABLE IF NOT EXISTS `cfg_webank_organization` (
   `dp_id` int(10) unsigned NOT NULL,
   `pid` int(10) DEFAULT NULL COMMENT '父级部门ID',
@@ -87,7 +87,7 @@ alter table cfg_webank_organization modify dp_name varchar(200) CHARACTER SET ut
 
 
 -- 数据导出被取消选择。
--- 导出  表 bdp_scheduler_01.event_auth 结构
+-- 导出  表 database.event_auth 结构
 CREATE TABLE IF NOT EXISTS `event_auth` (
   `sender` varchar(45) NOT NULL COMMENT '消息发送者',
   `topic` varchar(45) NOT NULL COMMENT '消息主题',
@@ -98,7 +98,7 @@ CREATE TABLE IF NOT EXISTS `event_auth` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COMMENT='消息发送授权表';
 
 -- 数据导出被取消选择。
--- 导出  表 bdp_scheduler_01.event_queue 结构
+-- 导出  表 database.event_queue 结构
 CREATE TABLE IF NOT EXISTS `event_queue` (
   `msg_id` int(10) unsigned NOT NULL AUTO_INCREMENT COMMENT '消息ID号',
   `sender` varchar(45) NOT NULL COMMENT '消息发送者',
@@ -111,7 +111,7 @@ CREATE TABLE IF NOT EXISTS `event_queue` (
 ) ENGINE=InnoDB AUTO_INCREMENT=0 DEFAULT CHARSET=utf8 COMMENT='azkaban调取系统消息队列表';
 
 -- 数据导出被取消选择。
--- 导出  表 bdp_scheduler_01.event_status 结构
+-- 导出  表 database.event_status 结构
 CREATE TABLE IF NOT EXISTS `event_status` (
   `receiver` varchar(45) NOT NULL COMMENT '消息接收者',
   `receive_time` datetime NOT NULL COMMENT '消息接收时间',
@@ -122,7 +122,7 @@ CREATE TABLE IF NOT EXISTS `event_status` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COMMENT='消息消费状态表';
 
 -- 数据导出被取消选择。
--- 导出  表 bdp_scheduler_01.execution_dependencies 结构
+-- 导出  表 database.execution_dependencies 结构
 CREATE TABLE IF NOT EXISTS `execution_dependencies` (
   `trigger_instance_id` varchar(64) NOT NULL,
   `dep_name` varchar(128) NOT NULL,
@@ -139,7 +139,7 @@ CREATE TABLE IF NOT EXISTS `execution_dependencies` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
 -- 数据导出被取消选择。
--- 导出  表 bdp_scheduler_01.execution_flows 结构
+-- 导出  表 database.execution_flows 结构
 CREATE TABLE IF NOT EXISTS `execution_flows` (
   `exec_id` int(11) NOT NULL AUTO_INCREMENT,
   `project_id` int(11) NOT NULL,
@@ -166,7 +166,7 @@ CREATE TABLE IF NOT EXISTS `execution_flows` (
 ) ENGINE=InnoDB AUTO_INCREMENT=0 DEFAULT CHARSET=utf8;
 
 -- 数据导出被取消选择。
--- 导出  表 bdp_scheduler_01.execution_jobs 结构
+-- 导出  表 database.execution_jobs 结构
 CREATE TABLE IF NOT EXISTS `execution_jobs` (
   `exec_id` int(11) NOT NULL,
   `project_id` int(11) NOT NULL,
@@ -187,7 +187,7 @@ CREATE TABLE IF NOT EXISTS `execution_jobs` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
 -- 数据导出被取消选择。
--- 导出  表 bdp_scheduler_01.execution_logs 结构
+-- 导出  表 database.execution_logs 结构
 CREATE TABLE IF NOT EXISTS `execution_logs` (
   `exec_id` int(11) NOT NULL,
   `name` varchar(128) NOT NULL,
@@ -204,7 +204,7 @@ CREATE TABLE IF NOT EXISTS `execution_logs` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
 -- 数据导出被取消选择。
--- 导出  表 bdp_scheduler_01.execution_recover_flows 结构
+-- 导出  表 database.execution_recover_flows 结构
 CREATE TABLE IF NOT EXISTS `execution_recover_flows` (
   `recover_id` int(11) NOT NULL AUTO_INCREMENT,
   `recover_status` tinyint(4) DEFAULT NULL,
@@ -225,7 +225,7 @@ CREATE TABLE IF NOT EXISTS `execution_recover_flows` (
 ) ENGINE=InnoDB AUTO_INCREMENT=0 DEFAULT CHARSET=utf8;
 
 -- 数据导出被取消选择。
--- 导出  表 bdp_scheduler_01.executors 结构
+-- 导出  表 database.executors 结构
 CREATE TABLE IF NOT EXISTS `executors` (
   `id` int(11) NOT NULL,
   `host` varchar(64) NOT NULL,
@@ -238,7 +238,7 @@ CREATE TABLE IF NOT EXISTS `executors` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
 -- 数据导出被取消选择。
--- 导出  表 bdp_scheduler_01.executor_events 结构
+-- 导出  表 database.executor_events 结构
 CREATE TABLE IF NOT EXISTS `executor_events` (
   `executor_id` int(11) NOT NULL,
   `event_type` tinyint(4) NOT NULL,
@@ -249,7 +249,7 @@ CREATE TABLE IF NOT EXISTS `executor_events` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
 -- 数据导出被取消选择。
--- 导出  表 bdp_scheduler_01.log_filter 结构
+-- 导出  表 database.log_filter 结构
 CREATE TABLE IF NOT EXISTS `log_filter` (
   `code_id` int(11) unsigned NOT NULL AUTO_INCREMENT COMMENT '错误码ID号',
   `log_code` varchar(10) NOT NULL COMMENT '日志错误码',
@@ -263,7 +263,7 @@ CREATE TABLE IF NOT EXISTS `log_filter` (
 ) ENGINE=InnoDB AUTO_INCREMENT=0 DEFAULT CHARSET=utf8 COMMENT='日志错误码表';
 
 -- 数据导出被取消选择。
--- 导出  表 bdp_scheduler_01.projects 结构
+-- 导出  表 database.projects 结构
 CREATE TABLE IF NOT EXISTS `projects` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
   `name` varchar(64) NOT NULL,
@@ -282,7 +282,7 @@ CREATE TABLE IF NOT EXISTS `projects` (
 ) ENGINE=InnoDB AUTO_INCREMENT=0 DEFAULT CHARSET=utf8;
 
 -- 数据导出被取消选择。
--- 导出  表 bdp_scheduler_01.project_events 结构
+-- 导出  表 database.project_events 结构
 CREATE TABLE IF NOT EXISTS `project_events` (
   `project_id` int(11) NOT NULL,
   `event_type` tinyint(4) NOT NULL,
@@ -293,7 +293,7 @@ CREATE TABLE IF NOT EXISTS `project_events` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
 -- 数据导出被取消选择。
--- 导出  表 bdp_scheduler_01.project_files 结构
+-- 导出  表 database.project_files 结构
 CREATE TABLE IF NOT EXISTS `project_files` (
   `project_id` int(11) NOT NULL,
   `version` int(11) NOT NULL,
@@ -305,7 +305,7 @@ CREATE TABLE IF NOT EXISTS `project_files` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
 -- 数据导出被取消选择。
--- 导出  表 bdp_scheduler_01.project_flows 结构
+-- 导出  表 database.project_flows 结构
 CREATE TABLE IF NOT EXISTS `project_flows` (
   `project_id` int(11) NOT NULL,
   `version` int(11) NOT NULL,
@@ -318,7 +318,7 @@ CREATE TABLE IF NOT EXISTS `project_flows` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
 -- 数据导出被取消选择。
--- 导出  表 bdp_scheduler_01.project_flow_files 结构
+-- 导出  表 database.project_flow_files 结构
 CREATE TABLE IF NOT EXISTS `project_flow_files` (
   `project_id` int(11) NOT NULL,
   `project_version` int(11) NOT NULL,
@@ -330,7 +330,7 @@ CREATE TABLE IF NOT EXISTS `project_flow_files` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
 -- 数据导出被取消选择。
--- 导出  表 bdp_scheduler_01.project_permissions 结构
+-- 导出  表 database.project_permissions 结构
 CREATE TABLE IF NOT EXISTS `project_permissions` (
   `project_id` varchar(64) NOT NULL,
   `modified_time` bigint(20) NOT NULL,
@@ -345,7 +345,7 @@ CREATE TABLE IF NOT EXISTS `project_permissions` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
 -- 数据导出被取消选择。
--- 导出  表 bdp_scheduler_01.project_properties 结构
+-- 导出  表 database.project_properties 结构
 CREATE TABLE IF NOT EXISTS `project_properties` (
   `project_id` int(11) NOT NULL,
   `version` int(11) NOT NULL,
@@ -358,7 +358,7 @@ CREATE TABLE IF NOT EXISTS `project_properties` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
 -- 数据导出被取消选择。
--- 导出  表 bdp_scheduler_01.project_versions 结构
+-- 导出  表 database.project_versions 结构
 CREATE TABLE IF NOT EXISTS `project_versions` (
   `project_id` int(11) NOT NULL,
   `version` int(11) NOT NULL,
@@ -374,7 +374,7 @@ CREATE TABLE IF NOT EXISTS `project_versions` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
 -- 数据导出被取消选择。
--- 导出  表 bdp_scheduler_01.properties 结构
+-- 导出  表 database.properties 结构
 CREATE TABLE IF NOT EXISTS `properties` (
   `name` varchar(64) NOT NULL,
   `type` int(11) NOT NULL,
@@ -384,7 +384,7 @@ CREATE TABLE IF NOT EXISTS `properties` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
 -- 数据导出被取消选择。
--- 导出  表 bdp_scheduler_01.triggers 结构
+-- 导出  表 database.triggers 结构
 CREATE TABLE IF NOT EXISTS `triggers` (
   `trigger_id` int(11) NOT NULL AUTO_INCREMENT,
   `trigger_source` varchar(128) DEFAULT NULL,
@@ -395,7 +395,7 @@ CREATE TABLE IF NOT EXISTS `triggers` (
 ) ENGINE=InnoDB AUTO_INCREMENT=0 DEFAULT CHARSET=utf8;
 
 -- 数据导出被取消选择。
--- 导出  表 bdp_scheduler_01.wtss_permissions 结构
+-- 导出  表 database.wtss_permissions 结构
 CREATE TABLE IF NOT EXISTS `wtss_permissions` (
   `permissions_id` int(11) NOT NULL AUTO_INCREMENT COMMENT '权限ID',
   `permissions_name` varchar(80) DEFAULT NULL COMMENT '权限名称',
@@ -408,7 +408,7 @@ CREATE TABLE IF NOT EXISTS `wtss_permissions` (
 ) ENGINE=InnoDB AUTO_INCREMENT=0 DEFAULT CHARSET=utf8 COMMENT='权限表';
 
 -- 数据导出被取消选择。
--- 导出  表 bdp_scheduler_01.wtss_role 结构
+-- 导出  表 database.wtss_role 结构
 CREATE TABLE IF NOT EXISTS `wtss_role` (
   `role_id` int(11) NOT NULL AUTO_INCREMENT COMMENT '角色ID',
   `role_name` varchar(80) DEFAULT NULL COMMENT '角色名称',
@@ -420,7 +420,7 @@ CREATE TABLE IF NOT EXISTS `wtss_role` (
 ) ENGINE=InnoDB AUTO_INCREMENT=0 DEFAULT CHARSET=utf8 COMMENT='角色表';
 
 -- 数据导出被取消选择。
--- 导出  表 bdp_scheduler_01.wtss_user 结构
+-- 导出  表 database.wtss_user 结构
 CREATE TABLE IF NOT EXISTS `wtss_user` (
   `user_id` varchar(50) NOT NULL COMMENT '用户ID',
   `username` varchar(200) DEFAULT NULL COMMENT '用户登录名',

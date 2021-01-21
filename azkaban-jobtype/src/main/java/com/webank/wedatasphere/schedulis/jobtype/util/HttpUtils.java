@@ -203,7 +203,7 @@ public class HttpUtils {
     RequestBody requestBody = new FormBody.Builder()
         .add("targetDb", "bdp_test_ods_mask")
         .add("targetTable", "ccpd_dump")
-        .add("partition", "dcn_id=UA0/type_id=6042/ip=10.240.228.31/ds=2015-04-06")
+        .add("partition", "dcn_id=UA0/type_id=6042/ip=127.0.0.1/ds=2015-04-06")
         .build();
 
     FormBody.Builder formBuilder = new FormBody.Builder();
