@@ -309,9 +309,9 @@ public class ProjectManager {
       throw new ProjectManagerException("项目描述不能为空.");
     } else if (creator == null) {
       throw new ProjectManagerException("必须使用有效用户创建项目.");
-    } else if (!projectName.matches("[a-zA-Z][a-zA-Z_0-9|-]*")) {
-      throw new ProjectManagerException(
-          "项目名称必须以字母开头，后面跟着任意数量的字母，数字, '-' 或者 '_'.");
+//    } else if (!projectName.matches("[a-zA-Z][a-zA-Z_0-9|-]*")) {
+//      throw new ProjectManagerException(
+//          "项目名称必须以字母开头，后面跟着任意数量的字母，数字, '-' 或者 '_'.");
     }
 
     final Project newProject;
@@ -629,8 +629,8 @@ public class ProjectManager {
       throw new ProjectManagerException(dataMap.get("noBlankProgramDesc"));
     } else if (creator == null) {
       throw new ProjectManagerException(dataMap.get("noInvalidUser"));
-    } else if (!projectName.matches("[a-zA-Z][a-zA-Z_0-9|-]*")) {
-      throw new ProjectManagerException(dataMap.get("checkProgramName"));
+//    } else if (!projectName.matches("[a-zA-Z][a-zA-Z_0-9|-]*")) {
+//      throw new ProjectManagerException(dataMap.get("checkProgramName"));
     }
 
     final Project newProject;

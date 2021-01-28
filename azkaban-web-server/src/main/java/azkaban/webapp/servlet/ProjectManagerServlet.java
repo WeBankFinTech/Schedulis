@@ -59,13 +59,8 @@ import com.webank.wedatasphere.schedulis.common.system.SystemUserManagerExceptio
 import com.webank.wedatasphere.schedulis.common.system.common.TransitionService;
 import com.webank.wedatasphere.schedulis.common.system.entity.WebankDepartment;
 import com.webank.wedatasphere.schedulis.common.system.entity.WtssUser;
-import java.io.BufferedOutputStream;
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.io.OutputStream;
-import java.io.Writer;
+
+import java.io.*;
 import java.security.AccessControlException;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -1348,8 +1343,8 @@ public class ProjectManagerServlet extends LoginAbstractAzkabanServlet {
 
             final String headerKey = "Content-Disposition";
             final String headerValue =
-                String.format("attachment; filename=\"%s\"",
-                    projectFileHandler.getFileName());
+                    String.format("attachment; filename=%s.zip",
+                            java.net.URLEncoder.encode(projectName, "UTF8"));
             resp.setHeader(headerKey, headerValue);
             resp.setHeader("version",
                 Integer.toString(projectFileHandler.getVersion()));
@@ -3032,8 +3027,8 @@ public class ProjectManagerServlet extends LoginAbstractAzkabanServlet {
                 action = "redirect";
                 final String redirect = "manager?project=" + projectName;
                 params = new HashMap<>();
-                params.put("path", redirect);
-            } catch (final ProjectManagerException e) {
+                params.put("path", java.net.URLEncoder.encode(redirect, "UTF-8"));
+            } catch (final ProjectManagerException | UnsupportedEncodingException e) {
                 message = e.getMessage();
                 status = "error";
             }
@@ -3238,7 +3233,9 @@ public class ProjectManagerServlet extends LoginAbstractAzkabanServlet {
         final Map<String, Object> multipart, final Session session) throws ServletException,
         IOException {
         final HashMap<String, String> ret = new HashMap<>();
-        final String projectName = (String) multipart.get("project");
+        //解决项目能上传成功但是返回报错问题
+        final String projectName =java.net.URLEncoder.encode(((String) multipart.get("project")), "UTF-8");
+
         ajaxHandleUpload(req, resp, ret, multipart, session);
 
         if (ret.containsKey("error")) {

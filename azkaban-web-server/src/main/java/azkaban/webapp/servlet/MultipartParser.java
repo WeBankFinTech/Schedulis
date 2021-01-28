@@ -49,7 +49,7 @@ public class MultipartParser {
     final Map<String, Object> params = new HashMap<>();
     for (final FileItem item : items) {
       if (item.isFormField()) {
-        params.put(item.getFieldName(), item.getString());
+        params.put(item.getFieldName(), item.getString("utf-8"));
       } else {
         params.put(item.getFieldName(), item);
       }
