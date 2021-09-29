@@ -290,7 +290,7 @@
     <dependency>
       <groupId>com.webank.wedatasphere.dss</groupId>
       <artifactId>dss-linkis-node-execution</artifactId>
-      <version>0.7.0</version>
+      <version>${dss.version}</version>
       <scope>compile</scope>
     </dependency>
 
