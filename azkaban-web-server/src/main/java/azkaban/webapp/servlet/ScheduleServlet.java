@@ -34,6 +34,10 @@ import azkaban.user.Permission.Type;
 import azkaban.user.User;
 import azkaban.utils.Utils;
 import azkaban.webapp.AzkabanWebServer;
+import cn.hutool.cache.CacheUtil;
+import cn.hutool.cache.impl.TimedCache;
+import cn.hutool.core.collection.CollUtil;
+import cn.hutool.core.lang.Tuple;
 import com.google.common.collect.Lists;
 import com.google.gson.JsonObject;
 import com.webank.wedatasphere.schedulis.common.i18nutils.LoadJsonUtils;
@@ -1214,10 +1218,37 @@ public class ScheduleServlet extends LoginAbstractAzkabanServlet {
     }
   }
 
+  private static final int CONNECTION_TIMEOUT = 60 * 1000;
+  private static final String CACHE_KEY = "CACHE_KEY";
+  private static TimedCache<String, Tuple> CACHE = CacheUtil.newTimedCache(3 * CONNECTION_TIMEOUT);
+
+  static {
+    CACHE.schedulePrune(CONNECTION_TIMEOUT);
+  }
+
+  private Tuple getTuple() throws ServletException {
+    if (!CACHE.containsKey(CACHE_KEY)) {
+      try {
+        CACHE.put(CACHE_KEY, new Tuple(this.projectManager.getProjects(), this.scheduleManager.getSchedules()));
+      } catch (ScheduleManagerException e) {
+        throw new ServletException(e);
+      }
+    }
+    return CACHE.get(CACHE_KEY, false);
+  }
+
   private void ajaxFetchAllScheduleFlowInfo(final HttpServletRequest req,
       final HashMap<String, Object> ret, final Session session) throws ServletException {
     try {
-      ajaxFetchAllSchedules(req, ret, session);
+      final HashMap<Integer, Project> allProjectsId = new HashMap<>();
+      final Tuple tuple = getTuple();
+      final List<Project> projects = tuple.get(0);
+      final List<Schedule> scheduleList = tuple.get(1);
+      for (Project project : projects) {
+        allProjectsId.put(project.getId(),project);
+      }
+
+      ajaxFetchAllSchedules(req, ret, session,projects,allProjectsId,scheduleList);
       List<Schedule>  schedules = (List<Schedule> )ret.get("allSchedules");
       if (CollectionUtils.isNotEmpty(schedules)) {
         List<String> allScheduleFlowNameList = new ArrayList<>();
@@ -1462,6 +1493,92 @@ public class ScheduleServlet extends LoginAbstractAzkabanServlet {
     page.render();
   }
 
+  private List<Project> getUserAllProjects(final List<Project> projects,User user){
+    ArrayList<Project> userProjectList = CollUtil.newArrayList();
+    for (Project project : projects) {
+      if (project.getCreateUser().contains(user.getUserId()))
+        userProjectList.add(project);
+    }
+    return userProjectList;
+  }
+
+  private void ajaxFetchAllSchedules(final HttpServletRequest req,
+                                     final HashMap<String, Object> ret,
+                                     final Session session,
+                                     final List<Project> projects,
+                                     final HashMap<Integer, Project> allProjectsId,
+                                     final List<Schedule> scheduleList) throws ServletException, IOException {
+    int pageNum = getIntParam(req, "page", 1);
+    final int pageSize = getIntParam(req, "size", 20);
+
+    if (pageNum < 0) {
+      pageNum = 1;
+    }
+
+    final List<Schedule> schedules = new ArrayList<>();
+    // FIXME New function Permission judgment, admin user can view all shedule tasks, user can only view their own tasks.
+    User user = session.getUser();
+    //如果输入了快捷搜索
+    if (hasParam(req, "search")) {
+      //去除搜索字符串的空格
+      final String searchTerm = getParam(req, "searchterm").trim();
+      Set<String> userRoleSet = new HashSet<>();
+      userRoleSet.addAll(user.getRoles());
+      //权限判断 admin 用户能查看所有的 schedule 任务, user只能查看自己的
+      if(userRoleSet.contains("admin")){
+        for (Schedule schedule : scheduleList){
+          // 匹配搜索参数
+          checkAndAddSchedule(searchTerm, schedule, schedules,allProjectsId);
+        }
+
+      } else {
+        List<Project> userProjectList = getUserAllProjects(projects,session.getUser());
+        for(Schedule schedule : scheduleList){
+          for(Project project : userProjectList){
+            if(project.getId() == schedule.getProjectId()){
+              // 匹配搜索参数
+              checkAndAddSchedule(searchTerm, schedule, schedules,allProjectsId);
+            }
+          }
+        }
+      }
+    } else {
+      Set<String> userRoleSet = new HashSet<>();
+      userRoleSet.addAll(session.getUser().getRoles());
+      //权限判断 admin 用户能查看所有的 shedule 任务, user只能查看自己的
+      if(userRoleSet.contains("admin")){
+        for (Schedule adminSchedule : scheduleList) {
+          // 检查工作流是否有效
+          checkValidFlows(schedules, adminSchedule,allProjectsId);
+        }
+      } else {
+        List<Project> userProjectList = getUserAllProjects(projects,session.getUser());
+        for(Schedule schedule : scheduleList){
+          for(Project project : userProjectList){
+            if(project.getId() == schedule.getProjectId()){
+              // 检查工作流是否有效
+              checkValidFlows(schedules, schedule,allProjectsId);
+            }
+          }
+        }
+      }
+    }
+    Collections.sort(schedules, (a,b) -> a.getScheduleId() > b.getScheduleId() ? -1 : 1);
+    int total = schedules.size();
+    List<Schedule> subList = getSchedules(pageNum, pageSize, total, schedules);
+    ret.put("total", schedules.size());
+    ret.put("page", pageNum);
+    ret.put("size", pageSize);
+    Map<String, String> dataMap = loadScheduleServletI18nData();
+
+    ret.put("schConfig", dataMap.get("schConfig"));
+    ret.put("slaSetting", dataMap.get("slaSetting"));
+    ret.put("deleteSch", dataMap.get("deleteSch"));
+    ret.put("showParam", dataMap.get("showParam"));
+    ret.put("allSchedules", schedules);
+    ret.put("schedules", subList);
+  }
+
   private void ajaxFetchAllSchedules(final HttpServletRequest req,
       final HashMap<String, Object> ret,
       final Session session) throws ServletException, IOException {
@@ -1540,6 +1657,50 @@ public class ScheduleServlet extends LoginAbstractAzkabanServlet {
     ret.put("showParam", dataMap.get("showParam"));
     ret.put("allSchedules", schedules);
     ret.put("schedules", subList);
+  }
+
+  /**
+   * 匹配查询参数
+   * @param searchTerm
+   * @param schedule
+   * @param schedules
+   */
+  private void checkAndAddSchedule(String searchTerm, Schedule schedule, List<Schedule> schedules,final HashMap<Integer, Project> allProjectsId) {
+    boolean projectContainResult = schedule.getProjectName().contains(searchTerm);
+    boolean flowNameContainResult = schedule.getFlowName().contains(searchTerm);
+    boolean submitUserContainsResult = schedule.getSubmitUser().contains(searchTerm);
+    if(projectContainResult || flowNameContainResult || submitUserContainsResult){
+      // 检查工作流是否有效
+      checkValidFlows(schedules, schedule,allProjectsId);
+    }
+  }
+
+  /**
+   * 检查工作流是否有效
+   * @param schedules
+   * @param schedule
+   */
+  private void checkValidFlows(List<Schedule> schedules, Schedule schedule,final HashMap<Integer, Project> allProjectsId) {
+    String flowName = schedule.getFlowName();
+
+    // 查找项目, 获取项目所有工作流
+    int projectId = schedule.getProjectId();
+    Project dbProject = allProjectsId.get(projectId);
+    if (null != dbProject) {
+      List<Flow> flows = dbProject.getFlows();
+
+      Map<String, Object> otherOption = schedule.getOtherOption();
+      // 取出当前项目的所有flow名称进行判断
+      List<String> flowNameList = flows.stream().map(Flow::getId).collect(Collectors.toList());
+      if (flowNameList.contains(flowName)) {
+        otherOption.put("validFlow", true);
+      } else {
+        otherOption.put("validFlow", false);
+      }
+      schedule.setOtherOption(otherOption);
+      schedules.add(schedule);
+    }
+
   }
 
   /**
@@ -1683,6 +1844,12 @@ public class ScheduleServlet extends LoginAbstractAzkabanServlet {
         .postProjectEvent(project, EventType.SCHEDULE, user.getUserId(),
             "Schedule " + sched.toString() + " has been removed.");
 
+    try {
+      CACHE.put(CACHE_KEY, new Tuple(this.projectManager.getProjects(), this.scheduleManager.getSchedules()));
+    } catch (ScheduleManagerException e) {
+      e.printStackTrace();
+    }
+
     ret.put("status", "success");
     ret.put("message", dataMap.get("flow") + sched.getFlowName() + dataMap.get("deleteFromSch"));
     return;
@@ -1769,6 +1936,12 @@ public class ScheduleServlet extends LoginAbstractAzkabanServlet {
     this.projectManager.postProjectEvent(project, EventType.SCHEDULE,
         user.getUserId(), "Schedule " + schedule.toString()
             + " has been added.");
+
+    try {
+      CACHE.put(CACHE_KEY, new Tuple(this.projectManager.getProjects(), this.scheduleManager.getSchedules()));
+    } catch (ScheduleManagerException e) {
+      e.printStackTrace();
+    }
 
     ret.put("status", "success");
     ret.put("scheduleId", schedule.getScheduleId());

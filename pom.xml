@@ -78,6 +78,7 @@
         <fasterxml.jackson.version>2.11.2</fasterxml.jackson.version>
         <dss.version>1.0.1</dss.version>
         <linkis.version>1.0.3</linkis.version>
+        <hu.version>5.7.2</hu.version>
     </properties>
 
     <dependencies>

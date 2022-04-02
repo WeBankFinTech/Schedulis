@@ -454,6 +454,11 @@
             <artifactId>spring-origin-sso-integration-plugin</artifactId>
             <version>${dss.version}</version>
         </dependency>
+        <dependency>
+            <groupId>cn.hutool</groupId>
+            <artifactId>hutool-all</artifactId>
+            <version>${hu.version}</version>
+        </dependency>
     </dependencies>
 
     <build>
