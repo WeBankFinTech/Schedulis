@@ -19,12 +19,8 @@ package azkaban.executor;
 import azkaban.executor.mail.DefaultMailCreator;
 import azkaban.utils.TypedMapWrapper;
 import com.google.gson.GsonBuilder;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+
+import java.util.*;
 
 /**
  * Execution options for submitted flows and scheduled flows
@@ -54,6 +50,7 @@ public class ExecutionOptions {
   private static final String SUCCESS_EMAILS_OVERRIDE = "successEmailsOverride";
   private static final String MAIL_CREATOR = "mailCreator";
   private static final String MEMORY_CHECK = "memoryCheck";
+  private static final String RERUN_ACTION = "rerunAction";
 
   private boolean notifyOnFirstFailure = true;
   private boolean notifyOnLastFailure = false;
@@ -61,6 +58,7 @@ public class ExecutionOptions {
   private boolean successEmailsOverride = false;
   private ArrayList<String> failureEmails = new ArrayList<>();
   private ArrayList<String> successEmails = new ArrayList<>();
+  private String rerunAction = null;
 
   private Integer pipelineLevel = null;
   private Integer pipelineExecId = null;
@@ -125,6 +123,8 @@ public class ExecutionOptions {
         false));
 
     options.setMemoryCheck(wrapper.getBool(MEMORY_CHECK, true));
+
+    options.setRerunAction(wrapper.getString(RERUN_ACTION));
 
     return options;
   }
@@ -245,6 +245,15 @@ public class ExecutionOptions {
     this.memoryCheck = memoryCheck;
   }
 
+  public String getRerunAction() {
+    return rerunAction;
+  }
+
+  public void setRerunAction(String rerunAction) {
+    this.rerunAction = rerunAction;
+  }
+
+
   public Map<String, Object> toObject() {
     final HashMap<String, Object> flowOptionObj = new HashMap<>();
 
@@ -263,6 +272,7 @@ public class ExecutionOptions {
     flowOptionObj.put(SUCCESS_EMAILS_OVERRIDE, this.successEmailsOverride);
     flowOptionObj.put(MAIL_CREATOR, this.mailCreator);
     flowOptionObj.put(MEMORY_CHECK, this.memoryCheck);
+    flowOptionObj.put(RERUN_ACTION, this.rerunAction);
     return flowOptionObj;
   }
 

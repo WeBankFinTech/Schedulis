@@ -8,17 +8,19 @@ public class JobIdRelation {
   private String jobNamePath;
   private String jobServerJobId;
   private String applicationId;
+  private String proxyUrl;
 
   public JobIdRelation() {
   }
 
-  public JobIdRelation(Integer id, Integer execId, Integer attempt, String jobNamePath, String jobServerJobId, String applicationId) {
+  public JobIdRelation(Integer id, Integer execId, Integer attempt, String jobNamePath, String jobServerJobId, String applicationId, String proxyUrl) {
     this.id = id;
     this.execId = execId;
     this.attempt = attempt;
     this.jobNamePath = jobNamePath;
     this.jobServerJobId = jobServerJobId;
     this.applicationId = applicationId;
+    this.proxyUrl = proxyUrl;
   }
 
   public Integer getId() {
@@ -69,6 +71,14 @@ public class JobIdRelation {
     this.applicationId = applicationId;
   }
 
+  public String getProxyUrl() {
+    return proxyUrl;
+  }
+
+  public void setProxyUrl(String proxyUrl) {
+    this.proxyUrl = proxyUrl;
+  }
+
   @Override
   public String toString() {
     return "JobIdRelation{" +
@@ -78,6 +88,7 @@ public class JobIdRelation {
         ", jobNamePath='" + jobNamePath + '\'' +
         ", jobServerJobId='" + jobServerJobId + '\'' +
         ", applicationId='" + applicationId + '\'' +
+            ",proxyUrl'" + proxyUrl + '\'' +
         '}';
   }
 }

@@ -19,13 +19,8 @@ import azkaban.flow.Flow;
 import azkaban.project.Project;
 import azkaban.sla.SlaOption;
 import azkaban.utils.TypedMapWrapper;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 
@@ -76,6 +71,8 @@ public class ExecutableFlow extends ExecutableFlowBase {
   private ExecutionOptions executionOptions;
   private List<SlaOption> slaOptions = new ArrayList<>();
 
+  private int lastExecId = -1;
+
   private double azkabanFlowVersion;
   // 历史重跑设置参数
   private Map<String, String> repeatOption = new HashMap<>();
@@ -125,6 +122,14 @@ public class ExecutableFlow extends ExecutableFlowBase {
     exFlow.fillExecutableFromMapObject(flowObj);
 
     return exFlow;
+  }
+
+  public int getLastExecId() {
+    return lastExecId;
+  }
+
+  public void setLastExecId(int lastExecId) {
+    this.lastExecId = lastExecId;
   }
 
   public String getComment() {

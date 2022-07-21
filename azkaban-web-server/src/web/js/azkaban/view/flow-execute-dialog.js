@@ -275,6 +275,9 @@ azkaban.FlowExecuteDialogView = Backbone.View.extend({
       executingData.queueLevel = $("#queueLevel").val();
     }
 
+    var rerunAction = $('input[name=rerunAction]:checked').val();
+    executingData.rerunAction = rerunAction;
+
     //检查是否有重复的规则
     if (checkFiledRetryRule(jobFailedRetryOptions)) {
       alert(wtssI18n.view.errorRerunRulePro);
@@ -296,6 +299,7 @@ azkaban.FlowExecuteDialogView = Backbone.View.extend({
     var jobOutputGlobalParam = this.model.get("jobOutputGlobalParam");
     var isRunning = this.model.get("isRunning");
     var concurrentOption = this.model.get("concurrentOption");
+    var rerunAction = this.model.get("rerunAction");
     var pipelineLevel = this.model.get("pipelineLevel");
     var pipelineExecutionId = this.model.get("pipelineExecution");
     var queueLevel = this.model.get("queueLevel");
@@ -352,6 +356,10 @@ azkaban.FlowExecuteDialogView = Backbone.View.extend({
     }
     if (queueLevel) {
       $('#queueLevel').val(queueLevel);
+    }
+
+    if(rerunAction){
+    $('input[value=' + rerunAction + '][name="rerunAction"]').prop("checked","checked");
     }
 
     if (flowParams && $("#editTable .editRow").length == 0) {

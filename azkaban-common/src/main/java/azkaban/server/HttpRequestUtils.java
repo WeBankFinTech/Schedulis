@@ -20,30 +20,25 @@ import azkaban.executor.ExecutionOptions;
 import azkaban.executor.ExecutionOptions.FailureAction;
 import azkaban.executor.ExecutorManagerException;
 import azkaban.executor.mail.DefaultMailCreator;
-import azkaban.user.Permission;
 import azkaban.user.Permission.Type;
 import azkaban.user.Role;
 import azkaban.user.User;
 import azkaban.utils.JSONUtils;
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.InputStreamReader;
-import java.util.Arrays;
-import java.util.Enumeration;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import javax.servlet.ServletException;
-import javax.servlet.http.HttpServletRequest;
-
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import com.google.gson.reflect.TypeToken;
 import com.webank.wedatasphere.schedulis.common.utils.GsonUtils;
 import org.apache.commons.lang.StringEscapeUtils;
 import org.apache.commons.lang.StringUtils;
-import org.slf4j.LoggerFactory;
 import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import javax.servlet.ServletException;
+import javax.servlet.http.HttpServletRequest;
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.util.*;
 
 public class HttpRequestUtils {
 
@@ -66,6 +61,10 @@ public class HttpRequestUtils {
       }
     }
 
+    if (hasParam(req, "rerunAction")) {
+      final String rerunAction = getParam(req, "rerunAction");
+      execOptions.setRerunAction(rerunAction);
+    }
     if (hasParam(req, "failureEmailsOverride")) {
       final boolean override = getBooleanParam(req, "failureEmailsOverride", false);
       execOptions.setFailureEmailsOverridden(override);
@@ -145,6 +144,10 @@ public class HttpRequestUtils {
       }
     }
 
+    if (jsonObject.has("rerunAction")) {
+      final String rerunAction = jsonObject.get("rerunAction").getAsString();
+      execOptions.setRerunAction(rerunAction);
+    }
     if (jsonObject.has("failureEmailsOverride")) {
       final boolean override = jsonObject.get("failureEmailsOverride").getAsBoolean();
       execOptions.setFailureEmailsOverridden(override);
@@ -422,6 +425,8 @@ public class HttpRequestUtils {
     if(null != flowOptions.getPipelineLevel()){
       responseMap.put("pipelineLevel", flowOptions.getPipelineLevel());
     }
+
+    responseMap.put("rerunAction", flowOptions.getRerunAction());
 
     responseMap.put("mailCreator", flowOptions.getMailCreator());
 

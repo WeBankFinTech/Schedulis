@@ -16,14 +16,6 @@
 
 package azkaban.execapp;
 
-import static azkaban.Constants.ConfigurationKeys.AZKABAN_SERVER_HOST_NAME;
-import static azkaban.Constants.USER_DEFINED_PARAM;
-import static azkaban.execapp.ConditionalWorkflowUtils.FAILED;
-import static azkaban.execapp.ConditionalWorkflowUtils.PENDING;
-import static azkaban.execapp.ConditionalWorkflowUtils.checkConditionOnJobStatus;
-import static azkaban.project.DirectoryYamlFlowLoader.CONDITION_ON_JOB_STATUS_PATTERN;
-import static azkaban.project.DirectoryYamlFlowLoader.CONDITION_VARIABLE_REPLACEMENT_PATTERN;
-
 import azkaban.Constants;
 import azkaban.Constants.ConfigurationKeys;
 import azkaban.Constants.JobProperties;
@@ -38,17 +30,8 @@ import azkaban.execapp.event.JobCallbackManager;
 import azkaban.execapp.jmx.JmxJobMBeanManager;
 import azkaban.execapp.metric.NumFailedJobMetric;
 import azkaban.execapp.metric.NumRunningJobMetric;
-import azkaban.executor.AlerterHolder;
-import azkaban.executor.ConnectorParams;
-import azkaban.executor.ExecutableFlow;
-import azkaban.executor.ExecutableFlowBase;
-import azkaban.executor.ExecutableNode;
-import azkaban.executor.ExecutionControllerUtils;
-import azkaban.executor.ExecutionOptions;
+import azkaban.executor.*;
 import azkaban.executor.ExecutionOptions.FailureAction;
-import azkaban.executor.ExecutorLoader;
-import azkaban.executor.ExecutorManagerException;
-import azkaban.executor.Status;
 import azkaban.flow.ConditionOnJobStatus;
 import azkaban.flow.FlowProps;
 import azkaban.flow.FlowUtils;
@@ -61,16 +44,27 @@ import azkaban.project.ProjectManagerException;
 import azkaban.sla.SlaOption;
 import azkaban.spi.AzkabanEventReporter;
 import azkaban.spi.EventType;
-import azkaban.utils.*;
+import azkaban.utils.FileIOUtils;
+import azkaban.utils.Props;
+import azkaban.utils.SwapQueue;
+import azkaban.utils.Utils;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.io.Files;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
+import com.google.gson.JsonObject;
 import com.webank.wedatasphere.schedulis.common.executor.ExecutionCycle;
 import com.webank.wedatasphere.schedulis.common.jobExecutor.utils.SystemBuiltInParamJodeTimeUtils;
 import com.webank.wedatasphere.schedulis.common.utils.LogUtils;
 import com.webank.wedatasphere.schedulis.exec.execapp.KillFlowTrigger;
+import org.apache.commons.io.FileUtils;
+import org.apache.commons.lang.StringUtils;
+import org.slf4j.LoggerFactory;
+
+import javax.script.ScriptEngine;
+import javax.script.ScriptEngineManager;
+import javax.script.ScriptException;
 import java.io.File;
 import java.io.IOException;
 import java.security.AccessControlContext;
@@ -78,24 +72,16 @@ import java.security.AccessController;
 import java.security.PrivilegedExceptionAction;
 import java.security.ProtectionDomain;
 import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.LinkedBlockingQueue;
-import java.util.concurrent.RejectedExecutionException;
-import java.util.concurrent.ThreadFactory;
-import java.util.concurrent.ThreadPoolExecutor;
-import java.util.concurrent.TimeUnit;
+import java.util.concurrent.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
-import javax.script.ScriptEngine;
-import javax.script.ScriptEngineManager;
-import javax.script.ScriptException;
-import com.google.gson.JsonObject;
-import org.apache.commons.io.FileUtils;
-import org.apache.commons.lang.StringUtils;
-import org.slf4j.LoggerFactory;
+
+import static azkaban.Constants.ConfigurationKeys.AZKABAN_SERVER_HOST_NAME;
+import static azkaban.Constants.USER_DEFINED_PARAM;
+import static azkaban.execapp.ConditionalWorkflowUtils.*;
+import static azkaban.project.DirectoryYamlFlowLoader.CONDITION_ON_JOB_STATUS_PATTERN;
+import static azkaban.project.DirectoryYamlFlowLoader.CONDITION_VARIABLE_REPLACEMENT_PATTERN;
 
 
 /**
@@ -604,7 +590,7 @@ public class FlowRunner extends EventHandler implements Runnable {
     }
 
     this.logger.info("Finishing up flow. Awaiting Termination");
-    this.executorService.shutdown();
+    this.executorService.shutdownNow();
 
     updateFlow();
     this.logger.info("Finished Flow");
@@ -1277,6 +1263,8 @@ public class FlowRunner extends EventHandler implements Runnable {
       Props flowFailedRetryProps = new Props(null);
       flowFailedRetryProps.putAll(flowFailedRetryOption);
       props.setEarliestAncestor(flowFailedRetryProps);
+
+      props.put("rerun.action",this.flow.getExecutionOptions().getRerunAction());
     }
   }
 

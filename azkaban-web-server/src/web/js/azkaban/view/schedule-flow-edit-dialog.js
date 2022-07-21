@@ -139,6 +139,9 @@ azkaban.FlowScheduleDialogView = Backbone.View.extend({
       executingData.queueLevel = $("#schedule-queueLevel").val();
     }
 
+    var rerunAction = $('input[name=rerunActionSchedule]:checked').val();
+    executingData.rerunAction = rerunAction;
+
     //检查是否有重复的规则
     if (checkFiledRetryRule(jobFailedRetryOptions)) {
       alert(wtssI18n.view.errorRerunRulePro);
@@ -163,6 +166,7 @@ azkaban.FlowScheduleDialogView = Backbone.View.extend({
     var overrideFailureEmails = this.model.get("failureEmailsOverride");
     var overrideSuccessEmails = this.model.get("successEmailsOverride");
     var enableHistoryRecover = this.model.get("enableHistoryRecover");
+    var rerunAction = this.model.get("rerunAction");
 
     if (overrideSuccessEmails && !$('#schedule-flow-override-success-emails').is(':checked')) {
       $('#schedule-flow-override-success-emails').click();
@@ -204,6 +208,10 @@ azkaban.FlowScheduleDialogView = Backbone.View.extend({
     }
     if (queueLevel) {
       $('#schedule-queueLevel').val(queueLevel);
+    }
+
+    if(rerunAction){
+      $('input[value=' + rerunAction + '][name="rerunActionSchedule"]').prop("checked","checked");
     }
 
     if (flowParams && $(".editRow").length == 0) {
@@ -400,6 +408,7 @@ azkaban.FlowScheduleDialogView = Backbone.View.extend({
         var successAlertLevel = data.schedule.otherOptions.successAlertLevel;
         var jobSkipFailedOptions = data.schedule.otherOptions.jobSkipFailedOptions;
         var jobCronExpressionOptions = data.schedule.otherOptions["job.cron.expression"];
+        var rerunAction = data.schedule.executionOptions.rerunAction;
 
         if (overrideFailureEmails && !$('#schedule-flow-override-failure-emails').is(':checked')) {
           $('#schedule-flow-override-failure-emails').click();
@@ -453,6 +462,10 @@ azkaban.FlowScheduleDialogView = Backbone.View.extend({
         if (queueLevel) {
           $('#schedule-queueLevel').val(queueLevel);
         }
+
+        if(rerunAction){
+              $('input[value=' + rerunAction + '][name="rerunActionSchedule"]').prop("checked","checked");
+            }
 
         schedulEditTableView.clearTable();
         if (flowParams && $(".editRow").length == 0) {

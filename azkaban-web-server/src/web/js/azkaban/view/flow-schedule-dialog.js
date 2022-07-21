@@ -141,6 +141,9 @@ azkaban.FlowScheduleDialogView = Backbone.View.extend({
       executingData.queueLevel = $("#schedule-queueLevel").val();
     }
 
+    var rerunAction = $('input[name=rerunActionSche]:checked').val();
+    executingData.rerunAction = rerunAction;
+
     //检查是否有重复的规则
     if (checkFiledRetryRule(jobFailedRetryOptions)) {
       alert(wtssI18n.view.errorRerunRulePro);
@@ -165,6 +168,7 @@ azkaban.FlowScheduleDialogView = Backbone.View.extend({
     var overrideSuccessEmails = this.model.get("failureEmailsOverride");
     var overrideFailureEmails = this.model.get("successEmailsOverride");
     var enableHistoryRecover = this.model.get("enableHistoryRecover");
+    var rerunAction = this.model.get("rerunAction");
 
     if (overrideSuccessEmails) {
       $('#schedule-override-success-emails').attr('checked', true);
@@ -215,6 +219,10 @@ azkaban.FlowScheduleDialogView = Backbone.View.extend({
     }
     if (queueLevel) {
       $('#schedule-queueLevel').val(queueLevel);
+    }
+
+    if(rerunAction){
+      $('input[value=' + rerunAction + '][name="rerunActionSche"]').prop("checked","checked");
     }
 
     if (flowParams && $(".editRow").length == 0) {
@@ -502,6 +510,7 @@ azkaban.FlowScheduleDialogView = Backbone.View.extend({
         var queueLevel = data.schedule.executionOptions.pipelineLevel;
         var overrideSuccessEmails = data.schedule.executionOptions.failureEmailsOverride;
         var overrideFailureEmails = data.schedule.executionOptions.successEmailsOverride;
+        var rerunAction = data.schedule.executionOptions.rerunAction;
 
         if (overrideSuccessEmails) {
           $('#schedule-override-success-emails').attr('checked', true);
@@ -552,6 +561,10 @@ azkaban.FlowScheduleDialogView = Backbone.View.extend({
         }
         if (queueLevel) {
           $('#schedule-queueLevel').val(queueLevel);
+        }
+
+        if(rerunAction){
+          $('input[value=' + rerunAction + '][name="rerunActionSche"]').prop("checked","checked");
         }
 
         if (flowParams && $(".editRow").length == 0) {

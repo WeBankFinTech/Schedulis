@@ -12,7 +12,6 @@ import javax.inject.Singleton;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 
 @Singleton
@@ -22,12 +21,12 @@ public class JobIdRelationDaoImpl implements JobIdRelationDao {
 
 
   private static final String FETCH_JOB_ID_RELATION =
-      "SELECT w.id, w.`exec_id`, w.`attempt`, w.`job_id`, w.`job_server_job_id`, w.`application_id` FROM wtss_job_id_relation w " +
+          "SELECT w.id, w.`exec_id`, w.`attempt`, w.`job_id`, w.`job_server_job_id`, w.`application_id`, w.`proxy_url` FROM wtss_job_id_relation w " +
           " WHERE w.`exec_id` = ? AND w.`job_id` = ?;";
 
   private static final String ADD_JOB_ID_RELATION =
-      "INSERT INTO wtss_job_id_relation  (`exec_id`, `attempt`, `job_id`, `job_server_job_id`, `application_id`) " +
-          " VALUES (?, ?, ?, ?, ?);";
+          "INSERT INTO wtss_job_id_relation  (`exec_id`, `attempt`, `job_id`, `job_server_job_id`, `application_id`, `proxy_url`) " +
+                  " VALUES (?, ?, ?, ?, ?, ?);";
 
   private final DatabaseOperator dbOperator;
 
@@ -43,7 +42,7 @@ public class JobIdRelationDaoImpl implements JobIdRelationDao {
 
   @Override
   public int addJobIdRelation(JobIdRelation jobIdRelation) throws Exception {
-    return dbOperator.update(ADD_JOB_ID_RELATION, jobIdRelation.getExecId(), jobIdRelation.getAttempt(), jobIdRelation.getJobNamePath(), jobIdRelation.getJobServerJobId(), jobIdRelation.getApplicationId());
+    return dbOperator.update(ADD_JOB_ID_RELATION, jobIdRelation.getExecId(), jobIdRelation.getAttempt(), jobIdRelation.getJobNamePath(), jobIdRelation.getJobServerJobId(), jobIdRelation.getApplicationId(), jobIdRelation.getProxyUrl());
   }
 
   static class FetchJobIdRelation implements ResultSetHandler<List<JobIdRelation>> {
@@ -51,7 +50,7 @@ public class JobIdRelationDaoImpl implements JobIdRelationDao {
     @Override
     public List<JobIdRelation> handle(final ResultSet rs) throws SQLException {
       if (!rs.next()) {
-        return Collections.emptyList();
+        return new ArrayList<>();
       }
       List<JobIdRelation> list = new ArrayList<>();
       do{
@@ -61,7 +60,8 @@ public class JobIdRelationDaoImpl implements JobIdRelationDao {
             rs.getInt(3),
             rs.getString(4),
             rs.getString(5),
-            rs.getNString(6)
+            rs.getNString(6),
+            rs.getString(7)
         );
         list.add(jobIdRelation);
       }while (rs.next());

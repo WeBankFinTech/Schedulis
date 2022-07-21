@@ -16,19 +16,13 @@
 
 package azkaban.execapp;
 
-import static azkaban.ServiceProvider.SERVICE_PROVIDER;
-
 import azkaban.Constants.JobProperties;
 import azkaban.event.Event;
 import azkaban.event.EventData;
 import azkaban.event.EventHandler;
 import azkaban.execapp.event.BlockingStatus;
 import azkaban.execapp.event.FlowWatcher;
-import azkaban.executor.ExecutableFlowBase;
-import azkaban.executor.ExecutableNode;
-import azkaban.executor.ExecutorLoader;
-import azkaban.executor.ExecutorManagerException;
-import azkaban.executor.Status;
+import azkaban.executor.*;
 import azkaban.flow.CommonJobProperties;
 import azkaban.jobExecutor.AbstractProcessJob;
 import azkaban.jobExecutor.JavaProcessJob;
@@ -39,27 +33,22 @@ import azkaban.jobtype.JobTypeManager;
 import azkaban.jobtype.JobTypeManagerException;
 import azkaban.spi.EventType;
 import azkaban.utils.ExternalLinkUtils;
+import azkaban.utils.HadoopJobUtils;
 import azkaban.utils.Props;
 import azkaban.utils.StringUtils;
 import com.webank.wedatasphere.schedulis.common.log.LogFilterEntity;
 import com.webank.wedatasphere.schedulis.common.log.OperateType;
 import com.webank.wedatasphere.schedulis.common.utils.LogUtils;
-import java.io.BufferedReader;
-import java.io.File;
-import java.io.FileReader;
-import java.io.FilenameFilter;
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
-import java.util.UUID;
+import org.slf4j.LoggerFactory;
+
+import java.io.*;
+import java.util.*;
+import java.util.concurrent.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
-import org.slf4j.LoggerFactory;
+
+import static azkaban.ServiceProvider.SERVICE_PROVIDER;
 
 public class JobRunner extends EventHandler implements Runnable {
 
@@ -108,6 +97,10 @@ public class JobRunner extends EventHandler implements Runnable {
 
   private String loggerName;
   private String logFileName;
+
+  private ExecutorService singleThreadPool = new ThreadPoolExecutor(1, 1, 0L, TimeUnit.MILLISECONDS,
+          new LinkedBlockingQueue<>());
+
 
   public JobRunner(final ExecutableNode node, final File workingDir, final ExecutorLoader loader,
       final JobTypeManager jobtypeManager, final Props azkabanProps) {
@@ -511,6 +504,7 @@ public class JobRunner extends EventHandler implements Runnable {
       Arrays.sort(files, Collections.reverseOrder());
       Set<String> appId = new HashSet<>();
       Set<String> bdpId = new HashSet<>();
+      String proxyUrl = null;
       for (File file : files) {
         BufferedReader br = null;
         try {
@@ -525,6 +519,10 @@ public class JobRunner extends EventHandler implements Runnable {
               } else if (match.startsWith("job")) {
                 bdpId.add(match);
               }
+            }
+            int index;
+            if (org.apache.commons.lang3.StringUtils.isEmpty(proxyUrl) && (index = line.indexOf(HadoopJobUtils.JOB_SERVER_PROXY_URL_LOG_PREFIX)) > -1){
+              proxyUrl = line.substring(index + HadoopJobUtils.JOB_SERVER_PROXY_URL_LOG_PREFIX.length());
             }
           }
         } catch (IOException e) {
@@ -544,6 +542,7 @@ public class JobRunner extends EventHandler implements Runnable {
         jobIdRelation.setExecId(executionId);
         jobIdRelation.setAttempt(node.getAttempt());
         jobIdRelation.setJobNamePath(node.getNestedId());
+        jobIdRelation.setProxyUrl(proxyUrl);
         jobIdRelation.setApplicationId(org.apache.commons.lang3.StringUtils.join(appId, ","));
         jobIdRelation.setJobServerJobId(org.apache.commons.lang3.StringUtils.join(bdpId, ","));
         jobIdRelationService.addJobIdRelation(jobIdRelation);
@@ -563,11 +562,13 @@ public class JobRunner extends EventHandler implements Runnable {
     } catch (final Exception e) {
       serverLogger.error("Unexpected exception", e);
       throw e;
+    } finally {
+      this.singleThreadPool.shutdown();
     }
     serverLogger.info("execId:" + this.executionId + ",node:" + node.getNestedId() + ", finished.");
   }
 
-  
+
   private void doRun() {
     Thread.currentThread().setName(
         "JobRunner-" + this.jobId + "-" + this.executionId);
@@ -596,6 +597,7 @@ public class JobRunner extends EventHandler implements Runnable {
     serverLogger.info("execId:" + this.executionId + ",node:" + node.getNestedId() + ", uploadExecutableNode.");
 
 
+    killJobServer();
     Props inputProps = this.node.getInputProps();
     if(inputProps.containsKey(JOB_FAILED_RETRY_COUNT)
         && inputProps.containsKey(JOB_FAILED_RETRY_INTERVAL)){
@@ -681,6 +683,43 @@ public class JobRunner extends EventHandler implements Runnable {
           new EventData(finalStatus, this.node.getNestedId())), false);
     }
   }
+
+  private void killJobServer() {
+      Future<String> future = singleThreadPool.submit(() -> {
+          if ("killServer".equals(this.props.getString("rerun.action", ""))) {
+              JobIdRelationService jobIdRelationService = SERVICE_PROVIDER
+                .getInstance(JobIdRelationService.class);
+        List<JobIdRelation> relList = jobIdRelationService
+                .getJobIdRelation(this.executionId, this.node.getNestedId());
+        int lastExecId;
+        if ((lastExecId = this.node.getExecutableFlow().getLastExecId()) != -1) {
+          relList.addAll(jobIdRelationService
+                  .getJobIdRelation(lastExecId, this.node.getNestedId()));
+        }
+
+        for (JobIdRelation rel : relList) {
+          HadoopJobUtils.killAllHadoopJobs(
+                  Arrays.stream(rel.getApplicationId().split(",")).collect(Collectors.toSet()),
+                  this.logger);
+          HadoopJobUtils.killBdpClientJob(
+                  Arrays.stream(rel.getJobServerJobId().split(",")).collect(Collectors.toSet()),
+                  rel.getProxyUrl(), this.logger, this.jobtypeManager.getJobTypePluginSet()
+                          .getCommonPluginLoadProps());
+        }
+      }
+          return "";
+      });
+      try {
+          future.get(this.azkabanProps.getInt("executor.job.kill.timeout", 60), TimeUnit.SECONDS);
+      } catch (Exception e) {
+          future.cancel(true);
+          fireEvent(Event.create(this, EventType.JOB_FINISHED,
+                  new EventData(changeStatus(Status.FAILED), this.node.getNestedId())), false);
+          this.logger.error("Could not kill job server for job: " + this.jobId, e);
+          throw new RuntimeException("Could not kill job server for job: " + this.jobId, e);
+      }
+  }
+
 
   private String getNodeRetryLog() {
     return this.node.getAttempt() > 0 ? (" retry: " + this.node.getAttempt()) : "";
@@ -1115,6 +1154,24 @@ public class JobRunner extends EventHandler implements Runnable {
           if(isKilled() || isSkipped()){
             logger.info("job has been killed or skipped, no need to retry.");
             return;
+          }
+          if ("killServer".equals(this.props.getString("rerun.action", ""))) {
+              Future<String> future = singleThreadPool.submit(() -> {
+                  HadoopJobUtils.killAllHadoopJobsSync(JobRunner.this.logFile.getAbsolutePath(),
+                          JobRunner.this.logger);
+                  HadoopJobUtils.killBdpClientJobSync(JobRunner.this.logFile.getAbsolutePath(),
+                          JobRunner.this.logger,
+                          JobRunner.this.jobtypeManager.getJobTypePluginSet().getCommonPluginLoadProps());
+                  return "";
+              });
+              try {
+                  future.get(this.azkabanProps.getInt("executor.job.kill.timeout", 60), TimeUnit.SECONDS);
+              } catch (Exception e) {
+                  this.logger.error("Could not kill job server for job: " + this.jobId, e);
+                  future.cancel(true);
+                  finalStatus = changeStatus(Status.FAILED);
+                  break;
+              }
           }
           logger.info("重试第" + (i+1) + "次。");
           this.retryConut++;

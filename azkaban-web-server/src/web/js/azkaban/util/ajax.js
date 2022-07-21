@@ -83,6 +83,7 @@ function fetchFlowInfo(model, projectName, flowId, execId) {
         "failureEmails": data.failureEmails,
         "failureEmailsOverride":data.failureEmailsOverride,
         "failureAction": data.failureAction,
+        "rerunAction": data.rerunAction,
         "notifyFailure": {
           "first": data.notifyFailureFirst,
           "last": data.notifyFailureLast

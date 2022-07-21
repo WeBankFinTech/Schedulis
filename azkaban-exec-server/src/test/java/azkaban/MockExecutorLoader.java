@@ -31,8 +31,8 @@ import com.webank.wedatasphere.schedulis.common.executor.UserVariable;
 import com.webank.wedatasphere.schedulis.common.log.LogFilterEntity;
 import com.webank.wedatasphere.schedulis.common.system.entity.WtssUser;
 import org.apache.commons.io.FileUtils;
-import org.slf4j.LoggerFactory;
 import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.io.IOException;
@@ -134,6 +134,11 @@ public class MockExecutorLoader implements ExecutorLoader {
   @Override
   public List<ExecutableFlow> fetchFlowHistory(final int projectId, final String flowId,
       final int skip, final int num) throws ExecutorManagerException {
+    return null;
+  }
+
+  @Override
+  public List<ExecutableFlow> fetchFlowHistory(int projectId, String flowId) throws ExecutorManagerException{
     return null;
   }
 

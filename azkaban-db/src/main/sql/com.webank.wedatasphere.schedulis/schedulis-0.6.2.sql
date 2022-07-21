@@ -9,3 +9,5 @@ CREATE TABLE `wtss_job_id_relation` (
   PRIMARY KEY (`id`),
   UNIQUE KEY `exec_id` (`exec_id`,`job_id`,`attempt`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COMMENT='wtss_jobId 和 job_server_job_id 、application_id的关联关系'
+
+alter table wtss_job_id_relation add column proxy_url varchar(100) comment "jobserver代理地址"
