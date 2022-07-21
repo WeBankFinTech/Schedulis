@@ -34,7 +34,7 @@ CREATE TABLE IF NOT EXISTS `active_sla` (
 -- 导出  表 bdp_scheduler_01.cfg_webank_all_users 结构
 CREATE TABLE IF NOT EXISTS `cfg_webank_all_users` (
   `app_id` smallint(5) unsigned NOT NULL,
-  `user_id` varchar(50) NOT NULL,
+  `user_id` varchar(50) NOT NULL DEFAULT 1,
   `urn` varchar(200) DEFAULT NULL,
   `full_name` varchar(200) DEFAULT NULL,
   `display_name` varchar(200) DEFAULT NULL,
@@ -422,7 +422,7 @@ CREATE TABLE IF NOT EXISTS `wtss_role` (
 -- 数据导出被取消选择。
 -- 导出  表 bdp_scheduler_01.wtss_user 结构
 CREATE TABLE IF NOT EXISTS `wtss_user` (
-  `user_id` varchar(50) NOT NULL COMMENT '用户ID',
+  `user_id` varchar(50) NOT NULL COMMENT '用户ID' DEFAULT 1,
   `username` varchar(200) DEFAULT NULL COMMENT '用户登录名',
   `password` varchar(200) DEFAULT NULL COMMENT '用户登录密码',
   `full_name` varchar(200) DEFAULT NULL COMMENT '用户姓名',

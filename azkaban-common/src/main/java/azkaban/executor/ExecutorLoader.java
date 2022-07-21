@@ -19,14 +19,15 @@ package azkaban.executor;
 import azkaban.executor.ExecutorLogEvent.EventType;
 import azkaban.history.ExecutionRecover;
 import azkaban.history.RecoverTrigger;
-import com.webank.wedatasphere.schedulis.common.log.LogFilterEntity;
-import com.webank.wedatasphere.schedulis.common.system.entity.WtssUser;
 import azkaban.utils.FileIOUtils.LogData;
 import azkaban.utils.Pair;
 import azkaban.utils.Props;
 import com.webank.wedatasphere.schedulis.common.executor.DepartmentGroup;
 import com.webank.wedatasphere.schedulis.common.executor.ExecutionCycle;
 import com.webank.wedatasphere.schedulis.common.executor.UserVariable;
+import com.webank.wedatasphere.schedulis.common.log.LogFilterEntity;
+import com.webank.wedatasphere.schedulis.common.system.entity.WtssUser;
+
 import java.io.File;
 import java.time.Duration;
 import java.util.List;
@@ -68,6 +69,8 @@ public interface ExecutorLoader {
 
   List<ExecutableFlow> fetchFlowHistory(int projectId, String flowId,
       int skip, int num) throws ExecutorManagerException;
+
+  public List<ExecutableFlow> fetchFlowHistory(int projectId, String flowId) throws ExecutorManagerException;
 
   List<ExecutableFlow> fetchFlowHistory(int projectId, String flowId,
       int skip, int num, Status status) throws ExecutorManagerException;

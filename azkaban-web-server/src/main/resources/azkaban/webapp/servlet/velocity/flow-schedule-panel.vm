@@ -145,6 +145,20 @@
                 <option value="failedPause">$suspendCurrentFlow</option>
               </select>
               <hr>
+              <p>$rerunActionTips</p>
+                <div class="radio">
+                  <label>
+                    <input type="radio" name="rerunActionSche" value="killServer">
+                       $killServerTips
+                  </label>
+                </div>
+                <div class="radio">
+                  <label>
+                    <input type="radio" name="rerunActionSche" value="rerun" checked="checked">
+                       $rerunTips
+                  </label>
+                </div>
+              <hr>
               <p>$retryFailed</p>
               <div id="job-schedule-failed-retry-view">
                 <table class="table table-striped" id="jobScheduleFailedRetryTable">
