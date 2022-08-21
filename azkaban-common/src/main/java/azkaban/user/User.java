@@ -35,6 +35,8 @@ public class User {
   //用户权限集合
   private HashMap<String, Role> roleMap;
 
+  private String normalUser;
+
   public User(final String userid) {
     this.userid = userid;
   }
@@ -57,6 +59,14 @@ public class User {
 
   public void setPermissions(final UserPermissions checker) {
     this.userPermissions = checker;
+  }
+
+  public String getNormalUser() {
+    return normalUser;
+  }
+
+  public void setNormalUser(String normalUser) {
+    this.normalUser = normalUser;
   }
 
   public boolean hasPermission(final String permission) {

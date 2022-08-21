@@ -52,6 +52,7 @@ import java.util.Map;
 import java.util.UUID;
 
 import static azkaban.ServiceProvider.SERVICE_PROVIDER;
+import static azkaban.Constants.WTSS_PUBLIC_KEY;
 
 /**
  * Abstract Servlet that handles auto login when the session hasn't been verified.
@@ -103,6 +104,35 @@ public abstract class LoginAbstractAzkabanServlet extends AbstractAzkabanServlet
         this.webResourceDirectory = file;
     }
 
+    private boolean validCsrf(HttpServletRequest req, HttpServletResponse resp, Session session,
+                              boolean isGet, Map<String, Object> params)
+            throws IOException, ServletException {
+        if (!getApplication().getServerProps().getBoolean("azkaban.csrf.check", true) || session == null
+                || "/error".equals(req.getRequestURI()) || !StringUtils
+                .isFromBrowser(req.getHeader("User-Agent"))) {
+            return false;
+        }
+        if (isGet) {
+            if (!hasParam(req, "ajax") && !hasParam(req, "action") && !hasParam(req, "delete")
+                    && !hasParam(req, "purge") && !hasParam(req, "download") && !hasParam(req, "logout")) {
+                return false;
+            }
+            String referer = req.getHeader("Referer");
+            if (referer == null || !referer.contains(req.getServerName())) {
+                handleLogin(req, resp);
+                return true;
+            }
+        } else {
+            Object csrfToken = session.getSessionData("csrfToken");
+            if (csrfToken != null && !csrfToken.equals(req.getHeader("csrfToken")) && (params == null
+                    ? true : !csrfToken.equals(params.get("csrfToken") + ""))) {
+                resp.sendRedirect("/error");
+                return true;
+            }
+        }
+        return false;
+    }
+
     @Override
     protected void doGet(final HttpServletRequest req, final HttpServletResponse resp)
             throws ServletException, IOException {
@@ -120,6 +150,10 @@ public abstract class LoginAbstractAzkabanServlet extends AbstractAzkabanServlet
         // Set session id
         final Session session = getSessionFromRequest(req);
         logRequest(req, session);
+        if (this.validCsrf(req, resp, session, true, null)) {
+            resp.sendRedirect("/error");
+            return;
+        }
         if (hasParam(req, "logout")) {
             resp.sendRedirect(req.getContextPath());
             if (session != null) {
@@ -147,8 +181,14 @@ public abstract class LoginAbstractAzkabanServlet extends AbstractAzkabanServlet
                     return;
                 }
             }
-            if (logger.isDebugEnabled() && session != null) {
-                logger.debug("Found session {}", session.getUser());
+            if (session != null) {
+                if (logger.isDebugEnabled()) {
+                    logger.debug("Found session {}", session.getUser());
+                }
+                Object csrfToken = session.getSessionData("csrfToken");
+                if (csrfToken != null) {
+                    resp.setHeader("csrfToken", csrfToken.toString());
+                }
             }
             if (handleFileGet(req, resp)) {
                 return;
@@ -337,6 +377,7 @@ public abstract class LoginAbstractAzkabanServlet extends AbstractAzkabanServlet
         subPageMap1.forEach(page::add);
 
         page.add("passwordPlaceholder", this.passwordPlaceholder);
+        page.add("publicKey", getApplication().getServerProps().get(WTSS_PUBLIC_KEY));
         if (errorMsg != null) {
             page.add("errorMsg", errorMsg);
         }
@@ -376,6 +417,16 @@ public abstract class LoginAbstractAzkabanServlet extends AbstractAzkabanServlet
         Session session = getSessionFromRequest(req);
         this.webMetrics.markWebPostCall();
         logRequest(req, session);
+        Map<String, Object> params = null;
+        if (ServletFileUpload.isMultipartContent(req)) {
+            params = this.multipartParser.parseMultipart(req);
+        }
+        if (this.validCsrf(req, resp, session, false, params)) {
+            return;
+        }
+        if (session != null) {
+            resp.setHeader("csrfToken", session.getSessionData("csrfToken") + "");
+        }
         if (isIllegalPostRequest(req)) {
             writeResponse(resp, "Login error. Must pass username and password in request body");
             return;
@@ -407,7 +458,6 @@ public abstract class LoginAbstractAzkabanServlet extends AbstractAzkabanServlet
         }
         // Handle Multipart differently from other post messages
         if (ServletFileUpload.isMultipartContent(req)) {
-            final Map<String, Object> params = this.multipartParser.parseMultipart(req);
             if (session == null) {
                 // See if the session id is properly set.
                 if (params.containsKey("session.id")) {
@@ -449,6 +499,7 @@ public abstract class LoginAbstractAzkabanServlet extends AbstractAzkabanServlet
                     logger.info("handle dss login , dss_secret pass check");
                     try {
                         session = createSession(username, password, ip, wtss_secret_de);
+                        resp.setHeader("csrfToken", session.getSessionData("csrfToken") + "");
                     } catch (final Exception e) {
                         writeResponse(resp, "Login error: " + e.getMessage());
                         return;
@@ -456,6 +507,7 @@ public abstract class LoginAbstractAzkabanServlet extends AbstractAzkabanServlet
                 } else {
                     try {
                         session = createSession(username, password, ip);
+                        resp.setHeader("csrfToken", session.getSessionData("csrfToken") + "");
                     } catch (final UserManagerException e) {
                         writeResponse(resp, "Login error: " + e.getMessage());
                         return;
@@ -473,6 +525,7 @@ public abstract class LoginAbstractAzkabanServlet extends AbstractAzkabanServlet
                 // If it's a post command with curl, we create a temporary session
                 try {
                     session = createSession(req);
+                    resp.setHeader("csrfToken", session.getSessionData("csrfToken") + "");
                 } catch (final UserManagerException e) {
                     writeResponse(resp, "Login error: " + e.getMessage());
                 }
@@ -538,6 +591,10 @@ public abstract class LoginAbstractAzkabanServlet extends AbstractAzkabanServlet
             throws UserManagerException, ServletException, IOException {
         final String username = getParam(req, "username");
         String password = getParam(req, "userpwd");
+        String frompage = "";
+        if(hasParam(req, "frompage")){
+            frompage = getParam(req, "frompage");
+        }
 
         final Props props = this.application.getServerProps();
 
@@ -597,6 +654,15 @@ public abstract class LoginAbstractAzkabanServlet extends AbstractAzkabanServlet
         } catch (final Exception e) {
             logger.error("no super user", e);
             //没有超级用户，直接ignore
+        }
+        if("true".equals(frompage)){
+            try {
+                String passwordPrivateKey = props.getString("password.private.key");
+                password = RSAUtils.decrypt(passwordPrivateKey, password);
+            } catch (Exception e) {
+                logger.error("decrypt password failed.", e);
+                throw new UserManagerException("decrypt password failed.");
+            }
         }
         return createSession(username, password, ip, req);
     }
@@ -711,6 +777,7 @@ public abstract class LoginAbstractAzkabanServlet extends AbstractAzkabanServlet
             Session session = null;
             try {
                 session = createSession(req);
+                resp.setHeader("csrfToken", session.getSessionData("csrfToken") + "");
             } catch (final UserManagerException | IOException e) {
                 ret.put("error", "Login in error. " + e.getMessage());
                 return;

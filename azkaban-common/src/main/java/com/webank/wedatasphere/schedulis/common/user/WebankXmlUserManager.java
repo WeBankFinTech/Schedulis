@@ -431,5 +431,4 @@ public class WebankXmlUserManager implements UserManager {
     }
   }
 
-
 }

@@ -365,6 +365,7 @@ public abstract class AbstractAzkabanServlet extends HttpServlet {
 
         if (session != null && session.getUser() != null) {
             page.add("user_id", session.getUser().getUserId());
+            page.add("csrfToken", session.getSessionData("csrfToken"));
         }
         page.add("context", req.getContextPath());
 

@@ -36,6 +36,7 @@ import java.time.Duration;
  */
 public class Constants {
 
+  public static final String WTSS_PUBLIC_KEY = "wtss.public.key";
   public static final Object HISTORY_RERUN_LOCK = new Object();
   public static final String USER_DEFINED_PARAM = "userDefined";
   public static final String FLOW_PAUSED_MAX_TIME_MS = "flow.paused.max.time.ms";

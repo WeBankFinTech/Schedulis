@@ -83,7 +83,7 @@ public abstract class FlowWatcher {
   }
 
   public Status peekStatus(final String jobId) {
-    if (Status.isStatusFinished(this.flow.getStatus())) {
+    if (this.flow == null || Status.isStatusFinished(this.flow.getStatus())) {
       return null;
     }
     final ExecutableNode node = this.flow.getExecutableNodePath(jobId);

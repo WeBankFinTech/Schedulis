@@ -64,6 +64,7 @@
         <div class="modal-footer">
           <input type="hidden" name="project" value="$project.name">
           <input type="hidden" name="action" value="upload">
+          <input type="hidden" name="csrfToken" value="$csrfToken">
           <button type="button" class="btn btn-default" data-dismiss="modal">$cancel</button>
           <button type="button" class="btn btn-primary" id="upload-project-btn">$upload</button>
         </div>

@@ -74,7 +74,7 @@ public class SystemUserManager implements UserManager {
         if (null != wtssUser){
           wtssUser.setPassword(password);
         } else {
-          throw new UserManagerException("Unknown User.");
+          throw new UserManagerException("Error User Name Or Password.");
         }
 
         boolean ldapSwitch = props.getBoolean("ladp.switch", false);
@@ -157,7 +157,7 @@ public class SystemUserManager implements UserManager {
           user = new User(wtssUser.getUsername());
           wtssUser.setPassword("");
         } else {
-          throw new UserManagerException("Unknown User.");
+          throw new UserManagerException("Error User Name Or Password.");
         }
         initUserAuthority(wtssUser, user);
       } catch (Exception e) {
@@ -257,6 +257,41 @@ public class SystemUserManager implements UserManager {
       return true;
     } else {
       return false;
+    }
+  }
+
+
+  private User validateUserPassword(String UserName, String Password, String prefix, boolean isGetAuth) throws UserManagerException {
+    synchronized (this) {
+      try {
+        //校验用户是否存在
+        WtssUser wtssUser = systemUserLoader.getWtssUserByUsername(UserName);
+        if (null != wtssUser) {
+          wtssUser.setPassword(Password);
+        } else {
+          throw new UserManagerException("Unknown" + prefix + "User.");
+        }
+
+        //校验用户密码
+        if (!"Ops".equals(prefix.trim()) && !LdapCheckCenter.checkLogin(props, UserName, Password) && systemUserLoader.getWtssUserByUsernameAndPassword(wtssUser) == null) {
+          throw new UserManagerException("Error" + prefix + "User Name Or Password.");
+        }
+
+        //赋权限
+        User user = null;
+        if (isGetAuth) {
+          user = new User(wtssUser.getUsername());
+          initUserAuthority(wtssUser, user);
+        }
+        return user;
+      } catch (Exception e) {
+        logger.error("Login error！ caused by {}：", e);
+        if (e instanceof UserManagerException) {
+          throw new UserManagerException(e.getMessage());
+        } else {
+          throw new UserManagerException("Error" + prefix + "User Name Or Password.");
+        }
+      }
     }
   }
 

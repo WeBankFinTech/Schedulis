@@ -354,4 +354,5 @@ public class XmlUserManager implements UserManager {
       return false;
     }
   }
+
 }
