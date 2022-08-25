@@ -45,7 +45,7 @@ public class AbstractDistributeLock implements DistributeLockAdapter {
     }
 
     //将requestId保存在该变量中
-    ThreadLocal<String> requestIdTL = new ThreadLocal<>();
+    static ThreadLocal<String> requestIdTL = new ThreadLocal<>();
 
     /**
      * 获取当前线程所拥有的锁信息
