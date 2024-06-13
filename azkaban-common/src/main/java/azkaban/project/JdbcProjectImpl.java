@@ -179,6 +179,9 @@ public class JdbcProjectImpl implements ProjectLoader {
         }
       }
       project = projects.get(0);
+      if (!project.isActive()){
+        throw new ProjectManagerException("No project with name " + name + " exists in db.");
+      }
       for (final Triple<String, Boolean, Permission> perm : fetchPermissionsForProject(project)) {
         if (perm.getThird().toFlags() != 0) {
           setProjectPermission(project, perm);
