@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration status="info" monitorInterval="60">
+    <appenders>
+        <Console name="Console" target="SYSTEM_OUT">
+            <ThresholdFilter level="trace" onMatch="ACCEPT" onMismatch="DENY"/>
+            <PatternLayout pattern="%d{yyyy-MM-dd HH:mm:ss.SSS} %-5level [%t] %logger{36} %L %M - %msg%xEx%n"/>
+        </Console>
+        <RollingFile name="fixedTimeFileAppender" fileName="/appcom/logs/azkaban/schedulis-execserver.log"
+                     filePattern="${date:yyyy-MM}/schedulis--log-%d{yyyy-MM-dd}-%i.log.gz">
+            <PatternLayout pattern="%d{yyyy-MM-dd HH:mm:ss.SSS} %-5level [%t] %logger{36} %L %M - %msg%xEx%n"/>
+            <Policies>
+                <TimeBasedTriggeringPolicy />
+                <SizeBasedTriggeringPolicy size="1GB"/>
+            </Policies>
+            <DefaultRolloverStrategy max="24"/>
+        </RollingFile>
+    </appenders>
+    <loggers>
+        <root level="INFO" includeLocation="true">
+            <AppenderRef ref="Console"/>
+            <AppenderRef ref="fixedTimeFileAppender" />
+        </root>
+    </loggers>
+</configuration>
+

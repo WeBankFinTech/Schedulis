@@ -1,0 +1,363 @@
+#*
+ * Copyright 2012 LinkedIn Corp.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not
+ * use this file except in compliance with the License. You may obtain a copy of
+ * the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations under
+ * the License.
+*#
+<!-- executionspage.vm -->
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+
+#parse("azkaban/webapp/servlet/velocity/style.vm")
+#parse("azkaban/webapp/servlet/velocity/javascript.vm")
+    <link rel="stylesheet" type="text/css" href="${context}/css/bootstrap-datetimepicker.css?version=1.10.0"/>
+    <script type="text/javascript">
+      var contextURL = "${context}";
+      var currentTime = ${currentTime};
+      var timezone = "${timezone}";
+      var errorMessage = null;
+      var successMessage = null;
+      var langType = "${currentlangType}";
+    </script>
+    <script type="text/javascript" src="${context}/js/moment.min.js?version=1.10.0"></script>
+    <script type="text/javascript" src="${context}/js/bootstrap-datetimepicker.min.js?version=1.10.0"></script>
+    <script type="text/javascript" src="${context}/js/azkaban/i18n-config.js?version=1.10.0"></script>
+    <script type="text/javascript" src="${context}/js/azkaban/util/ajax.js?version=1.10.0"></script>
+    <script type="text/javascript" src="${context}/js/azkaban/view/executions.js?version=1.10.0"></script>
+    <script type="text/javascript" src="${context}/js/jquery/jquery.tablesorter.js?version=1.10.0"></script>
+    <script type="text/javascript" src="${context}/js/azkaban/view/table-sort.js?version=1.10.0"></script>
+    <script type="text/javascript" src="${context}/js/azkaban/util/date.js?version=1.10.0"></script>
+    <script type="text/javascript" src="${context}/js/azkaban/util/job-status.js?version=1.10.0"></script>
+    <script type="text/javascript" src="${context}/js/raphael.min.js?version=1.10.0"></script>
+    <script type="text/javascript" src="${context}/js/morris.min.js?version=1.10.0"></script>
+    <script type="text/javascript" src="${context}/js/azkaban/view/repeat-collection-page.js?version=1.10.0"></script>
+
+  </head>
+  <body>
+
+  #set ($current_page="executing")
+  #parse ("azkaban/webapp/servlet/velocity/nav.vm")
+
+## Page header.
+
+<div class="az-page-header">
+  <div class="container-full">
+    <div class="row">
+      <div class="header-title">
+        <h1><a href="${context}/executor">$runningFlow</a></h1>
+      </div>
+      <div class="header-control">
+        <form class="form-inline header-form" role="form">
+          <div class="form-group">
+            <div class="pull-right">
+              <span class="input-group-btn">
+                <button id="exec-page-refresh-btn" type="button" class="btn btn-success btn-sm" style="float:right">$refresh</button>
+              </span>
+            </div>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+## 提示用户操作权限是否可用会话框
+<div class="modal" id="kill-current-running-flow-panel">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+        <h4 id="title-kill-current-running-flow" class="modal-title"></h4>
+      </div>
+      <div class="modal-body" >
+        <p id="body-kill-current-running-flow"></p>
+      </div>
+      <div class="modal-footer">
+        <form id="button-kill-current-running-flow-panel-close">
+          <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="container-full">
+
+  #parse ("azkaban/webapp/servlet/velocity/alerts.vm")
+
+## Page Content
+
+      <ul class="nav nav-tabs nav-sm" id="header-tabs">
+        <li id="currently-running-view-link"><a href="#currently-running">$currentRunning</a></li>
+        <li id="recently-finished-view-link"><a href="#recently-finished">$recentFinish</a></li>
+        <li id="recover-history-view-link"><a href="#recover-history">$reRunHistory</a></li>
+        <li id="cycle-execution-view-link"><a href="#cycle-execution">$cycleExecution</a></li>
+      </ul>
+      <!-- 正在执行的Flow -->
+      <div class="row" id="currently-running-view">
+        <div class="col-xs-12" id="executing-flows-view">
+            <i>$clickColumntoRank</i>
+            <table id="executingJobs"
+                   class="table table-striped table-bordered table-hover table-condensed executions-table">
+            <thead>
+              <tr>
+                <th>#</th>
+                <th class="execid">$execId</th>
+                <th>$execNodeId</th>
+                <th>$flow</th>
+                <th>$program</th>
+                <th class="user">$user</th>
+                ##<th class="user">$proxyUser</th>
+                <th class="date">$startTime</th>
+                ##<th class="date">$endTime</th>
+                <th class="date">$runBatchDate</th>
+                <th class="elapse">$timeOfExec</th>
+                <th class="status">$status</th>
+                <th class="action">$operate</th>
+              </tr>
+            </thead>
+            <tbody id="executing-tbody">
+
+###if ( $utils.isNotNull(${runningFlows}))
+##  #foreach ($flow in $runningFlows)
+##              <tr>
+##                 <td class="tb-name">
+##                   $velocityCount
+##                </td>
+##                <td class="tb-name">
+##                  <a href="${context}/executor?execid=${flow.getFirst().executionId}">${flow.getFirst().executionId}</a>
+##                </td>
+##                <td>
+##                #if (${flow.getSecond().isPresent()})
+##                 ${flow.getSecond().get().getId()}
+##                #else
+##                  -
+##                #end
+##                </td>
+##                <td style="width:350px;word-break:break-all;"><a href="${context}/manager?project=$vmutils.getProjectName(${flow.getFirst().projectId})&flow=${flow.getFirst().flowId}">${flow.getFirst().flowId}</a></td>
+##                <td style="width:350px;word-break:break-all;">
+##                  <a href="${context}/manager?project=$vmutils.getProjectName(${flow.getFirst().projectId})">$vmutils.getProjectName(${flow.getFirst().projectId})</a>
+##                </td>
+##                <td>${flow.getFirst().submitUser}</td>
+##                <td>${flow.getFirst().proxyUsers}</td>
+##                <td>$utils.formatDate(${flow.getFirst().startTime})</td>
+##                <td>$utils.formatDate(${flow.getFirst().endTime})</td>
+##                <td>$utils.formatRunDate(${flow.getFirst().updateTime})</td>
+##                <td>$utils.formatDuration(${flow.getFirst().startTime}, ${flow.getFirst().endTime})</td>
+##                <td><div class="status ${flow.getFirst().status}">$utils.formatStatus(${flow.getFirst().status})</div></td>
+##                <td><button type="button" id="cancelbtn" class="btn btn-danger btn-sm" onclick="killFlow(${flow.getFirst().executionId})">结束</button></td>
+##              </tr>
+##  #end
+###else
+##              <tr>
+##                <td colspan="13">没有正在执行的工作流。</td>
+##              </tr>
+###end
+            </tbody>
+          </table>
+        </div><!-- /col-xs-12 -->
+      </div><!-- /row -->
+      <!-- 最近完成的Flow -->
+      <div class="row" id="recently-finished-view">
+        <div class="col-xs-12">
+          <table id="recentlyFinished" class="table table-striped table-bordered table-hover table-condensed executions-table">
+            <thead>
+              <tr>
+                <th>#</th>
+                <th class="execid"> Id</th>
+                <th>$flow</th>
+                <th>$program</th>
+                <th class="user">$user</th>
+                ##<th class="user">$proxyUser</th>
+                <th class="date">$startTime</th>
+                <th class="date">$endTime</th>
+                <th class="date">$runBatchDate</th>
+                <th class="elapse">$timeOfExec</th>
+                <th class="status">$status</th>
+                <th class="action">$operate</th>
+              </tr>
+            </thead>
+            <tbody>
+#if ( $utils.isNotNull(${recentlyFinished}))
+  #foreach ($flow in $recentlyFinished)
+              <tr>
+                <td class="tb-name">
+                   $velocityCount
+                </td>
+                <td class="tb-name execId">
+                  <a href="${context}/executor?execid=${flow.executionId}">${flow.executionId}</a>
+                </td>
+                <td style="width:350px;word-break:break-all;"><a href="${context}/manager?project=$vmutils.getProjectName(${flow.projectId})&flow=${flow.flowId}">${flow.flowId}</a></td>
+                <td style="width:350px;word-break:break-all;">
+                  <a href="${context}/manager?project=$vmutils.getProjectName(${flow.projectId})">$vmutils.getProjectName(${flow.projectId})</a>
+                </td>
+                <td>${flow.submitUser}</td>
+                ## <td>${flow.proxyUsers}</td>
+                <td>$utils.formatDate(${flow.startTime})</td>
+                <td>$utils.formatDate(${flow.endTime})</td>
+                <td>$utils.formatRunDate(${flow.updateTime})</td>
+                <td>$utils.formatDuration(${flow.startTime}, ${flow.endTime})</td>
+                <td>
+		   <div class="status ${flow.status}">$utils.formatStatus(${flow.status})</div>
+		</td>
+                <td></td>
+              </tr>
+  #end
+#else
+              <tr>
+                <td colspan="10">$recentNoData</td>
+              </tr>
+#end
+
+            </tbody>
+          </table>
+        </div><!-- /col-xs-12 -->
+      </div><!-- /row -->
+
+      <div class="row" id="recover-history-view"><!-- /row -->
+        <div class="col-xs-12">
+          <table class="table table-striped table-bordered table-condensed table-hover" id="execTable">
+            <thead>
+            <tr>
+              <th>#</th>
+              <th>$flow</th>
+              <th>$program</th>
+              <th class="user">$user</th>
+              ##<th class="user">$proxyUser</th>
+              <th class="date">$startTimeofrerun</th>
+              <th class="date">$endTimeofrerun</th>
+              <th class="elapse">$execInterval</th>
+              <th class="date">$runningCompensate</th>
+              <th class="elapse">$runningFlowcId</th>
+              <th class="status">$status</th>
+              <th class="action">$operate</th>
+            </tr>
+            </thead>
+            <tbody id="execTableBody">
+            </tbody>
+          </table>
+          <div>
+            <table id="pageTable">
+              <tr>
+                <td>
+                  <select id="pageSizeSelect" class="form-control select2" style="margin-bottom:5px;height:34px;">
+                    <option value="20">$pp_20</option>
+                    <option value="50">$pp_50</option>
+                    <option value="100">$pp_100</option>
+                  </select>
+                </td>
+                <td>
+                  <ul id="pageSelection" class="pagination">
+                    <li id="previous" class="first"><a><span class="arrow">&larr;</span>$previousPage</a></li>
+                    <li id="page1"><a href="#page1">1</a></li>
+                    <li id="page2"><a href="#page2">2</a></li>
+                    <li id="page3"><a href="#page3">3</a></li>
+                    <li id="page4"><a href="#page4">4</a></li>
+                    <li id="page5"><a href="#page5">5</a></li>
+##                    <li id="next"><a>总页数>${}</li>
+                    <li id="next"><a>$nextPage<span class="arrow">&rarr;</span></a></li>
+                  </ul>
+                </td>
+                <td>
+                  <input id="pageNumInput" class="form-control"  type="number" min="1"  style="margin-bottom:5px;width:100px;"/>
+                </td>
+                <td>
+                  <button id="pageNumJump" class="btn btn-default" style="margin-bottom:5px">$to</button>
+                </td>
+              </tr>
+            </table>
+          </div>
+        </div><!-- /col-xs-12 -->
+      </div><!-- /row -->
+
+       <!-- 循环执行的Flow-->
+      <div class="row" id="cycle-execution-view"><!-- /row -->
+        <div class="col-xs-12">
+            <table class="table table-striped table-bordered table-condensed table-hover" id="cycleExecutionTable">
+                <thead>
+                <tr>
+                    <th>#</th>
+                    <th>$flow</th>
+                    <th>$program</th>
+                    <th class="user">$user</th>
+                    ##<th class="user">$proxyUser</th>
+                    <th class="elapse">$runningFlowcId</th>
+                    <th class="status">$status</th>
+                    <th class="action">$operate</th>
+                </tr>
+                </thead>
+                <tbody id="cycleExecutionTableBody">
+                </tbody>
+            </table>
+            <div>
+                <table id="cycleExecutionPageTable">
+                    <tr>
+                        <td>
+                            <select id="cycleExecutionPageSizeSelect" class="form-control select2" style="margin-bottom:5px;height:34px;">
+                                <option value="20">$pp_20</option>
+                                <option value="50">$pp_50</option>
+                                <option value="100">$pp_100</option>
+                            </select>
+                        </td>
+                        <td>
+                            <ul id="cycleExecutionPageSelection" class="pagination">
+                                <li id="previous" class="first"><a><span class="arrow">&larr;</span>$previousPage</a></li>
+                                <li id="page1"><a href="#page1">1</a></li>
+                                <li id="page2"><a href="#page2">2</a></li>
+                                <li id="page3"><a href="#page3">3</a></li>
+                                <li id="page4"><a href="#page4">4</a></li>
+                                <li id="page5"><a href="#page5">5</a></li>
+                            ##                    <li id="next"><a>总页数>${}</li>
+                                <li id="next"><a>$nextPage<span class="arrow">&rarr;</span></a></li>
+                            </ul>
+                        </td>
+                        <td>
+                            <input id="cycleExecutionPageNumInput" class="form-control"  type="number" min="1"  style="margin-bottom:5px;width:100px;"/>
+                        </td>
+                        <td>
+                            <button id="cycleExecutionPageNumJump" class="btn btn-default" style="margin-bottom:5px">$to</button>
+                        </td>
+                    </tr>
+                </table>
+            </div>
+        </div><!-- /col-xs-12 -->
+    </div><!-- /row -->
+
+      <div class="modal" id="messageDialog">
+        <div class="modal-dialog">
+          <div class="modal-content">
+            <div class="modal-header" id="messageTitle">
+              <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;
+	      </button>
+              <h4 class="modal-title">Error</h4>
+            </div>
+            <div class="modal-body" id="messageDiv">
+              <p id="messageBox"></p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-primary" data-dismiss="modal"
+                        onclick="window.location.reload(true);">$quit
+	      </button>
+            </div>
+          </div>
+       </div>
+      </div>
+    </div><!-- /container-full -->
+  </body>
+  <script type="text/javascript">
+      document.getElementById("pageNumInput").addEventListener("input",function(event){
+          event.target.value = event.target.value.replace(/\-/g,"");
+      });
+
+  </script>
+</html>
