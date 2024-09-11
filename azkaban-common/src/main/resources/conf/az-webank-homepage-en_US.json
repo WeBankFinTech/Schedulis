@@ -1,0 +1,27 @@
+{
+  "module": "az-webank-homepage",
+  "language": "en_US",
+  "azkaban.viewer.homepage.HomePageServlet": {
+    "successFlow": "Successful",
+    "runningFlow": "Running",
+    "failedFlow": "Failed",
+    "killedFlow": "Killed",
+    "preparingFlow": "Waiting"
+  },
+  "azkaban.viewer.home-page.vm": {
+    "home" : "Home",
+    "todayFlowWorkingStatus": "Today Flow Working Status",
+    "getTodayFlowWorkingStatus": "Get Today Flow Working Status",
+    "realTimeFlowInfo": "Real-Time Error Flow Info(Status: KILLED, FAILED, FAILED_FINISHING)",
+    "flowName": "Flow Name",
+    "programName": "Project Name",
+    "creator": "Creator",
+    "numberOfTimesExecute": "Number Of Times In Execute",
+    "numberOfTask": "Number Of Task",
+    "ready": "Ready",
+    "running": "Running",
+    "success": "Success",
+    "failed": "Failed",
+    "cancelled": "Cancelled"
+  }
+}

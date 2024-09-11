@@ -1,0 +1,89 @@
+#*
+ * Copyright 2012 LinkedIn Corp.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not
+ * use this file except in compliance with the License. You may obtain a copy of
+ * the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations under
+ * the License.
+*#
+
+      ## Advanced Filter Modal.
+
+      <div class="modal" id="repeat-collection-panel">
+        <div class="modal-dialog">
+          <div class="modal-content">
+            <div class="modal-header">
+              <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+              <h4 class="modal-title">History Recover</h4>
+            </div>
+            <div class="modal-body">
+              <div class="alert alert-danger" id="repeat-collection-error-msg">$error_msg</div>
+              <fieldset class="form-horizontal">
+                <div class="form-group">
+                  <label for="projcontain" class="col-sm-2 control-label">Project</label>
+                  <div class="col-sm-10">
+                    <input id="projcontain" type="text" value="" readonly="readonly" class="form-control" name="projcontain">
+                  </div>
+                </div>
+                <div class="form-group">
+                  <label for="flowcontain" class="col-sm-2 control-label">Flow</label>
+                  <div class="col-sm-10">
+                    <input id="flowcontain" type="text" value="" readonly="readonly" class="form-control" name="flowcontain">
+                  </div>
+                </div>
+                <!--
+                <div class="form-group" id="usercontain-div">
+                  <label for="usercontain" class="col-sm-2 control-label">User</label>
+                  <div class="col-sm-10">
+                    <input id="usercontain" type="text" placeholder="User name containing ..." value="" class="form-control" name="usercontain">
+                  </div>
+                </div>-->
+                <div class="form-group">
+                  <label for="datetimebegin" class="col-sm-2 control-label">Start Time</label>
+                  <div class="col-sm-4">
+                    <input type="text" id="datetimebegin" value="" class="ui-datetime-container form-control">
+                  </div>
+                  <label for="datetimeend" class="col-sm-2 control-label control-label-center">End Time</label>
+                  <div class="col-sm-4">
+                    <input type="text" id="datetimeend" value="" class="ui-datetime-container form-control">
+                  </div>
+                </div>
+                <div class="form-group">
+                  <label for="status" class="col-sm-3 control-label">Execution Interval</label>
+                </div>
+                <div class="form-group">
+                  <label for="datetimeend" class="col-sm-1 control-label control-label-center">Month</label>
+                  <div class="col-sm-2">
+                    <input type="number" id="repeat-month" value="0" step="1" min="0" max="88" class="form-control">
+                  </div>
+                  <label for="datetimeend" class="col-sm-1 control-label control-label-center">Day</label>
+                  <div class="col-sm-2">
+                    <input type="number" id="repeat-day" value="0" step="1" min="0" max="888" class="form-control">
+                  </div>
+                  <!--
+                  <label for="datetimeend" class="col-sm-1 control-label control-label-center">Hour</label>
+                  <div class="col-sm-2">
+                    <input type="number" id="repeat-hour" value="0" step="1" min="0" max="888" class="form-control">
+                  </div>
+                  <label for="datetimeend" class="col-sm-1 control-label control-label-center">Min</label>
+                  <div class="col-sm-2">
+                    <input type="number" id="repeat-min" value="0" step="1" min="0" max="888" class="form-control">
+                  </div>-->
+                </div>
+              </fieldset>
+            </div>
+            <div class="modal-footer">
+              <button type="button" class="btn btn-default" data-dismiss="modal">Cancel</button>
+              <button class="btn btn-success" id="filter-btn">Execute</button>
+            </div>
+          </div>
+        </div>
+      </div>
+

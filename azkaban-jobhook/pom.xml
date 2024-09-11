@@ -1,0 +1,90 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+
+    <parent>
+        <artifactId>WTSS</artifactId>
+        <groupId>com.wedatasphere.azkaban</groupId>
+        <version>RELEASE</version>
+    </parent>
+
+    <artifactId>azkaban-jobhook</artifactId>
+    <version>${azkaban.version}</version>
+    <packaging>jar</packaging>
+
+    <properties>
+        <maven.compiler.source>8</maven.compiler.source>
+        <maven.compiler.target>8</maven.compiler.target>
+    </properties>
+
+    <dependencies>
+<!--        <dependency>-->
+<!--            <groupId>com.wedatasphere.azkaban</groupId>-->
+<!--            <artifactId>azkaban-exec-server</artifactId>-->
+<!--            <version>${azkaban.version}</version>-->
+<!--        </dependency>-->
+        <dependency>
+            <groupId>com.wedatasphere.azkaban</groupId>
+            <artifactId>azkaban-common</artifactId>
+            <version>${azkaban.version}</version>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <plugins>
+
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-resources-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <id>conf-copy-resources</id>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>copy-resources</goal>
+                        </goals>
+                        <configuration>
+                            <encoding>UTF-8</encoding>
+                            <outputDirectory>
+                                ${project.build.directory}/jobhooks/
+                            </outputDirectory>
+                            <resources>
+                                <resource>
+                                    <directory>jobhooks/</directory>
+                                </resource>
+                            </resources>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-antrun-plugin</artifactId>
+                <version>1.8</version>
+                <executions>
+                    <execution>
+                        <id>copy-jobhook-jar</id>
+                        <phase>package</phase>
+                        <configuration>
+                            <target>
+                                <copy file="${project.build.directory}/azkaban-jobhook-${azkaban.version}.jar"
+                                      todir="${project.build.directory}/jobhooks/dataquality"/>
+                                <copy file="${project.build.directory}/azkaban-jobhook-${azkaban.version}.jar"
+                                      todir="${project.build.directory}/jobhooks/demo"/>
+                                <copy file="${project.build.directory}/azkaban-jobhook-${azkaban.version}.jar"
+                                      todir="${project.build.directory}/jobhooks/eventshell"/>
+                            </target>
+                        </configuration>
+                        <goals>
+                            <goal>run</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+        </plugins>
+
+    </build>
+</project>

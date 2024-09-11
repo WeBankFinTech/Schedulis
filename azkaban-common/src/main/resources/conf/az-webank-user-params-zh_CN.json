@@ -1,0 +1,28 @@
+{
+  "module": "az-webank-user-params",
+  "language": "zh_CN",
+  "azkaban.viewer.system.userparams-manager.vm": {
+    "userParams": "用户参数",
+    "userParamsSetPage": "用户参数设置页面",
+    "addUserParams": "新增用户参数",
+    "paramName": "变量名称",
+    "desc": "描述",
+    "paramValue": "变量值",
+    "owner": "所属用户",
+    "userReadOnly": "只读用户",
+    "createTime": "创建时间",
+    "updateTime": "更新时间",
+    "operate": "操作",
+    "quit": "离开",
+    "addOneLine": "新增一行",
+    "cancel": "取消",
+    "add": "新增",
+    "update": "更新",
+    "delete": "删除",
+    "updateUserParams": "更新用户参数",
+    "status": "状态"
+  },
+  "azkaban.viewer.system.UserParamsServlet": {
+    "modify": "修改"
+  }
+}

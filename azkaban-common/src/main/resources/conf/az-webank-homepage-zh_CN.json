@@ -1,0 +1,27 @@
+{
+  "module": "az-webank-homepage",
+  "language": "zh_CN",
+  "azkaban.viewer.homepage.HomePageServlet": {
+    "successFlow": "成功工作流",
+    "runningFlow": "正在运行工作流",
+    "failedFlow": "失败工作流",
+    "killedFlow": "Kill工作流",
+    "preparingFlow": "等待工作流"
+  },
+  "azkaban.viewer.home-page.vm": {
+    "home": "首页",
+    "todayFlowWorkingStatus": "今日工作流整体状态",
+    "getTodayFlowWorkingStatus": "获取今日工作流整体状态",
+    "realTimeFlowInfo": "异常工作流实时信息(状态: KILLED, FAILED, FAILED_FINISHING)",
+    "flowName": "工作流名称",
+    "programName": "项目名称",
+    "creator": "创建人",
+    "numberOfTimesExecute": "执行次数",
+    "numberOfTask": "任务数",
+    "ready": "未开始",
+    "running": "运行中",
+    "success": "运行成功",
+    "failed": "运行失败",
+    "cancelled": "已取消"
+  }
+}

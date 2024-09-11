@@ -1,0 +1,161 @@
+#*
+ * Copyright 2012 LinkedIn Corp.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not
+ * use this file except in compliance with the License. You may obtain a copy of
+ * the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations under
+ * the License.
+*#
+
+<script type="text/javascript" src="${context}/js/azkaban/util/date.js?version=1.10.0"></script>
+<script type="text/javascript"
+        src="${context}/js/azkaban/view/schedule-panel.js?version=1.10.0"></script>
+<script type="text/javascript" src="${context}/js/moment.min.js?version=1.10.0"></script>
+<script type="text/javascript" src="${context}/js/later.min.js?version=1.10.0"></script>
+<script type="text/javascript" src="${context}/js/moment-timezone-with-data.min.js?version=1.10.0"></script>
+<style type="text/css">
+  .input-box {
+    position: relative;
+  }
+
+  .input-box input {
+    display: block;
+    border: 1px solid #d7d6d6;
+    background: #fff;
+    padding: 10px 10px 10px 20px;
+    width: 195px;
+  }
+
+  .unit {
+    position: absolute;
+    display: block;
+    left: 5px;
+    top: 7px;
+    z-index: 9;
+  }
+</style>
+<div class="modal" id="schedule-modal">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+        <h4 class="modal-title">$scheduleSet</h4>
+      </div><!-- /modal-header -->
+      <div class="modal-body">
+        <fieldset class="form-horizontal">
+          <div class="form-group">
+
+            <div class="col-sm-12" style="height:55px;">
+              <h4 style="color:Coral; font-style:italic;">$refTimeZone <b id="timeZoneID"></b>.</h4>
+              <!--
+              <h6 style="color:#0080ff;">警告:如果它被安排在运行时的一个小时内运行，那么它将被跳过。当PST切换到PDT时，没有2-3 AM。</h6>
+              -->
+            </div>
+            <!--
+            <div class="col-xs-12" style="height:30px;"></div>-->
+            <div class="form-group">
+              <div class="col-sm-6">
+                <label class="col-sm-4 control-label" id="min_label">$minute</label>
+                <div class="col-sm-8">
+                  <input type="text" id="minute_input" value="*" class="form-control"
+                         oninput="updateOutput()">
+                </div>
+                <br/> <br/> <br/>
+                <label class="col-sm-4 control-label" id="hour_label">$hour</label>
+                <div class="col-sm-8">
+                  <input type="text" id="hour_input" value="*" class="form-control"
+                         oninput="updateOutput()">
+                </div>
+                <br/> <br/> <br/>
+                <label class="col-sm-4 control-label" id="dom_label" style="margin-top:-8px">$dayofmonth</label>
+                <div class="col-sm-8">
+                  <input type="text" id="dom_input" value="?" class="form-control"
+                         oninput="updateOutput()">
+                </div>
+                <br/> <br/> <br/>
+                <label class="col-sm-4 control-label" id="mon_label">$month</label>
+                <div class="col-sm-8">
+                  <input type="text" id="month_input" value="*" class="form-control"
+                         oninput="updateOutput()">
+                </div>
+                <br/> <br/> <br/>
+                <label class="col-sm-4 control-label" id="dow_label" style="margin-top:-8px">$dayofweek</label>
+                <div class="col-sm-8">
+                  <input type="text" id="dow_input" value="*" class="form-control"
+                         oninput="updateOutput()">
+                </div>
+                <br/> <br/> <br/>
+                <label class="col-sm-4 control-label" id="year_label">$year</label>
+                <div class="col-sm-8">
+                  <input type="text" id="year_input" value="" class="form-control"
+                         oninput="updateOutput()">
+                </div>
+              </div>
+
+              <div class="col-sm-5" style="background-color:#f5f5f5; border:1px solid #e3e3e3">
+                <h4 style="color:orange">$sepcialcharacter</h4>
+                <table class="table table-striped" data-row-style="rowColors" id="instructions">
+                  <tbody>
+                  <tr class="success">
+                    <th scope="row">*</th>
+                    <td>$anything</td>
+                  </tr>
+                  <tr class="primary">
+                    <th scope="row">,</th>
+                    <td>$commaSep</td>
+                  </tr>
+                  <tr class="warning">
+                    <th scope="row">-</th>
+                    <td>$valueRange</td>
+                  </tr>
+                  <tr class="danger">
+                    <th scope="row">/</th>
+                    <td>$graduallyValue</td>
+                  </tr>
+                  </tbody>
+                </table>
+                <p><u><span style="color:Indigo"><a
+                    href="http://www.quartz-scheduler.org/documentation/quartz-2.x/tutorials/crontrigger.html" target="_blank">$detailDocLink</a></span>.</u>
+                </p>
+              </div>
+            </div>
+
+            <div class="col-sm-offset-1 col-sm-4">
+              <div class="input-box">
+                <input type="text" id="cron-output" value="* * ? * *" oninput="updateExpression()"
+                       class="form-control">
+                <span class="unit">0</span>
+              </div>
+            </div>
+            <button type="button" class="col-sm-offset-1 btn btn-warning" id="clearCron">$clear
+            </button>
+            <div class="col-xs-12" style="height:20px;"></div>
+
+            <div class="col-sm-12" style="background-color:#f5f5f5; border:1px solid #e3e3e3">
+              <h4 id="nextRecurLabel">
+                $previewSch
+              </h4>
+              <ul id="nextRecurId">
+              </ul>
+            </div>
+
+            <h3 id="cronTranslate" style="color:DeepSkyBlue; font-style:italic;"></h3>
+            <div class="col-sm-9 col-sm-offset-3">
+              <p class="text-right" id="translationWarning"></p>
+            </div>
+        </fieldset>
+      </div>
+      <div class="modal-footer" style="padding-top: 0px;margin:0;">
+        <button type="button" class="btn btn-default" data-dismiss="modal">$cancel</button>
+        <button type="button" class="btn btn-success" id="schedule-button">$execSch</button>
+      </div>
+    </div>
+  </div>
+</div>
