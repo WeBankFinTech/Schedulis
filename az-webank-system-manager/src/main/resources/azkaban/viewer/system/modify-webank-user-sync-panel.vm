@@ -1,0 +1,35 @@
+## Modal dialog to be displayed to create a new project.
+
+<div class="modal" id="modify-webank-user-sync-panel">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;
+        </button>
+        <h4 class="modal-title">$syncWebankModifyUserInfo</h4>
+      </div>
+      <div class="modal-body">
+        <div class="alert alert-danger" id="modify-webank-user-sync-error-msg" style="word-break:break-all;"></div>
+        <div class="alert alert-success" id="modify-webank-user-sync-success-msg" style="word-break:break-all;"></div>
+        <fieldset class="form-horizontal">
+          <div class="form-group">
+            <label for="description" class="col-sm-2 control-label">$rateOfProgress</label>
+            <div class="col-sm-8">
+              <div class="flow-progress" style="width: 100%;">
+                <div id="modify-webank-user-sync-progress" class="" />
+              </div>
+            </div>
+          </div>
+        </fieldset>
+      </div>
+      <div class="modal-footer">
+        <input name="action" type="hidden" value="create">
+        <input name="redirect" type="hidden" value="$!context/">
+        <button type="button" class="btn btn-default" data-dismiss="modal">$cancel</button>
+        <button type="button" class="btn btn-primary" id="modify-webank-user-sync-btn">$sync</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+

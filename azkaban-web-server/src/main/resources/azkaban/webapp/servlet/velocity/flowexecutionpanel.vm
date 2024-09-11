@@ -1,0 +1,639 @@
+#*
+ * Copyright 2012 LinkedIn Corp.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not
+ * use this file except in compliance with the License. You may obtain a copy of
+ * the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations under
+ * the License.
+*#
+
+      <div class="modal modal-wide" id="execute-flow-panel">
+        <div class="modal-dialog">
+          <div class="modal-content">
+            <div class="modal-header">
+              <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+              <h4 class="modal-title" id="execute-flow-panel-title" style="word-break:break-all;"></h4>
+            </div><!-- /modal-header -->
+            <div class="modal-body row">
+              <div class="col-xs-4" id="execution-graph-options-box">
+                <ul class="nav nav-pills nav-stacked" id="graph-options">
+                  <li id="flow-option" viewpanel="svg-div-custom">
+                    <a href="#">$flowStruct</a>
+                    <div class="menu-caption">$rightClickBan</div>
+                  </li>
+                  <li id="flow-notification" viewpanel="notification-panel">
+                    <a href="#">$normalAlertSettings</a>
+                    <div class="menu-caption">$settingsAlertList</div>
+                  </li>
+                  <li viewpanel="timeout-alert-panel">
+                      <a href="#">$timeoutSetTag</a>
+                      <div class="menu-caption">$timeoutTips</div>
+                  </li>
+                  <li id="flow-execution-option" viewpanel="failure-options">
+                    <a href="#">$settingsFail</a>
+                    <div class="menu-caption">$failedOperate</div>
+                  </li>
+                  <li viewpanel="concurrent-panel">
+                    <a href="#">$concurrentSet</a>
+                    <div class="menu-caption">$changeAction</div>
+                  </li>
+                  <li viewpanel="flow-parameters-panel">
+                    <a href="#">$flowParamSettings</a>
+                    <div class="menu-caption">$tempSettings</div>
+                  </li>
+                  <li viewpanel="job-output-parameters-panel" id="job-output-parameters-li" style="display:none">
+                    <a href="#">$modifyJobOutputParams</a>
+                    <div class="menu-caption">$modifyJobOutputParamsTips</div>
+                  </li>
+                  <li viewpanel="history-recover-panel" id="history-recover-li">
+                    <a href="#">$setReRunHistory</a>
+                    <div class="menu-caption">$setReRunHistoryParam</div>
+                  </li>
+                  <li viewpanel="cycle-execution-panel" id="cycle-execution-li">
+                    <a href="#">$setCycleExecution</a>
+                    <div class="menu-caption">$setCycleExecutionParam</div>
+                  </li>
+                </ul>
+              </div><!-- /col-xs-4 -->
+              <div class="col-xs-8" id="execution-graph-panel-box">
+                <div id="execution-graph-options-panel">
+                  <div class="graph-sidebar-open " >
+                    <span class="glyphicon glyphicon-retweet switching-flow-btn margin-left-15" id="switching-execute-flow-btn" style="display:none" title="Flow Switching"></span>
+                    <span class="glyphicon glyphicon-zoom-in margin-left-15" id="workflow-execute-zoom-in" title="Zoom in"></span>
+                    <span class="glyphicon glyphicon-zoom-out margin-left-15" id="workflow-execute-zoom-out" style="display:none" title="Zoom out"></span>
+                  </div>
+## SVG graph panel.
+
+                  <div id="svg-div-custom" class="side-panel">
+                    <svg id="flow-executing-graph" xmlns="http://www.w3.org/2000/svg" version="1.1" shape-rendering="optimize-speed" text-rendering="optimize-speed">
+                    </svg>
+                  </div>
+
+## Notification panel.
+
+                  <div id="notification-panel" class="side-panel">
+                    <h4>$failAlertSetDoc</h4>
+                    <p>$failAlertSetDocDetail</p>
+                    <hr>
+                    <div class="btn-group" data-toggle="buttons">
+                      <label class="btn btn-default">
+                        <input id="notify-failure-first" type="radio" name="notify" value="first">$firstFail
+                      </label>
+                      <label class="btn btn-default">
+                        <input id="notify-failure-last" type="radio" name="notify" value="last">$flowFinish
+                      </label>
+                    </div>
+
+                    <h4>$flowFailedAlertList</h4>
+                    <div class="checkbox">
+                      <label>
+                        <input type="checkbox" id="override-failure-emails" name="overrideFailureEmails" value="overrideFailureEmails">
+                        $setAlertList
+                      </label>
+                    </div>
+                    <div style="width: 50%">
+                      <label>$selectAlertLevel</label>
+                      <select id="override-failure-alert-level">
+                        <option value="INFO">INFO</option>
+                        <option value="WARNING">WARNING</option>
+                        <option value="MINOR">MINOR</option>
+                        <option value="MAJOR">MAJOR</option>
+                        <option value="CRITICAL">CRITICAL</option>
+                        <option value="CLEAR">CLEAR</option>
+                      </select>
+                    </div>
+                    <label>$setFailedAlertFormat</label>
+                    <textarea class="form-control" rows="3" placeholder="$alertUserInputTips" id="failure-emails"></textarea>
+
+                    <h4>$successAlertList</h4>
+                    <div class="checkbox">
+                      <label>
+                        <input type="checkbox" id="override-success-emails" name="overrideSuccessEmails" value="overrideSuccessEmails">
+                        $setAlertList
+                      </label>
+                    </div>
+                    <div style="width: 50%">
+                      <label>$selectAlertLevel</label>
+                      <select id="override-success-alert-level">
+                        <option value="INFO">INFO</option>
+                        <option value="WARNING">WARNING</option>
+                        <option value="MINOR">MINOR</option>
+                        <option value="MAJOR">MAJOR</option>
+                        <option value="CRITICAL">CRITICAL</option>
+                        <option value="CLEAR">CLEAR</option>
+                      </select>
+                    </div>
+                    <label>$setSuccAlertFormat</label>
+                    <textarea class="form-control" rows="3" placeholder="$alertUserInputTips" id="success-emails"></textarea>
+
+
+                  </div>
+
+## 单次执行的超时告警设置
+
+    <div id="timeout-alert-panel" class="side-panel">
+        <h4>$timeoutSetTitle</h4>
+        <p>$timeoutSetTitleTips</p>
+        <hr>
+        <div class="checkbox">
+            <label>
+                <input type="checkbox" id="flow-timeout-option" name="flowTimeoutOption">
+                $onJobTimeoutSet
+            </label>
+        </div>
+        <div id="flow-timeout-model">
+            <h4>$alertEmailAddress</h4>
+            <fieldset>
+                <div class="form-group">
+                    <textarea id="timeout-slaEmails" placeholder="$alertUserInputTips" class="form-control"></textarea>
+                </div>
+            </fieldset>
+            <h4>$ruleTimeoutAlertSet</h4>
+            <table class="table table-striped" id="timeout-flowRulesTbl">
+                <thead>
+                <tr>
+                    <th>$ruleAlert</th>
+                    <th>$timeout (In HH:MM eg. kill in 10 minutes is 00:10)</th>
+                    <th>$alertLevel</th>
+                    <th>$sendemail</th>
+                    <th>$stopJoborFlow</th>
+                </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>
+                            <select class="form-control" id="timeout-status">
+                                <option value="SUCCESS">SUCCESS</option>
+                                <option value="FINISH">FINISH</option>
+                            </select>
+                        </td>
+                        <td>
+                            <input type="text" class="durationpick form-control" id="timeout-second">
+                        </td>
+                        <td>
+                            <select class="form-control" id="timeout-level">
+                                <option value="INFO">INFO</option>
+                                <option value="WARNING">WARNING</option>
+                                <option value="MINOR">MINOR</option>
+                                <option value="MAJOR">MAJOR</option>
+                                <option value="CRITICAL">CRITICAL</option>
+                                <option value="CLEAR">CLEAR</option>
+                            </select>
+                        </td>
+                        <td>
+                            <input type="checkbox" id="timeout-email">
+                        </td>
+                        <td>
+                            <input type="checkbox" id="timeout-killflow">
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+## Failure options panel.
+
+                  <div id="failure-options" class="side-panel">
+                    <h4>$settingsFail</h4>
+                    <p>$selectErrorOperate</p>
+                    <hr>
+                    <ul>
+                      <li><strong>$finishRunnableJob</strong> $tipsFinishRunnableJob</li>
+                      <li><strong>$finishRunningJob</strong> $tipsfinishRunningJob</li>
+                      <li><strong>$shutdownRunningJob</strong> $tipsShutdownRunningJob</li>
+                      <li><strong>$suspendCurrentFlow</strong> $tipsSuspendCurrentFlow。 </li>
+                    </ul>
+                    <select id="failure-action" name="failureAction"
+		            class="form-control form-control-auto">
+                      <option value="finishPossible">$finishRunnableJob</option>
+                      <option value="finishCurrent">$finishRunningJob</option>
+                      <option value="cancelImmediately">$shutdownRunningJob</option>
+                      <option value="failedPause">$suspendCurrentFlow</option>
+                    </select>
+                    <hr>
+                    <p>$retryFailed</p>
+                    <div id="job-failed-retry-view">
+                      <table class="table table-striped" id="jobFailedRetryTable">
+                        <thead>
+                        <tr>
+                          <th>$job</th>
+                          <th>$retryInterval</th>
+                          <th>$timesOfRetry</th>
+                          <th>$operate</th>
+                        </tr>
+                        </thead>
+                        <tbody id="set-job-retry-failed-tbody">
+                        <tr id="addFailedRow">
+                          <td id="addFailedRow-col" colspan="5">
+                            <span class="addIcon"></span>
+                            <button type="button" class="btn btn-xs btn-success" id="add-failed-retry-btn">$addOneLine</button>
+                          </td>
+                        </tr>
+                        </tbody>
+                      </table>
+                    </div>
+                    <p>$skipFailed</p>
+                    <div id="job-skip-failed-view">
+                      <table class="table table-striped" id="jobSkipFailedTable">
+                        <thead>
+                        <tr>
+                          <th>$jobName</th>
+                        </tr>
+                        </thead>
+                        <tbody id="set-job-skip-failed-tbody">
+                        <tr id="addSkipJobRow">
+                          <td id="addSkipJobRow-col" colspan="5">
+                            <span class="addIcon"></span>
+                            <button type="button" class="btn btn-xs btn-success" id="add-skip-failed-btn">$addOneLine</button>
+                          </td>
+                        </tr>
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+
+## Concurrent execution options panel.
+
+                  <div id="concurrent-panel" class="side-panel">
+                    <h4>$concurrentSet</h4>
+                    <p>$changeAction</p>
+                    <hr>
+                    <div class="radio">
+                      <label>
+                        <input type="radio" id="skip" name="concurrent" value="skip" checked="checked">
+                        $skipExcute
+                      </label>
+                      <span class="help-block">$tipsSkipExcute</span>
+                    </div>
+
+                    <div class="radio">
+                      <label>
+                        <input type="radio" id="ignore" name="concurrent" value="ignore">
+                        $meanwhileRun
+                      </label>
+                      <span class="help-block">$tipsMeanwhileRun</span>
+                    </div>
+
+                    <div class="radio">
+                      <label>
+                        <input type="radio" id="pipeline" name="concurrent" value="pipeline">
+                        $channel
+                      </label>
+                      <select id="pipeline-level" name="pipelineLevel" class="form-control form-control-auto input-sm">
+                        <option value="1">Level 1</option>
+                        <option value="2">Level 2</option>
+                      </select>
+                      <span class="help-block">
+                        $setChannel
+                        <li>
+                          <li>$optChannelone</li>
+                          <li>$optChanneltwo</li>
+                        </li>
+                      </span>
+                    </div>
+                  </div>
+
+## Flow parameters panel
+
+                  <div id="flow-parameters-panel" class="side-panel">
+                    <h4>$flowParamOverride</h4>
+                    <hr>
+                    <div id="editTable">
+                      <table class="table table-striped">
+                        <thead>
+                          <tr>
+                            <th class="property-key">$paramName</th>
+                            <th>$paramValue</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          <tr id="addRow" class="addRow">
+                            <td id="addRow-col" colspan="2">
+                              <button type="button" class="btn btn-success btn-xs" id="add-btn">$addOneLine</button>
+                            </td>
+                          </tr>
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+
+## job output parameters panel
+
+                  <div id="job-output-parameters-panel" class="side-panel">
+                    <h4>$modifyJobOutputParamsTitle</h4>
+                    <hr>
+                    <div id="jobOutputParam-editTable">
+                      <table class="table table-striped">
+                        <thead>
+                          <tr>
+                            <th class="property-key">$paramName</th>
+                            <th>$paramValue</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          <tr id="jobOutputParam-addRow" class="addRow">
+                            <td id="jobOutputParam-addRow-col" colspan="2">
+                              <button type="button" class="btn btn-success btn-xs" id="jobOutputParam-add-btn">$addOneLine</button>
+                            </td>
+                          </tr>
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+
+## History Recover panel
+
+                  <div id="history-recover-panel" class="side-panel">
+                    <h4>$setReRunHistory</h4>
+                    <hr>
+                    <br/>
+                    <table>
+                      <tr>
+                        <td><h4></h4></td>
+                      </tr>
+                      <tr>
+                        <div class="checkbox">
+                          <label>
+                            <input type="checkbox" id="enable-history-recover" name="enableHistoryRecover" value="">
+                            $onHistoryRerun
+                          </label>
+                        </div>
+                        <div class="checkbox">
+                          <label>
+                            <input type="checkbox" id="enable-reverse-execute-history-recover" name="reverseExecuteHistoryRecover" value="">
+                            $reverseHistoryRerun
+                          </label>
+                        </div>
+                        <div class="checkbox">
+                          <label>
+                            <input type="checkbox" id="enable-history-recover-finished-alert" name="finishedAlert">
+                            $historyRecoverAlert
+                          </label>
+                        </div>
+                      </tr>
+                      <tr>
+                        <td><h4>$historyRerunTime</h4></td>
+                      </tr>
+                      <tr>
+                        <td>
+                          <div class="form-group">
+                            <label for="datetimebegin" class="col-sm-3 control-label">$startTime</label>
+                            <div class="col-sm-3">
+                              <input type="text" id="datetimebegin" value="" class="ui-datetime-container form-control">
+                            </div>
+                            <label for="datetimeend" class="col-sm-3 control-label control-label-center">$endTime</label>
+                            <div class="col-sm-3">
+                              <input type="text" id="datetimeend" value="" class="ui-datetime-container form-control">
+                            </div>
+                          </div>
+                        </td>
+                      </tr>
+                      <tr>
+                        <td><h4>$historyRerunTimeInterval</h4></td>
+                      </tr>
+                      <tr>
+                        <td>
+                          <div class="form-group">
+##                            <label for="repeat-month" class="col-sm-2 control-label control-label-center">Month</label>
+##                            <div class="col-sm-3">
+##                              <input type="number" id="repeat-month" value="0" step="1" min="0" max="88" class="form-control">
+##                            </div>
+##                            <label for="repeat-day" class="col-sm-2 control-label control-label-center">Day</label>
+                            <label for="datetimebegin" class="col-sm-3 control-label">$retryInterval</label>
+                            <div class="col-sm-3">
+                              <input type="number" id="repeat-num" value="1" step="1" min="1" max="888" class="form-control">
+                            </div>
+                            <label for="datetimebegin" class="col-sm-3 control-label">$intervalUnit</label>
+                            <div class="col-sm-3">
+                              <select id="recover-interval" name="" class="form-control form-control-auto">
+                                <option value="day">Day</option>
+                                <option value="week">Week</option>
+                                <option value="month">Month</option>
+                              </select>
+                            </div>
+                          </div>
+                        </td>
+                      </tr>
+                      <tr>
+                        <td>
+                          <h4>$historyRerunDay</h4>
+                        </td>
+                      </tr>
+                      <tr>
+                        <td>
+                          <div class="form-group">
+                            <label for="runDateTime" class="col-sm-3 control-label">$flowDate</label>
+                            <div class="col-sm-9">
+                            ## direction: 'any' 设定日期选择限制,any表示无限制,
+                            ## ”past”|”today-past”|”any”|”today-future”|”future”。对应以下说明:
+                            ## 今日以前，今日及今日以前，无限制，今日及今日以后，今日以后。
+                              <input type="text" id="runDateTime" readonly class="auto-kal form-control"
+                              data-kal="mode:'multiple', direction: 'any'" style="width: 100%;" />
+                            </div>
+                            <span class="glyphicon glyphicon-repeat run-datetime-reset" id="resetRunDateTime" title="Reset"></span>
+                          </div>
+                        </td>
+                      </tr>
+                      <tr>
+                        <td><h4>$setReRunHistoryFailed</h4></td>
+                      </tr>
+                      <tr>
+                        <td>
+                          <div class="form-group">
+                            <div class="col-sm-3">
+                              <select id="recover-error-option" name="" class="form-control form-control-auto">
+                                <option value="errorStop">$setReRunHistoryFailedShutdown</option>
+                                <option value="errorCountion">$setReRunHistoryFailedfinish</option>
+                              </select>
+                            </div>
+                          </div>
+                        </td>
+                      </tr>
+
+                      <tr>
+                        <td>
+                          <div class="form-group">
+                            <h4 class="col-sm-4" style="padding-left: 0px;">历史重跑并发数设置</h4>
+                            <select id="recover-Concurrent-option" class="col-sm-3 form-control form-control-auto">
+                              <option value="1">1</option>
+                              <option value="2">2</option>
+                              <option value="3">3</option>
+                            </select>
+                          </div>
+                        </td>
+                      </tr>
+
+                      <tr>
+                        <td>
+                          <h4>$hisReRunPeriodAlert</h4>
+                          <div style="width: 50%">
+                            <label>$selectAlertLevel</label>
+                            <select id="flow-history-rerun-finish-alert-level">
+                              <option value="INFO">INFO</option>
+                              <option value="WARNING">WARNING</option>
+                              <option value="MINOR">MINOR</option>
+                              <option value="MAJOR">MAJOR</option>
+                              <option value="CRITICAL">CRITICAL</option>
+                              <option value="CLEAR">CLEAR</option>
+                            </select>
+                          </div>
+                          <label>$setFinishAlertFormat</label>
+                          <textarea class="form-control" rows="3" placeholder="$alertUserInputTips" id="flow-history-rerun-finish-emails"></textarea>
+                        </td>
+                      </tr>
+
+                      <tr>
+                        <td><h4>$reRunHistorytimespreview</h4></td>
+                      </tr>
+                      <tr>
+                        <td>
+                          <div class="form-group">
+                            <div class="col-sm-3">
+                              <span id="history-run-num"></span>
+                            </div>
+                          </div>
+                        </td>
+                      </tr>
+
+                      <tr>
+                        <td>
+                          <div class="form-group">
+                             <div class="btn-group" data-toggle="buttons">
+                               <label class="btn btn-default active" id="id-show-start-five-date">
+                                 <input id="show-start-five-date" type="radio" name="notify" value="first" checked="checked" >$showTop10
+                               </label>
+                               <label class="btn btn-default" id="id-show-last-five-date">
+                                 <input id="show-last-five-date" type="radio" name="notify" value="last">$showLast10
+                               </label>
+                             </div>
+                          </div>
+                        </td>
+                      </tr>
+
+                    </table>
+
+                    <br/>
+                    <div class="col-sm-12" style="background-color:#f5f5f5; border:1px solid #e3e3e3">
+                      <h4>
+                        $reRunHistorytimespreviewtop10
+                      </h4>
+                      <ul id="nextRecoverId">
+                      </ul>
+                    </div>
+
+                  </div>
+
+## Cycle Execution pannel
+                <div id="cycle-execution-panel" class="side-panel">
+                    <h4>$setCycleExecution</h4>
+                    <hr>
+                    <label>$cycleExecutionWarming</label>
+                    <table>
+                        <tr>
+                            <div class="checkbox">
+                                <label>
+                                    <input type="checkbox" id="enable-cycle-execution" name="enableCycleExecution" value="">
+                                    $onCycleExecution
+                                </label>
+                            </div>
+                        </tr>
+                        <tr>
+                            <td><h4>$setCycleExecutionFailed</h4></td>
+                        </tr>
+                        <tr>
+                            <td>
+                                <div class="form-group">
+                                    <div class="col-sm-3">
+                                        <select id="cycle-error-option" name="" class="form-control form-control-auto">
+                                            <option value="errorStop">$setCycleExecutionFailedShutdown</option>
+                                            <option value="errorContinue">$setCycleExecutionFailedFinish</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>
+                                <h4>$setCycleExecutionEmailsTitle</h4>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>
+                                <div style="width: 50%">
+                                    <label>$selectAlertLevel</label>
+                                    <select id="cycleFlow-interrupt-alert-level">
+                                        <option value="INFO">INFO</option>
+                                        <option value="WARNING">WARNING</option>
+                                        <option value="MINOR">MINOR</option>
+                                        <option value="MAJOR">MAJOR</option>
+                                        <option value="CRITICAL">CRITICAL</option>
+                                        <option value="CLEAR">CLEAR</option>
+                                    </select>
+                                </div>
+                                <label>$setCycleExecutionEmailsLabel</label>
+                                <textarea class="form-control" rows="3" placeholder="$alertUserInputTips" id="cycleFlow-interrupt-emails"></textarea>
+                            </td>
+                        </tr>
+                    </table>
+                    <br/>
+                </div>
+
+                </div><!-- /execution-graph-options-panel -->
+              </div><!-- /col-xs-8 -->
+            </div><!-- /modal-body -->
+
+
+
+            <div class="modal-footer">
+              <!--
+#if (!$show_schedule || $show_schedule == 'true')
+              <div class="pull-left">
+                <button type="button" class="btn btn-success" id="schedule-btn">定时调度</button>
+              </div>
+#end
+              <div class="pull-left" style="margin-left: 20px">
+                <button type="button" class="btn btn-success" id="history-recover-btn">历史重跑</button>
+              </div>-->
+#*
+#if ($triggerPlugins.size() > 0)
+  #foreach ($triggerPlugin in $triggerPlugins)
+              <button type="button" class="btn btn-default" id=set-$triggerPlugin.pluginName>$triggerPlugin.pluginName</button>
+  #end
+#end
+*#
+              <div style="display:none" id="start-all-div">
+                  <button id="close-start-all-modal" type="button" class="btn btn-default" data-dismiss="modal">$cancel</button>
+                  <button type="button" class="btn btn-primary" id="start-all-btn">$execAllFlow</button>
+              </div>
+              <div id="execute-div">
+                  <button id="closeFlowExecutionPanelButton" type="button" class="btn btn-default" data-dismiss="modal">$cancel</button>
+                  <button type="button" class="btn btn-primary" id="execute-btn">$executeSet</button>
+              </div>
+            </div><!-- /modal-footer -->
+          </div><!-- /modal-content -->
+        </div><!-- /modal-dialog -->
+      </div><!-- /modal -->
+
+#if (!$show_schedule || $show_schedule == 'true')
+  #parse ("azkaban/webapp/servlet/velocity/schedulepanel.vm")
+#end
+
+#*
+#if ($triggerPlugins.size() > 0)
+  #foreach ($triggerPlugin in $triggerPlugins)
+    #set ($prefix = $triggerPlugin.pluginName)
+    #set ($webpath = $triggerPlugin.pluginPath)
+    #parse ($triggerPlugin.inputPanelVM)
+  #end
+#end
+*#
+
+      <div id="contextMenu"></div>

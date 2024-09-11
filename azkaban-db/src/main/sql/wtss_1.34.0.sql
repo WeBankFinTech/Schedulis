@@ -1,0 +1,1 @@
+alter table wtss_job_id_relation add column linkis_id varchar(256) default '';

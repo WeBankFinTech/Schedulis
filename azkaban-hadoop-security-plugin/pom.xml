@@ -1,0 +1,95 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+  <artifactId>azkaban-hadoop-security-plugin</artifactId>
+  <version>${schedulis.version}</version>
+  <packaging>jar</packaging>
+
+
+  <parent>
+    <groupId>com.webank.wedatasphere.schedulis</groupId>
+    <artifactId>schedulis</artifactId>
+    <version>0.9.0</version>
+  </parent>
+
+  <dependencies>
+    <dependency>
+      <groupId>com.webank.wedatasphere.schedulis</groupId>
+      <artifactId>az-core</artifactId>
+      <version>${schedulis.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>com.webank.wedatasphere.schedulis</groupId>
+      <artifactId>azkaban-common</artifactId>
+      <version>${schedulis.version}</version>
+    </dependency>
+
+    <dependency>
+      <groupId>org.apache.hadoop</groupId>
+      <artifactId>hadoop-mapreduce-client-core</artifactId>
+      <version>${hadoop.version}</version>
+      <exclusions>
+        <exclusion>
+          <artifactId>netty</artifactId>
+          <groupId>io.netty</groupId>
+        </exclusion>
+      </exclusions>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.hadoop</groupId>
+      <artifactId>hadoop-mapreduce-client-common</artifactId>
+      <version>${hadoop.version}</version>
+      <exclusions>
+        <exclusion>
+          <artifactId>netty</artifactId>
+          <groupId>io.netty</groupId>
+        </exclusion>
+      </exclusions>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.hadoop</groupId>
+      <artifactId>hadoop-common</artifactId>
+      <version>${hadoop.version}</version>
+      <exclusions>
+        <exclusion>
+          <artifactId>netty</artifactId>
+          <groupId>io.netty</groupId>
+        </exclusion>
+      </exclusions>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.hive</groupId>
+      <artifactId>hive-exec</artifactId>
+      <version>${hive.version}</version>
+      <exclusions>
+        <exclusion>
+          <groupId>org.pentaho</groupId>
+          <artifactId>pentaho-aggdesigner-algorithm</artifactId>
+        </exclusion>
+        <exclusion>
+          <groupId>eigenbase</groupId>
+          <artifactId>eigenbase-properties</artifactId>
+        </exclusion>
+      </exclusions>
+    </dependency>
+  </dependencies>
+
+  <build>
+    <plugins>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-jar-plugin</artifactId>
+        <version>3.1.0</version>
+        <configuration>
+          <classesDirectory>target/classes/</classesDirectory>
+          <archive>
+            <!-- 避免打jar包时maven覆盖META-INF中文件 -->
+            <!-- <addMavenDescriptor>false</addMavenDescriptor> -->
+          </archive>
+        </configuration>
+      </plugin>
+    </plugins>
+  </build>
+</project>

@@ -1,0 +1,30 @@
+## Page header.
+
+<div class="az-page-header page-header-bare">
+    <div class="container-full">
+        <div class="row">
+            <div class="header-title">
+                <h1><a href="javascript:void(0);" onclick="checkHrefUrlXss('/event/auth/log?sender=${sender}')">$messageSender
+                    <small>${sender}</small>
+                </a></h1>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="page-breadcrumb">
+    <div class="container-full" style="word-break:break-all;">
+        <ol class="breadcrumb">
+            <li class="active">
+                <strong>$messageSender</strong> ${sender}
+            </li>
+        </ol>
+    </div>
+</div>
+
+<div class="container-full">
+    #parse ("azkaban/webapp/servlet/velocity/alerts.vm")
+    <ul class="nav nav-tabs nav-sm" id="headertabs">
+        <li class="active"><a href="#logs">$signalLog</a></li>
+    </ul>
+</div>
