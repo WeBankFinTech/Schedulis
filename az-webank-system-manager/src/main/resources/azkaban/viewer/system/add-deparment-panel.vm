@@ -1,0 +1,91 @@
+## Modal dialog to be displayed to create a new project.
+
+<div class="modal" id="add-deparment-panel">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;
+        </button>
+        <h4 class="modal-title">$addDep</h4>
+      </div>
+      <div class="modal-body">
+        <div class="alert alert-danger" id="add-deparment-modal-error-msg" style="word-break:break-all;"></div>
+        <fieldset class="form-horizontal">
+          <div class="form-group">
+            <label for="description" class="col-sm-2 control-label">$depId</label>
+            <div class="col-sm-8">
+              <div class="alert-warning" style="margin:5px">$tipsOnlyNum</div>
+              <input id="deparment-id" type="text" class="form-control" maxlength="8"/>
+            </div>
+          </div>
+          <div class="form-group">
+            <label for="path" class="col-sm-2 control-label">$parentDepId</label>
+            <div class="col-sm-8">
+##              <div class="alert-warning" style="margin:5px">提示:可以不输入密码，默认使用LADP密码校验。</div>
+              <input id="parent-id" type="text" class="form-control" maxlength="100"/>
+            </div>
+          </div>
+          <div class="form-group">
+            <label for="description" class="col-sm-2 control-label">$depEnName</label>
+            <div class="col-sm-8">
+              <div class="alert-warning" style="margin:5px">$tipsCombine</div>
+              <input id="deparment-name" type="text" class="form-control" maxlength="100"/>
+            </div>
+          </div>
+          <div class="form-group">
+            <label for="description" class="col-sm-2 control-label">$depCnName</label>
+            <div class="col-sm-8">
+              <div class="alert-warning" style="margin:5px">$tipsMustInput</div>
+              <input id="deparment-ch-name" type="text" class="form-control" maxlength="100"/>
+            </div>
+          </div>
+          <div class="form-group">
+            <label for="description" class="col-sm-2 control-label">$officeId</label>
+            <div class="col-sm-8">
+              <div class="alert-warning" style="margin:5px">$tipsOnlyNum</div>
+              <input id="org-id" type="text" class="form-control" maxlength="100"/>
+            </div>
+          </div>
+          <div class="form-group">
+            <label for="description" class="col-sm-2 control-label">$officeName</label>
+            <div class="col-sm-8">
+              <input id="org-name" type="text" class="form-control" maxlength="100"/>
+            </div>
+          </div>
+          <div class="form-group">
+            <label for="description" class="col-sm-2 control-label">$groupName</label>
+            <div class="col-sm-8">
+              <div class="alert-warning" style="margin:5px">$tipsMustSelect</div>
+              <select id="department-group" class="form-control" style="width: 100%;">
+                <option value="0">$selectGroup</option>
+              </select>
+            </div>
+          </div>
+          <div class="form-group">
+                <label for="add-select-permission-for-upload" class="col-sm-2 control-label">$uploadPermit</label>
+                <div class="col-sm-8">
+                    <select id="add-select-permission-for-upload" class="form-control" style="width: 100%;">
+                        <option value="0">$permit</option>
+                        <option value="1">$noPermit</option>
+                    </select>
+                </div>
+          </div>
+##          <div class="form-group">
+##            <label for="description" class="col-sm-2 control-label">部门事业线</label>
+##            <div class="col-sm-8">
+##              <input id="deparment-id" type="text" class="form-control" maxlength="10"/>
+##            </div>
+##          </div>
+        </fieldset>
+      </div>
+      <div class="modal-footer">
+        <input name="action" type="hidden" value="create">
+        <input name="redirect" type="hidden" value="$!context/">
+        <button type="button" class="btn btn-default" data-dismiss="modal">$cancel</button>
+        <button type="button" class="btn btn-primary" id="deparment-create-btn">$add</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+

@@ -1,0 +1,28 @@
+{
+  "module": "az-webank-user-params",
+  "language": "en_US",
+  "azkaban.viewer.system.userparams-manager.vm": {
+    "userParams":"User Parameters",
+    "userParamsSetPage": "User Parameters Settings Page",
+    "addUserParams": "Add User Parameters",
+    "paramName": "Parameter Name",
+    "desc": "Description",
+    "paramValue": "Parameter Value",
+    "owner": "Owner",
+    "userReadOnly": "User-Read-Only",
+    "createTime": "Create Time",
+    "updateTime": "Update Time",
+    "operate": "Operation",
+    "quit": "Quit",
+    "addOneLine": "Add One",
+    "cancel": "Cancel",
+    "add": "Add",
+    "update": "Update",
+    "delete": "Delete",
+    "updateUserParams": "Update User Parameters",
+    "status": "Status"
+  },
+  "azkaban.viewer.system.UserParamsServlet": {
+    "modify": "modify"
+  }
+}

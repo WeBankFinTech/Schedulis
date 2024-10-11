@@ -1,0 +1,14 @@
+{
+  "module": "azkaban-common",
+  "language": "en_US",
+  "azkaban.project.ProjectManager": {
+    "noBlankProgramName": "Can not submit blank project name.",
+    "noBlankProgramDesc": "Can not submit blank project description.",
+    "noInvalidUser": "Can not use invalid account to create project.",
+    "checkProgramName": "Specific start with letter,and accept letter or number or '-' or a blank as separator.",
+    "hasExistProgram": "Existed Project."
+  },
+  "com.webank.wedatasphere.schedulis.system.SystemManager": {
+    "errorFormatProxy": "Error format Proxy User Name, accept combined letters or number or underline, and multi proxy use comma as separate."
+  }
+}

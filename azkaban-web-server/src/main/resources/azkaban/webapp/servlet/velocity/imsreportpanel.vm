@@ -1,0 +1,103 @@
+## ims上报框
+<div class="modal" id="edit-ims-panel">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;
+        </button>
+        <h4 class="modal-title">$editImsTitle</h4>
+        <p>$supportTips</p>
+      </div>
+      <div class="modal-body">
+        <div class="alert alert-danger" id="edit-ims-error-msg" style="word-break:break-all;"></div>
+        <fieldset class="form-horizontal">
+          <div class="form-group">
+            <label for="report-ims" class="col-sm-3 control-label">$reportIMS</label>
+            <div class="col-sm-8">
+              <select id="report-ims" class="form-control">
+                <option value="true">true</option>
+                <option value="false">false</option>
+              </select>
+            </div>
+          </div>
+          <div class="form-group">
+            <label for="plan-start-time" class="col-sm-3 control-label">$planStartTime</label>
+            <div class="col-sm-8">
+              <input id="plan-start-time" type="text" class="ui-datetime-container form-control">
+            </div>
+          </div>
+          <div class="form-group">
+            <label for="plan-finish-time" class="col-sm-3 control-label">$planFinishTime</label>
+            <div class="col-sm-8">
+              <input id="plan-finish-time" type="text" class="ui-datetime-container form-control">
+            </div>
+          </div>
+            <div class="form-group">
+                <label for="last-start-time" class="col-sm-3 control-label">$lastStartTime</label>
+                <div class="col-sm-8">
+                    <input id="last-start-time" type="text" class="ui-datetime-container form-control">
+                </div>
+            </div>
+          <div class="form-group">
+            <label for="last-finish-time" class="col-sm-3 control-label">$lastFinishTime</label>
+            <div class="col-sm-8">
+              <input id="last-finish-time" type="text" class="ui-datetime-container form-control">
+            </div>
+          </div>
+          <div class="form-group">
+            <label for="alert-level" class="col-sm-3 control-label">$alertLevel</label>
+            <div class="col-sm-8">
+              <select id="alert-level" class="form-control selectpicker" title="${selectAlertLevel}">
+                <option value="1">critical</option>
+                <option value="2">major</option>
+                <option value="3">minor</option>
+                <option value="4">warn</option>
+              </select>
+            </div>
+          </div>
+          <div class="form-group">
+            <label for="dcn-number" class="col-sm-3 control-label">$dcnNumber</label>
+            <div class="col-sm-8">
+              <input id="dcn-number" type="text" class="form-control">
+            </div>
+          </div>
+          <div class="form-group">
+              <label for="sub-system-select" class="col-sm-3 control-label">$subSystemId</label>
+              <div class="col-sm-8">
+                <select id="sub-system-select" class="form-control" style="width: 100%"></select>
+              </div>
+          </div>
+          <div class="form-group">
+            <label for="batch-group-select" class="col-sm-3 control-label">$batchGroup</label>
+            <div class="col-sm-8">
+              <select id="batch-group-select" class="form-control" style="width: 100%"></select>
+            </div>
+          </div>
+          <div class="form-group">
+            <label for="bus-domain-select" class="col-sm-3 control-label">$busDomain</label>
+            <div class="col-sm-8">
+              <select id="bus-domain-select" class="form-control" style="width: 100%"></select>
+            </div>
+          </div>
+          <div class="form-group">
+            <label for="bus-path-select" class="col-sm-3 control-label">$busPath</label>
+            <div class="col-sm-8">
+              <select id="bus-path-select"  class="form-control" style="width: 100%"></select>
+            </div>
+          </div>
+          <div class="form-group">
+            <label for="ims-updater-select" class="col-sm-3 control-label">$imsUpdater</label>
+            <div class="col-sm-8">
+              <select id="ims-updater-select" class="form-control selectpicker" data-live-search="true" title="${selectImsUpdater}" data-size="8" multiple></select>
+            </div>
+          </div>
+        </fieldset>
+      </div>
+      <div class="modal-footer">
+        <input type="hidden" id="schedule-id" value="">
+        <button type="button" class="btn btn-default" data-dismiss="modal">$cancel</button>
+        <button type="button" class="btn btn-primary" id="ims-set-btn">$merge</button>
+      </div>
+    </div>
+  </div>
+</div>

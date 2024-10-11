@@ -1,0 +1,76 @@
+.home-table {
+  width: 100%;
+  height: 400px;
+  border:3px solid #0094ff;
+  border-collapse: separate;
+  border-radius: 12px;
+}
+.work-status-left{
+  float: left;
+  width: 65%;
+  height: 100%;
+}
+.work-status-right{
+  float: right;
+  width: 34%;
+  height: 100%;
+  padding-top: 25%;
+}
+.work-status-right span{
+  overflow: hidden;
+  word-wrap:break-word;
+  word-break:break-all;
+}
+.real-time-info{
+  width: 100%;
+  height: 400px;
+  border:3px solid #0094ff;
+  border-radius: 12px;
+  overflow-y:auto;overflow-x:hidden;
+  padding:10px 10px 10px 0px;
+
+}
+.real-time-info::-webkit-scrollbar{
+  width:10px;
+  height:1px;
+}
+.real-time-info::-webkit-scrollbar-thumb{
+  border-radius: 10px;
+  -webkit-box-shadow: inset 0 0 5px rgba(0,0,0,0.2);
+  background: #535353;
+}
+.real-time-info::-webkit-scrollbar-track{
+  border-radius: 10px;
+  -webkit-box-shadow: inset 0 0 5px rgba(0,0,0,0);
+  background: #0094ff;
+}
+.root_div {
+  background-color: #003366;
+  color:#ffffff;
+}
+.statistics-ring{
+  width:600px;
+  height:400px;
+}
+.today-flow-info{
+  width: 100%;
+  height: 300px;
+  border:3px solid #0094ff;
+  border-radius: 12px;
+  overflow-y:auto;overflow-x:hidden;
+  padding:10px 10px 10px 10px;
+}
+.today-flow-info::-webkit-scrollbar{
+  width:10px;
+  height:1px;
+}
+.today-flow-info::-webkit-scrollbar-thumb{
+  border-radius: 10px;
+  -webkit-box-shadow: inset 0 0 5px rgba(0,0,0,0.2);
+  background: #535353;
+}
+.today-flow-info::-webkit-scrollbar-track{
+  border-radius: 10px;
+  -webkit-box-shadow: inset 0 0 5px rgba(0,0,0,0);
+  background: #0094ff;
+}

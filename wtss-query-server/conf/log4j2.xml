@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration status="info" monitorInterval="60">
+    <properties>
+      <property name="logDir">/data/logs/wtss</property>
+      <property name="pattern">
+          %d{yyyy-MM-dd HH:mm:ss.SSS} [%-5level] [%-40t] %c{1.} (%L) [%M] - %msg%xEx%n
+      </property>
+    </properties>
+    <appenders>
+        <RollingFile name="fixedTimeFileAppender" fileName="${logDir}/wtss-query-server.log"
+          filePattern="${logDir}/${date:yyyy-MM}/query/wtss-query-server-log-%d{yyyy-MM-dd}-%i.log">
+            <PatternLayout
+              pattern="${pattern}"/>
+            <Policies>
+                <TimeBasedTriggeringPolicy/>
+                <SizeBasedTriggeringPolicy size="1GB"/>
+            </Policies>
+            <!--<DefaultRolloverStrategy max="24"/>-->
+        </RollingFile>
+        <RollingFile name="loginTimeFileAppender" fileName="${logDir}/wtss-query-access.log"
+          filePattern="${logDir}/${date:yyyy-MM}/audit/wtss-query-acces-log-%d{yyyy-MM-dd}-%i.log">
+            <PatternLayout
+              pattern="${pattern}"/>
+            <Policies>
+                <TimeBasedTriggeringPolicy/>
+                <SizeBasedTriggeringPolicy size="1GB"/>
+            </Policies>
+            <!--<DefaultRolloverStrategy max="24"/>-->
+        </RollingFile>
+    </appenders>
+
+    <loggers>
+        <root level="INFO" includeLocation="true">
+            <AppenderRef ref="fixedTimeFileAppender" />
+        </root>
+        <Logger name="LoginAccessLogger" additivity="false" level="DEBUG">
+            <AppenderRef ref="loginTimeFileAppender"/>
+        </Logger>
+    </loggers>
+</configuration>
+

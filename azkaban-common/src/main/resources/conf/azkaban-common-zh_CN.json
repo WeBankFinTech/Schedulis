@@ -1,0 +1,16 @@
+{
+  "module": "azkaban-common",
+  "language": "zh_CN",
+  "azkaban.project.ProjectManager": {
+    "noBlankProgramName": "项目名称不能为空.",
+    "noBlankProgramDesc": "项目描述不能为空.",
+    "noInvalidUser": "必须使用有效用户创建项目.",
+    "checkProgramName": "项目名称必须以字母开头，后面跟着任意数量的字母，数字, '-' 或者 '_'.",
+    "hasExistProgram": "项目已经存在.",
+    "projectNameLength": "项目名称长度不能超过 64",
+    "projectDescLength": "项目描述长度不能超过 2048"
+  },
+  "azkaban.system.SystemManager": {
+    "errorFormatProxy": "代理用户名错误,请使用大小写字母,数字及下划线的组合,多个用户用逗号分隔."
+  }
+}

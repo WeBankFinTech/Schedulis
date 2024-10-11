@@ -1,0 +1,58 @@
+{
+  "module": "az-webank-eventauth-manager",
+  "language": "en_US",
+  "azkaban.viewer.event.common": {
+    "signalManage": "Signal Manage",
+    "signalLog": "Signal Log",
+    "messageSender": "Message Sender"
+  },
+  "azkaban.viewer.event.eventAuth-detail.vm": {
+  },
+  "azkaban.viewer.event.eventAuth-detail-header.vm": {
+  },
+  "azkaban.viewer.event.eventAuth-manager.vm": {
+    "authedMessagePage": "Authorized Message Page",
+    "messageInfoInclude": "Message sender or topic or name include ...",
+    "quicklySearch": "Quick Search",
+    "clickNameToRank": "* Click name to sort",
+    "messageTopic": "Message Topic",
+    "messageName": "Message Name",
+    "messageRecordTime": "Message Record Time",
+    "messageDetail": "Message Detail",
+    "previousPage": "Previous Page",
+    "nextPage": "Next Page",
+    "alarmsetting": "Alarm Setting",
+    "selectAlertLevel": "Select Alert Level",
+    "backlogAlarmSet": "Set up a list of alarm alerts that can be separated by a comma, space, or semicon.",
+    "entertip": "Please enter a batch operator English name and a batch responsible English name",
+    "cancel": "Cancel",
+    "setAlarm": "Set Alarm"
+  },
+  "azkaban.viewer.event.eventQueue-manager.vm": {
+    "eventQueuePage": "Message Detail Page",
+    "messageInfoInclude": "Message ID or sender include ...",
+    "quicklySearch": "Quick Search",
+    "clickNameToRank": "* Click name to sort",
+    "messageTopic": "Message Topic",
+    "messageName": "Message Name",
+    "messageSendTime": "Message Send Time",
+    "messageBody": "Message",
+    "messageDetail": "Message Detail",
+    "previousPage": "Previous Page",
+    "nextPage": "Next Page",
+    "rmbnum": "RMB Biz number"
+  },
+  "azkaban.viewer.event.eventStatus-manager.vm": {
+    "eventStatusPage": "Consume Detail Page",
+    "messageInfoInclude": "Receiver include ...",
+    "quicklySearch": "Quick Search",
+    "clickNameToRank": "* Click name to sort",
+    "messageReceive": "Message Receiver",
+    "messageTopic": "Message Topic",
+    "messageName": "Message Name",
+    "messageReceiveTime": "Message Receive Time",
+    "consumeId": "Consume ID",
+    "previousPage": "Previous Page",
+    "nextPage": "Next Page"
+  }
+}

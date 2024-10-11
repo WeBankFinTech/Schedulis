@@ -1,0 +1,54 @@
+
+- hosts: all_nodes
+  tasks:
+    - name: create schedulisconfig dir
+      file: path={{item}} group=hadoop owner=hadoop state=directory mode=750
+      with_items:
+        - "/appcom/config/schedulis-config/"
+
+    - name: create schedulislog dir
+      file: path={{item}} group=hadoop owner=hadoop state=directory mode=750
+      with_items:
+        - "/appcom/logs/azkaban/"
+      
+    - name: judge schedulis_{{version}}_web is exist
+      shell: ls /appcom/Install/AzkabanInstall/schedulis_{{version}}_web
+      ignore_errors: True
+      register: newpackageexist  
+      
+    - name: rm -rf schedulis_{{version}}_web*
+      shell: rm -rf /appcom/Install/AzkabanInstall/schedulis_{{version}}_web*
+      when: newpackageexist is success 
+      
+      
+    - name: copy web package
+      copy: src=/appcom/Install/AzkabanInstall/schedulisdeploy/material/schedulis_{{version}}_web.zip dest=/appcom/Install/AzkabanInstall/
+        owner=hadoop group=hadoop mode=750
+      
+    - name: unzip web package
+      unarchive:
+            src=/appcom/Install/AzkabanInstall/schedulis_{{version}}_web.zip
+            dest=/appcom/Install/AzkabanInstall/
+            copy=no
+            owner=hadoop
+            group=hadoop
+            mode=750
+
+    - name: create ln
+      shell: 
+             ln -sf /appcom/Install/AzkabanInstall/schedulis_{{version}}_web /appcom/Install/AzkabanInstall/schedulis-web;
+             ln -sf /appcom/config/schedulis-config/schedulis-web/web_azkaban.properties /appcom/Install/AzkabanInstall/schedulis-web/conf/azkaban.properties;
+             ln -sf /appcom/config/schedulis-config/schedulis-web/web_plugin_ims.properties /appcom/Install/AzkabanInstall/schedulis-web/plugins/alerter/WebankIMS/conf/plugin.properties;
+             ln -sf /appcom/config/schedulis-config/schedulis-web/web_plugin_system.properties /appcom/Install/AzkabanInstall/schedulis-web/plugins/viewer/system/conf/plugin.properties;
+
+    - name: copy derby.jar
+      shell: cp /nemo/jdk8/db/lib/derby.jar /appcom/Install/AzkabanInstall/schedulis-web/lib
+
+    - name: copy crontab sh
+      copy: src=/appcom/Install/AzkabanInstall/schedulisdeploy/construct/removeLogsDir.sh dest=/appcom/Install/AzkabanInstall/
+
+    - name: cron setting
+      cron: name="remove logs" minute="0" hour="0" day="*" job="/appcom/Install/AzkabanInstall/removeLogsDir.sh >> /appcom/Install/AzkabanInstall/removeJobDataDir.log 2>&1" state="present"
+
+    - name: print over
+      shell: echo playbook over
