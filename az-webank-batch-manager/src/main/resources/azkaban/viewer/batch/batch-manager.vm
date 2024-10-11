@@ -1,0 +1,268 @@
+#*
+ * Copyright 2012 LinkedIn Corp.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not
+ * use this file except in compliance with the License. You may obtain a copy of
+ * the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations under
+ * the License.
+*#
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+
+#parse("azkaban/webapp/servlet/velocity/style.vm")
+#parse("azkaban/webapp/servlet/velocity/javascript.vm")
+<script type="text/javascript">
+    var currentTime = ${currentTime};
+    var timezone = "${timezone}";
+    var errorMessage = null;
+    var successMessage = null;
+    var langType = "${currentlangType}";
+    var busPathMap = {};
+    var subsystemMap = {};
+    var advQueryViewFirstShow = true;
+</script>
+<link href="/css/bootstrap-select.min.css?version=1.43.0" rel="stylesheet">
+<script type="text/javascript" src="/js/azkaban/i18n-config.js?version=1.43.0"></script>
+<script type="text/javascript" src="/js/azkaban/util/common.js?version=1.43.0"></script>
+<script type="text/javascript" src="/js/azkaban/util/ajax.js?version=1.43.0"></script>
+<script type="text/javascript" src="/js/jquery/jquery.tablesorter.js?version=1.43.0"></script>
+<script type="text/javascript" src="/js/azkaban/util/utils.js?version=1.43.0"></script>
+<script type="text/javascript" src="/js/azkaban/util/job-status.js?version=1.43.0"></script>
+<script type="text/javascript" src="/js/raphael.min.js?version=1.43.0"></script>
+<script type="text/javascript" src="/js/morris.min.js?version=1.43.0"></script>
+<script type="text/javascript" src="/batch/js/batch-manager.js?version=1.43.0"></script>
+<script type="text/javascript" src="/batch/js/hold-manager.js?version=1.43.0"></script>
+<script type="text/javascript" src="/js/bootstrap-select.js?version=1.43.0"></script>
+<script src="/js/select2/select2.js?version=1.43.0"></script>
+<script src="/js/select2/i18n/zh-CN.js?version=1.43.0"></script>
+    
+</head>
+<body>
+
+    #set ($current_page=$systemManage)
+    #parse ("azkaban/webapp/servlet/velocity/nav.vm")
+
+## Page header.
+    #if (${adminPerm})
+    <div class="az-page-header">
+        <div class="container-full">
+            <div class="row">
+                <div class="header-title" id="batch-page-header">
+                    <h1><a href="/batch">$batchManagePage</a></h1>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="container-full">
+
+        #parse ("azkaban/webapp/servlet/velocity/alerts.vm")
+
+    ## Page Content
+        <ul class="nav nav-tabs nav-sm" id="batch-header-tabs">
+            <li id="batch-hold-view-link"><a href="#batch-hold">$holdManage</a></li>
+        </ul>
+
+        <div class="row" id="batch-hold-view">
+            <div class="col-xs-12" id="hold-options">
+                <div class="from-group">
+                    <div class="col-sm-9">
+                        <button id="holdBatchBtn" class="btn btn-sm btn-primary">
+                            <span class="glyphicon glyphicon-plus"></span>$holdBatchBtn
+                        </button>
+                        <button id="resumeBatchBtn" class="btn btn-sm btn-success">
+                            <span class="glyphicon glyphicon-refresh"></span>$resumeBatchBtn
+                        </button>
+                    </div>
+                    <div class="col-sm-3" >
+                        <div class="input-group">
+                            <input type="text" id="serarch-batch" placeholder="${searchInclude}" class="form-control input-sm"
+                            name="searchterm">
+                            <span class="input-group-btn">
+                              <button id="search-batch-btn" class="btn btn-primary btn-sm">$quicklySearch</button>
+                              <button type="button" class="btn btn-success btn-sm" id="adv-filter-btn">$advancedFilter</button>
+                              </span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <br/>
+            <br/>
+            <br/>
+
+            <div class="col-xs-12">
+                <table class="table table-striped table-bordered table-condensed table-hover" id="batchTable">
+                    <thead>
+                    <tr>
+                        <th>#</th>
+                        <th class="header">$batchId</th>
+                        <th class="header">$holdType</th>
+                        <th class="header">$execId</th>
+                        <th class="header">$projectName</th>
+                        <th class="header">$flowName</th>
+                        <th class="header">$busPath</th>
+                        <th class="header">$subSystem</th>
+                        <th class="header">$lastStartTime</th>
+                        <th class="header">$lastFinishTime</th>
+                        <th class="header">$devDept</th>
+                        <th class="header">$submitUser</th>
+                        <th class="header">$holdStartTime</th>
+                        <th class="header">$resumeStatus</th>
+                        <th class="header">$resumeTime</th>
+                        <th class="header">$alertStatus</th>
+                        <th class="header">$alertTime</th>
+                        <th class="header">$isBlack</th>
+                        <th class="action ignoresort header">$operate</th>
+                    </tr>
+                    </thead>
+                    <tbody id="batchTableBody">
+                    </tbody>
+                </table>
+                <table id="pageSelection">
+                    #parse ("azkaban/webapp/servlet/velocity/commonPagination.vm")
+                </table>
+            </div>
+        </div>
+
+        <div class="modal" id="messageDialog">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header" id="messageTitle">
+                        <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;
+                        </button>
+                        <h4 class="modal-title">Error</h4>
+                    </div>
+                    <div class="modal-body" id="messageDiv">
+                        <p id="messageBox"></p>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-primary" data-dismiss="modal"
+                                onclick="window.location.reload(true);">$quit
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="modal" id="hold-batch-running-modal">
+          <div class="modal-dialog">
+            <div class="modal-content">
+              <div class="modal-body">
+                <div class="flow-progress" style="width: 100%;">
+                  <div id="hold-batch-running-progress" class="flow-progress-bar main-progress RUNNING" ></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="modal" id="adv-filter">
+          <div class="modal-dialog">
+            <div class="modal-content">
+              <div class="modal-header">
+                <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;
+                </button>
+                <h4 class="modal-title">$advancedFilter</h4>
+                <input id="advfilter" type="text" hidden="hidden">
+              </div>
+              <div class="modal-body">
+                <fieldset class="form-horizontal">
+                  <div class="form-group">
+                    <label for="projcontain" class="col-sm-2 control-label">$project</label>
+                    <div class="col-sm-10">
+                      <input id="projcontain" type="text" placeholder="${projectNameIncl}"
+                             value="" class="form-control" name="projcontain">
+                    </div>
+                  </div>
+                  <div class="form-group">
+                    <label for="flowcontain" class="col-sm-2 control-label">$flow</label>
+                    <div class="col-sm-10">
+                      <input id="flowcontain" type="text" placeholder="${flowNameInclude}"
+                             value="" class="form-control" name="flowcontain">
+                    </div>
+                  </div>
+                  <div class="form-group">
+                    <label for="busPathQuery" class="col-sm-2 control-label">$busPath</label>
+                    <div class="col-sm-10">
+                      <select id="busPathQuery"  class="form-control" style="width: 100%">
+                      </select>
+                    </div>
+                  </div>
+                  <div class="form-group">
+                    <label for="batchidcontain" class="col-sm-2 control-label">$batchId</label>
+                    <div class="col-sm-10">
+                      <input id="batchidcontain" type="text" placeholder="${batchIdInclude}"
+                             value="" class="form-control" name="batchidcontain">
+                    </div>
+                  </div>
+                  <div class="form-group">
+                    <label for="subSystemQuery" class="col-sm-2 control-label">$subSystem</label>
+                    <div class="col-sm-10" id="subSystemQueryBox">
+                        <select id="subSystemQuery" class="form-control" style="width: 100%">
+                        </select>
+                    </div>
+                  </div>
+                  <div class="form-group">
+                    <label for="devDeptQuery" class="col-sm-2 control-label">$devDept</label>
+                    <div class="col-sm-10">
+                      <select id="devDeptQuery" class="form-control" style="width: 100%" data-placeholder="${selectDevDept}">
+                        <option value="">$selectDevDept</option>
+                      </select>
+                    </div>
+                  </div>
+                  <div class="form-group" id="usercontain-div">
+                    <label for="usercontain" class="col-sm-2 control-label">$user</label>
+                    <div class="col-sm-10">
+                      <input id="usercontain" type="text" placeholder="${userNameIncl}"
+                             value="" class="form-control" name="usercontain">
+                    </div>
+                  </div>
+                  <div class="form-group">
+                    <label for="execIdcontain" class="col-sm-2 control-label">$execId</label>
+                    <div class="col-sm-10">
+                      <input id="execIdcontain" type="text" placeholder="${execIdIncl}"
+                             value="" class="form-control" name="execIdcontain">
+                    </div>
+                  </div>
+                </fieldset>
+              </div>
+              <div class="modal-footer">
+                <button type="button" class="btn btn-default" data-dismiss="modal">$cancel</button>
+                <button class="btn btn-success" id="filter-btn">$commit</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        #parse ("azkaban/viewer/batch/hold-batch-panel.vm")
+        #parse ("azkaban/viewer/batch/resume-batch-panel.vm")
+        #parse ("azkaban/webapp/servlet/velocity/messagedialog.vm")
+
+    </div><!-- /container-full -->
+
+    #else
+
+    <div class="az-page-header">
+        <div class="container-full">
+            <div class="row">
+                <div class="header-title" id="batch-page-header">
+                    <h1>$noAccessPermission</h1>
+                </div>
+            </div>
+        </div>
+    </div>
+    </div>
+
+    #end
+</body>
+</html>

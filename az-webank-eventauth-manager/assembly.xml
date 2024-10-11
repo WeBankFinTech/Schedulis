@@ -1,0 +1,32 @@
+<assembly>
+    <id>123</id>
+
+    <formats>
+        <format>zip</format>
+    </formats>
+
+    <fileSets>
+        <!-- 从目标目录拷贝文件去压缩 -->
+        <fileSet>
+            <directory>target/eventauth/lib</directory>
+            <outputDirectory>/lib</outputDirectory>
+        </fileSet>
+        <fileSet>
+            <directory>target/eventauth/conf</directory>
+            <outputDirectory>/conf</outputDirectory>
+        </fileSet>
+        <fileSet>
+            <directory>target/eventauth/conf-test</directory>
+            <outputDirectory>/conf-test</outputDirectory>
+        </fileSet>
+        <fileSet>
+            <directory>target/eventauth/conf-prod</directory>
+            <outputDirectory>/conf-prod</outputDirectory>
+        </fileSet>
+        <fileSet>
+            <directory>target/eventauth/web</directory>
+            <outputDirectory>/web</outputDirectory>
+        </fileSet>
+    </fileSets>
+
+</assembly>
