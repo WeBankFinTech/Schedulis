@@ -1,0 +1,65 @@
+## Modal dialog to be displayed to create a new project.
+
+<div class="modal" id="update-department-group-panel">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;
+                </button>
+                <h4 class="modal-title">$updateUserParams</h4>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-danger" id="update-department-group-modal-error-msg" style="word-break:break-all;"></div>
+                <fieldset class="form-horizontal">
+                    <input id="old-id" name="id" type="hidden"/>
+                    <input id="old-key-name" name="keyName" type="hidden"/>
+                    <div class="form-group">
+                        <label for="old-keyNname" class="col-sm-2 control-label">$paramName</label>
+                        <div class="col-sm-8">
+                            <input id="old-keyNname" name="keyNname" type="text" class="form-control" />
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="old-description" class="col-sm-2 control-label">$desc</label>
+                        <div class="col-sm-8">
+                            <input id="old-description" name="description" type="text" class="form-control" />
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="old-value" class="col-sm-2 control-label">$paramValue</label>
+                        <div class="col-sm-8">
+                            <input id="old-value" name="old-value" type="text" class="form-control" />
+                        </div>
+                    </div>
+                    <div id="old-executor-view">
+                        <table class="table table-striped" id="old-executorTable">
+                            <thead>
+                            <tr>
+                                <th>$userReadOnly</th>
+                            </tr>
+                            </thead>
+                            <tbody>
+                            <tr id="old-add-executor">
+                                <td id="old-add-executor-col" colspan="5">
+                                    <span class="addIcon"></span>
+                                    <button type="button" class="btn btn-xs btn-success" id="old-add-executor-btn">$addOneLine</button>
+                                </td>
+                            </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </fieldset>
+            </div>
+            <div class="modal-footer">
+                <input name="action" type="hidden" value="create">
+                <input name="redirect" type="hidden" value="$!context/">
+                <button type="button" class="btn btn-default" data-dismiss="modal">$cancel</button>
+                <button type="button" class="btn btn-primary" id="department-group-update-btn">$update</button>
+                <button type="button" class="btn btn-danger" id="department-group-delete-btn">$delete</button>
+            </div>
+        </div>
+    </div>
+</div>
+#parse ("azkaban/webapp/servlet/velocity/messagedialog.vm")
+
+

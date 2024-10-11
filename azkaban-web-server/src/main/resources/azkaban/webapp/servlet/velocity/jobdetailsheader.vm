@@ -1,0 +1,80 @@
+#*
+ * Copyright 2014 LinkedIn Corp.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not
+ * use this file except in compliance with the License. You may obtain a copy of
+ * the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations under
+ * the License.
+*#
+
+## Page header.
+
+<div class="az-page-header page-header-bare">
+  <div class="container-full">
+    <div class="row">
+      <div class="wb-header-title" title="${jobid}">
+        <h1 style="overflow: hidden;text-overflow: ellipsis;">
+          <a href="${context}/executor?execid=${execid}&job=${jobid}">$job
+            <small>$jobid</small>
+          </a>
+        </h1>
+      </div>
+      <div class="wb-header-control">
+        <div class="pull-right header-form">
+          #if ($jobLinkUrl)
+            #if ($jobType == "spark")
+              <a href="$jobLinkUrl" target="_blank" class="btn btn-primary btn-sm"
+                 id="jobLinkUrl">Spark Job Log</a>
+            #else
+              <a href="$jobLinkUrl" target="_blank" class="btn btn-primary btn-sm"
+                 id="jobLinkUrl">Hadoop Job Log</a>
+            #end
+          #end
+          <a href="${context}/manager?project=${projectName}&flow=${parentflowid}&job=$jobname"
+             class="btn btn-info btn-sm">$jobParam</a>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+<div class="page-breadcrumb">
+  <div class="container-full" style="word-break:break-all;">
+    <ol class="breadcrumb">
+      <li><a href="${context}/manager?project=${projectName}"><strong>$program</strong> $projectName
+      </a></li>
+      <li><a
+          href="${context}/manager?project=${projectName}&flow=${flowid}"><strong>$flow</strong> $flowid
+      </a></li>
+      <li><a href="${context}/executor?execid=${execid}#jobslist"><strong>$execId</strong> $execid
+      </a></li>
+      <li class="active"><strong>$job</strong> $jobid</li>
+    </ol>
+  </div>
+</div>
+
+<div class="container-full">
+
+  #parse ("azkaban/webapp/servlet/velocity/alerts.vm")
+
+## Tabs
+
+  <ul class="nav nav-tabs nav-sm" id="headertabs">
+    #if ($current_page == "executing")
+      <li class="active" id="jobLogViewLink"><a href="#logs">$jobLog</a></li>
+    #else
+      <li id="jobLogViewLink"><a href="${context}/executor?execid=${execid}&job=${jobid}#logs">$jobLog</a></li>
+    #end
+    #foreach ($jobViewerPlugin in $jobViewerPlugins)
+      <li#if($current_page == $jobViewerPlugin.pluginName) class="active"#end><a
+          href="$!context/${jobViewerPlugin.pluginPath}?execid=${execid}&jobid=${jobid}">$jobViewerPlugin.pluginName</a>
+      </li>
+    #end
+  </ul>
+</div>

@@ -1,0 +1,26 @@
+# Created by .ignore support plugin (hsz.mobi)
+# Created by .ignore support plugin (hsz.mobi)
+
+# IntelliJ project files
+.idea
+*.iml
+out
+gen
+/.apt_generated/
+/.classpath
+/.factorypath
+/.project
+/.settings/
+/.springBeans
+/target/
+/.idea
+.DS_Store
+LICENSE
+bin/
+docs/
+!/az-intellij-style.xml
+!/assembly.xml
+!/LICENSE
+tblStruct
+build
+*/target

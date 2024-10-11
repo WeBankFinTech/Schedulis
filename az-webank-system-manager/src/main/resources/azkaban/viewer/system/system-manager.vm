@@ -1,0 +1,441 @@
+#*
+ * Copyright 2012 LinkedIn Corp.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not
+ * use this file except in compliance with the License. You may obtain a copy of
+ * the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations under
+ * the License.
+*#
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+
+#parse("azkaban/webapp/servlet/velocity/style.vm")
+#parse("azkaban/webapp/servlet/velocity/javascript.vm")
+<script type="text/javascript">
+        var currentTime = ${currentTime};
+        var timezone = "${timezone}";
+        var errorMessage = null;
+        var successMessage = null;
+        var langType = "${currentlangType}";
+    </script>
+    <script type="text/javascript" src="/js/azkaban/i18n-config.js?version=1.43.0"></script>
+    <script type="text/javascript" src="/js/azkaban/util/common.js?version=1.43.0"></script>
+    <script type="text/javascript" src="/js/azkaban/util/ajax.js?version=1.43.0"></script>
+    <script type="text/javascript" src="/js/jquery/jquery.tablesorter.js?version=1.43.0"></script>
+    <script type="text/javascript" src="/js/azkaban/util/utils.js?version=1.43.0"></script>
+    <script type="text/javascript" src="/js/azkaban/util/job-status.js?version=1.43.0"></script>
+    <script type="text/javascript" src="/js/raphael.min.js?version=1.43.0"></script>
+    <script type="text/javascript" src="/js/morris.min.js?version=1.43.0"></script>
+##    <script type="text/javascript" src="/system/js/azkaban/system/system-manager.js?version=1.43.0"></script>
+    <script type="text/javascript" src="/system/js/system-manager.js?version=1.43.0"></script>
+    <script type="text/javascript" src="/system/js/user-manager.js?version=1.43.0"></script>
+    <script type="text/javascript" src="/system/js/deparment-manager.js?version=1.43.0"></script>
+    <script type="text/javascript" src="/system/js/department-group-manager.js?version=1.43.0"></script>
+    <script type="text/javascript" src="/system/js/modify-system-user-manager.js?version=1.43.0"></script>
+    <script type="text/javascript" src="/system/js/department-maintainer-manager.js?version=1.43.0"></script>
+    <script type="text/javascript" src="/system/js/exceptional-user-manager.js?version=1.43.0"></script>
+    <script src="/js/select2/select2.js?version=1.43.0"></script>
+    <script src="/js/select2/i18n/zh-CN.js?version=1.43.0"></script>
+    
+</head>
+<body>
+
+    #set ($current_page=$systemManage)
+    #parse ("azkaban/webapp/servlet/velocity/nav.vm")
+
+## Page header.
+    #if (${adminPerm})
+    <div class="az-page-header">
+        <div class="container-full">
+            <div class="row">
+                <div class="header-title" id="project-page-header">
+                    <h1><a href="/system">$systemManagePage</a></h1>
+                </div>
+            ##        <div class="header-control">
+            ##          <div class="header-form pull-right" id="system-options">
+            ##            <button id="syncXmlUserBtn" class="btn btn-sm btn-primary">
+            ##              <span class="glyphicon glyphicon-refresh"></span> 旧用户数据同步
+            ##            </button>
+            ##            <button id="syncWebankUserBtn" class="btn btn-sm btn-primary">
+            ##              <span class="glyphicon glyphicon-refresh"></span> 同步Webank用户数据
+            ##            </button>
+            ##            <button id="addSystemUser" class="btn btn-sm btn-success">
+            ##              <span class="glyphicon glyphicon-plus"></span> 新增用户
+            ##            </button>
+            ##          </div>
+            ##        </div>
+               
+            </div>
+        </div>
+    </div>
+
+    <div class="container-full">
+
+        #parse ("azkaban/webapp/servlet/velocity/alerts.vm")
+
+    ## Page Content
+        <ul class="nav nav-tabs nav-sm" id="system-header-tabs">
+            <li id="system-user-view-link"><a href="#system-user">$userManage</a></li>
+            <li id="system-deparment-view-link"><a href="#system-deparment">$depManage</a></li>
+            <li id="system-department-group-view-link"><a href="#department-group">$groupSourceManage</a></li>
+            <li id="system-user-modify-list-view-link"><a href="#modify-user-list">$modifyUserList</a></li>
+            <li id="system-department-maintainer-list-view-link"><a href="#department-maintainer-list">$depMaintainer</a></li>
+            <li id="exceptional-user-view-link"><a href="#exceptional-user">$exceptionalPerson</a></li>
+        </ul>
+
+        <div class="row" id="system-user-view">
+            <div class="col-xs-12" id="user-options">
+                <div class="from-group">
+                    <div class="col-sm-9">
+                        <button id="syncWebankUserBtn" class="btn btn-sm btn-primary">
+                            <span class="glyphicon glyphicon-refresh"></span>$syncWebankUser
+                        </button>
+                        <button id="addSystemUser" class="btn btn-sm btn-success">
+                            <span class="glyphicon glyphicon-plus"></span>$addUser
+                        </button>
+                    </div>
+                    <div class="col-sm-3" >
+                        <div class="input-group">
+                            <input type="text" id="serarch-user" placeholder="${userNameInclude}" class="form-control input-sm"
+                            name="searchterm">
+                            <span class="input-group-btn">
+                  <button id="search-user-btn" class="btn btn-primary btn-sm">$quicklySearch</button>
+                </span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <br/>
+            <br/>
+            <br/>
+
+            <div class="col-xs-12">
+                <table class="table table-striped table-bordered table-condensed table-hover" id="execTable">
+                    <thead>
+                    <tr>
+                        <th>#</th>
+                        <th class="user">$userId</th>
+                        <th class="user">$fullName</th>
+                        <th class="user">$dep</th>
+                        <th class="user">$proxyUser</th>
+                        <th class="user">$userRole</th>
+                        <th class="user">$userPermission</th>
+                        <th class="user">$userEmail</th>
+                        <th class="action">$operate</th>
+                    </tr>
+                    </thead>
+                    <tbody id="userTableBody">
+                    </tbody>
+                </table>
+                <table id="pageSelection">
+                    #parse ("azkaban/webapp/servlet/velocity/commonPagination.vm")
+                </table>
+            </div>
+        </div>
+
+        <div class="row" id="system-deparment-view">
+            <div class="col-xs-12" id="deparment-options">
+                <div class="from-group">
+                    <div class="col-sm-9" id="">
+                        <button id="add-deparment" class="btn btn-sm btn-success">
+                            <span class="glyphicon glyphicon-plus"></span>$addDep
+                        </button>
+                    </div>
+                    <div class="col-sm-3" >
+                        <div class="input-group">
+                            <input type="text" id="serarch-deparment" placeholder="${depNameInclude}" class="form-control input-sm"
+                            name="searchterm">
+                            <span class="input-group-btn">
+                <button id="search-deparment-btn" class="btn btn-primary btn-sm">$quicklySearch</button>
+              </span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <br/>
+            <br/>
+            <br/>
+
+            <div class="col-xs-12">
+                <table class="table table-striped table-bordered table-condensed table-hover" id="execTable">
+                    <thead>
+                    <tr>
+                        <th>#</th>
+                        <th class="user">$depId</th>
+                        <th class="user">$depEnName</th>
+                        <th class="user">$depCnName</th>
+                        <th class="user">$officeId</th>
+                        <th class="user">$officeName</th>
+                        <th class="user">$officeLine</th>
+                        <th class="user">$parentDepId</th>
+                        <th class="user">$relyGroupName</th>
+                        <!--
+                        <th class="status">$status</th>-->
+                        <th class="action">$operate</th>
+                    </tr>
+                    </thead>
+                    <tbody id="deparmentTableBody">
+                    </tbody>
+                </table>
+                <table id="dep-pageSelection">
+                    #parse ("azkaban/webapp/servlet/velocity/commonPagination.vm")
+                </table>
+            </div>
+        </div>
+
+        <div class="row" id="system-department-group-view">
+            <div class="col-xs-12" id="department-group-options">
+                <div class="from-group">
+                    <div class="col-sm-9" id="">
+                        <button id="add-department-group" class="btn btn-sm btn-success">
+                            <span class="glyphicon glyphicon-plus"></span>$addGroup
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <br/>
+            <br/>
+            <br/>
+
+            <div class="col-xs-12">
+                <table class="table table-striped table-bordered table-condensed table-hover" id="execTable">
+                    <thead>
+                    <tr>
+                        <th>#</th>
+                        <th class="user">$groupId</th>
+                        <th class="user">$groupName</th>
+                        <th class="user">$desc</th>
+                        <th class="user">$scheduleSwitch</th>
+                        <th class="user">$availableExec</th>
+                        <th class="user">$createTime</th>
+                        <th class="user">$updateTime</th>
+                        <!--
+                        <th class="status">$status</th>-->
+                        <th class="action">$operate</th>
+                    </tr>
+                    </thead>
+                    <tbody id="department-group-table-body">
+                    </tbody>
+                </table>
+            ##          <ul id="department-group-pageSelection" class="pagination">
+            ##              <li id="department-group-previous" class="first"><a><span class="arrow">&larr;</span>$previousPage</a></li>
+            ##              <li id="department-group-page1"><a href="#page1">1</a></li>
+            ##              <li id="dep-page2"><a href="#page2">2</a></li>
+            ##              <li id="dep-page3"><a href="#page3">3</a></li>
+            ##              <li id="dep-page4"><a href="#page4">4</a></li>
+            ##              <li id="dep-page5"><a href="#page5">5</a></li>
+            ##              <li id="dep-next"><a>$nextPage<span class="arrow">&rarr;</span></a></li>
+            ##          </ul>
+            </div><!-- /col-xs-12 -->
+        </div>
+
+        <div class="row" id="system-user-modify-list-view">
+            <div class="col-xs-12" id="modify-user-options">
+                <div class="from-group">
+                    <div class="col-sm-9">
+                        <button id="syncModifyWebankUserBtn" class="btn btn-sm btn-primary">
+                            <span class="glyphicon glyphicon-refresh"></span> $syncModifyUser
+                        </button>
+                        <button id="downloadModifySystemUserBtn" class="btn btn-sm btn-primary">
+                            <span class="glyphicon glyphicon-download"></span> $downloadModifyUser
+                        </button>
+                    </div>
+                    <div class="col-sm-3" >
+                        <div class="input-group">
+                            <input type="text" id="serarch-modify-user" placeholder="${userNameInclude}" class="form-control input-sm"
+                            name="searchterm">
+                            <span class="input-group-btn">
+                                <button id="search-modify-user-btn" class="btn btn-primary btn-sm">$quicklySearch</button>
+                          </span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <br/>
+            <br/>
+            <br/>
+
+            <div class="col-xs-12">
+                <table class="table table-striped table-bordered table-condensed table-hover" id="execTable">
+                    <thead>
+                    <tr>
+                        <th>#</th>
+                        <th class="user">$userId</th>
+                        <th class="user">$fullName</th>
+                        <th class="user">$dep</th>
+                        <th class="user">$proxyUser</th>
+                        <th class="user">$userRole</th>
+                        <th class="user">$userPermission</th>
+                        <th class="user">$userEmail</th>
+                        <th class="user">$modifyType</th>
+                    ##<th class="action">操作</th>
+                    </tr>
+                    </thead>
+                    <tbody id="modifyUserTableBody">
+                    </tbody>
+                </table>
+                <table id="modify-system-user-pageSelection">
+                    #parse ("azkaban/webapp/servlet/velocity/commonPagination.vm")
+                </table>
+            </div>
+        </div>
+
+        <div class="row" id="system-department-maintainer-list-view">
+            <div class="col-xs-12" id="department-maintainer-options">
+                <div class="from-group">
+                    <div class="col-sm-9">
+                        <button id="addDepMaintainer" class="btn btn-sm btn-success">
+                            <span class="glyphicon glyphicon-plus"></span>$addDepMaintainer
+                        </button>
+                    </div>
+                    <div class="col-sm-3" >
+                        <div class="input-group">
+                            <input type="text" id="serarch-department-maintainer" placeholder="${depIdOrNameOrUserNameInclude}" class="form-control input-sm"
+                                   name="searchterm">
+                            <span class="input-group-btn">
+                  <button id="search-department-maintainer-btn" class="btn btn-primary btn-sm">$quicklySearch</button>
+                </span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <br/>
+            <br/>
+            <br/>
+
+            <div class="col-xs-12">
+                <table class="table table-striped table-bordered table-condensed table-hover" id="execTable">
+                    <thead>
+                    <tr>
+                        <th>#</th>
+                        <th class="user">$depId</th>
+                        <th class="user">$depName</th>
+                        <th class="user">$depMaintainer</th>
+                        <th class="action">$operate</th>
+                    </tr>
+                    </thead>
+                    <tbody id="maintainerTableBody">
+                    </tbody>
+                </table>
+                <table id="department-maintainer-pageSelection">
+                    #parse ("azkaban/webapp/servlet/velocity/commonPagination.vm")
+                </table>
+            </div>
+        </div>
+
+        <div class="modal" id="messageDialog">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header" id="messageTitle">
+                        <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;
+                        </button>
+                        <h4 class="modal-title">Error</h4>
+                    </div>
+                    <div class="modal-body" id="messageDiv">
+                        <p id="messageBox"></p>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-primary" data-dismiss="modal"
+                                onclick="window.location.reload(true);">$quit
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="modal" id="hold-batch-running-modal">
+          <div class="modal-dialog">
+            <div class="modal-content">
+              <div class="modal-body">
+                <div class="flow-progress" style="width: 100%;">
+                  <div id="hold-batch-running-progress" class="flow-progress-bar main-progress RUNNING" ></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="row" id="exceptional-user-view">
+            <div class="col-xs-12" id="exceptional-user-options">
+                <div class="from-group">
+                    <div class="col-sm-9">
+                        <button id="addExceptionalUser" class="btn btn-sm btn-success">
+                            <span class="glyphicon glyphicon-plus"></span>$addUser
+                        </button>
+                    </div>
+                    <div class="col-sm-3" >
+                    </div>
+                </div>
+            </div>
+
+            <br/>
+            <br/>
+            <br/>
+
+            <div class="col-xs-12">
+                <table class="table table-striped table-bordered table-condensed table-hover" id="exceptional-user-table">
+                    <thead>
+                    <tr>
+                        <th>#</th>
+                        <th class="user">$userId</th>
+                        <th class="user">$fullName</th>
+                        <th class="user">$depId</th>
+                        <th class="user">$dep</th>
+                        <th class="user">$userEmail</th>
+                        <th class="action">$operate</th>
+                    </tr>
+                    </thead>
+                    <tbody id="exceptional-user-table-body">
+                    </tbody>
+                </table>
+                <table id="exceptional-user-pageSelection">
+                    #parse ("azkaban/webapp/servlet/velocity/commonPagination.vm")
+                </table>
+            </div>
+        </div>
+
+        #parse ("azkaban/viewer/system/add-wtss-user-panel.vm")
+        #parse ("azkaban/viewer/system/update-wtss-user-panel.vm")
+        #parse ("azkaban/viewer/system/webank-user-sync-panel.vm")
+        #parse ("azkaban/viewer/system/modify-webank-user-sync-panel.vm")
+        #parse ("azkaban/viewer/system/add-deparment-panel.vm")
+        #parse ("azkaban/viewer/system/update-deparment-panel.vm")
+        #parse ("azkaban/viewer/system/add-department-group-panel.vm")
+        #parse ("azkaban/viewer/system/update-department-group-panel.vm")
+        #parse ("azkaban/viewer/system/add-department-maintainer-panel.vm")
+        #parse ("azkaban/viewer/system/update-department-maintainer-panel.vm")
+
+        #parse ("azkaban/viewer/system/add-exceptional-user-panel.vm")
+        #parse ("azkaban/webapp/servlet/velocity/messagedialog.vm")
+    </div><!-- /container-full -->
+
+    #else
+
+    <div class="az-page-header">
+        <div class="container-full">
+            <div class="row">
+                <div class="header-title" id="project-page-header">
+                    <h1>$noAccessPermission</h1>
+                </div>
+            </div>
+        </div>
+    </div>
+    </div>
+
+    #end
+</body>
+</html>

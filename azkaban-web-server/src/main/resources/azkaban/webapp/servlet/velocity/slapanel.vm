@@ -1,0 +1,89 @@
+#*
+ * Copyright 2012 LinkedIn Corp.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not
+ * use this file except in compliance with the License. You may obtain a copy of
+ * the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations under
+ * the License.
+*#
+
+<div class="modal modal-wide" id="sla-options">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+        <h4 class="modal-title">$alertSet</h4>
+      </div>
+      <div class="modal-body">
+        <h4>$alertEmailAddress</h4>
+        <fieldset>
+          <div class="form-group">
+              <div class="checkbox">
+                <label>
+                  <input type="checkbox" id="sla-via-department" name="slaViaDepartment" value="slaViaDepartment">
+                  $sendAlertToDep
+                </label>
+              </div>
+            <label>$alertEmailAddress</label>
+            <textarea id="slaEmails" placeholder="$alertUserInputTips" class="form-control"></textarea>
+          </div>
+        </fieldset>
+        <h4>$ruleTimeoutAlertSet</h4>
+        <table class="table table-striped" id="flowRulesTbl">
+          <thead>
+          <tr>
+            <th>$floworJob</th>
+            <th>$ruleAlert</th>
+            <th>$timeout(In HH:MM eg. kill in 10 minutes is 00:10)</th>
+            <th>$alertLevel</th>
+            <th>$sendemail</th>
+            <th>$stopJoborFlow</th>
+            <th>$operate</th>
+          </tr>
+          </thead>
+          <tbody>
+          <tr id="addRow">
+            <td id="addRow-col" colspan="7">
+              <span class="addIcon"></span>
+              <button type="button" class="btn btn-xs btn-success" id="add-btn">$addOneLine</button>
+            </td>
+          </tr>
+          </tbody>
+        </table>
+        <h4>$flowEventAlertRuleSet</h4>
+        <div id="editTable">
+          <table class="table table-striped" id="FinishRulesTbl">
+            <thead>
+            <tr>
+              <th>$floworJob</th>
+              <th>$ruleAlert</th>
+              <th>$alertLevel</th>
+              <th>$operate</th>
+            </tr>
+            </thead>
+            <tbody>
+            <tr id="addRow">
+              <td id="addRow-col" colspan="6">
+                <span class="addIcon"></span>
+                <button type="button" class="btn btn-xs btn-success" id="finish-add-btn">$addOneLine</button>
+              </td>
+            </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-default" data-dismiss="modal">$cancel</button>
+        <!--<button type="button" class="btn btn-danger" id="remove-sla-btn">Remove SLA</button>-->
+        <button type="button" class="btn btn-primary" id="set-sla-btn">$createorUpdateAlert</button>
+      </div>
+    </div>
+  </div>
+</div>
