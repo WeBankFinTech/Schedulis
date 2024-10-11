@@ -1,0 +1,30 @@
+<tbody>
+    <tr>
+        <td>
+            <select class="pageSizeSelect form-control select2" style="margin-bottom:5px;height:34px;">
+                <option value="20">20条/页</option>
+                <option value="50">50条/页</option>
+                <option value="100">100条/页</option>
+            </select>
+        </td>
+        <td>
+            <ul class="projectPageSelection pagination">
+                <li class="firstPage"><a href="javascript:void(0);">第一页</a></li>
+                <li class="previous first disabled"><a><span class="arrow">←</span>上一页</a></li>
+                <li class="page1 active"><a href="javascript:void(0);">1</a></li>
+                <li class="page2"><a href="javascript:void(0);">2</a></li>
+                <li class="page3"><a href="javascript:void(0);">3</a></li>
+                <li class="page4"><a href="javascript:void(0);">4</a></li>
+                <li class="page5"><a href="javascript:void(0);">5</a></li>
+                <li class="next"><a>下一页<span class="arrow">→</span></a></li>
+                <li class="lastPage"><a href="javascript:void(0);">最后一页</a></li>
+            </ul>
+        </td>
+        <td>
+            <input class=" pageNumInput form-control" type="number" min="1" style="margin-bottom:5px;width:100px;">
+        </td>
+        <td>
+            <button class="pageNumJump btn btn-default" style="margin-bottom:5px">跳转</button>
+        </td>
+    </tr>
+</tbody>

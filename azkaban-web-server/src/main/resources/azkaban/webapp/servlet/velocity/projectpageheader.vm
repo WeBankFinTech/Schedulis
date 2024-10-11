@@ -1,0 +1,117 @@
+#*
+ * Copyright 2012 LinkedIn Corp.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not
+ * use this file except in compliance with the License. You may obtain a copy of
+ * the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations under
+ * the License.
+*#
+
+<div class="az-page-header">
+  <div class="container-full" style="word-break:break-all;">
+    <div class="row">
+      <div class="header-title" id="project-page-header">
+        <h1><a href="${context}/manager?project=${project.name}">$program
+          <small>$project.name</small>
+        </a></h1>
+      </div>
+      <div class="header-control2">
+        <div class="header-form pull-right" id="project-options">
+          #if($isSystemAdmin || $isProjectAdmin)
+            <button id="start-all-schedule-btn" class="btn btn-sm btn-success">
+              $oneKeySch
+            </button>
+            <button id="start-all-flow-btn" class="btn btn-sm btn-success">
+              $oneKeyexecFlow
+            </button>
+          #end
+          <button id="closeFlowList" class="btn btn-sm btn-warning">
+            <span class="glyphicon glyphicon-cog"></span> $foldExpandFlow
+          </button>
+          #if($isSystemAdmin || $isProjectAdmin)
+          <button id="project-delete-btn" class="btn btn-sm btn-danger">
+            <span class="glyphicon glyphicon-trash"></span> $removePro
+          </button>
+          #end
+##          #if (!$hideUploadProject || $isWritePerm)
+          #if ($isWritePerm)
+            <button id="project-upload-btn" class="btn btn-sm btn-primary">
+              <span class="glyphicon glyphicon-upload"></span> $uploadPro
+            </button>
+          #end
+          <a class="btn btn-sm btn-info"
+             href="${context}/manager?project=${project.name}&download=true">
+            <span class="glyphicon glyphicon-download"></span> $downloadPro
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+## 提示用户操作权限是否可用会话框
+<div class="modal" id="user-onekey-schedule-flow-permit-panel">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+        <h4 id="title-user-onekey-schedule-flow-permit" class="modal-title">$schFlowPermission</h4>
+      </div>
+      <div class="modal-body" >
+        <p id="body-user-onekey-schedule-flow-permit">$noSchPermissionsFlow</p>
+      </div>
+      <div class="modal-footer">
+        <form id="button-user-onekey-schedule-flow-permit-close">
+          <button type="button" class="btn btn-default" data-dismiss="modal">$close</button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+## 提示用户操作权限是否可用会话框
+<div class="modal" id="user-onekey-execute-flow-permit-panel">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+        <h4 id="title-user-onekey-execute-flow-permit" class="modal-title">$executePermission</h4>
+      </div>
+      <div class="modal-body" >
+        <p id="body-user-onekey-execute-flow-permit">$noexecuteFlowPermission</p>
+      </div>
+      <div class="modal-footer">
+        <form id="button-user-onekey-execute-flow-permit-close">
+          <button type="button" class="btn btn-default" data-dismiss="modal">$close</button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+## 提示用户部门权限信息变更会话框
+<div class="modal" id="delete-project-permit-change-panel">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+        <h4 id="title-delete-project-permit" class="modal-title">$deleteproJPermissions</h4>
+      </div>
+      <div class="modal-body">
+        <p id="body-delete-project-permit">$noPermissionsDeleteProject</p>
+      </div>
+      <div class="modal-footer">
+        <form id="button-delete-project-permit-close">
+          <button type="button" class="btn btn-default" data-dismiss="modal">$close</button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>

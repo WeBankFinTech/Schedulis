@@ -1,0 +1,257 @@
+#*
+ * Copyright 2012 LinkedIn Corp.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not
+ * use this file except in compliance with the License. You may obtain a copy of
+ * the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations under
+ * the License.
+*#
+<!-- scheduledflowpage.vm -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Cache-Control" content="no-cache, must-revalidate">
+  <meta http-equiv="Expires" content="0">
+  #parse ("azkaban/webapp/servlet/velocity/style.vm")
+  #parse ("azkaban/webapp/servlet/velocity/javascript.vm")
+  #parse ("azkaban/webapp/servlet/velocity/svgflowincludes.vm")
+  <link rel="stylesheet" type="text/css" href="${context}/css/bootstrap-datetimepicker.css?version=1.10.0"/>
+
+  <script type="text/javascript">
+    var contextURL = "${context}";
+    var currentTime = ${currentTime};
+    var timezone = "${timezone}";
+    var errorMessage = null;
+    var successMessage = null;
+    var langType = "${currentlangType}";
+
+    var loginUser = "${loginUser}";
+    $(document).ready(function () {
+      var jobTable = $("#scheduledFlowsTbl");
+      jobTable.tablesorter();
+    });
+  </script>
+  <script type="text/javascript" src="${context}/js/moment.min.js?version=1.10.0"></script>
+  <script type="text/javascript" src="${context}/js/bootstrap-datetimepicker.min.js?version=1.10.0"></script>
+  <script type="text/javascript" src="${context}/js/azkaban/i18n-config.js?version=1.10.0"></script>
+  <script type="text/javascript" src="${context}/js/azkaban/view/table-sort.js?version=1.10.0"></script>
+  <script type="text/javascript" src="${context}/js/azkaban/view/schedule-sla.js?version=1.10.0"></script>
+  <script type="text/javascript" src="${context}/js/azkaban/view/scheduled.js?version=1.10.0"></script>
+  <script type="text/javascript" src="${context}/js/azkaban/util/schedule.js?version=1.10.0"></script>
+  <script type="text/javascript" src="${context}/js/jquery/jquery.tablesorter.js?version=1.10.0"></script>
+  <script type="text/javascript" src="${context}/js/azkaban/view/schedule-edit-panel.js?version=1.10.0"></script>
+  <script type="text/javascript" src="${context}/js/azkaban/view/schedule-flow-edit-dialog.js?version=1.10.0"></script>
+  <script type="text/javascript" src="${context}/js/azkaban/view/schedule-context-menu.js?version=1.10.0"></script>
+  <script type="text/javascript" src="${context}/js/azkaban/view/schedule-page.js?version=1.10.0"></script>
+  <script src="${context}/js/select2/select2.js?version=1.10.0"></script>
+  <script src="${context}/js/select2/i18n/zh-CN.js?version=1.10.0"></script>
+  <link href="${context}/css/select2/select2.css?version=1.10.0" rel="stylesheet"/>
+  <style type="text/css">
+      .select2-container .select2-selection--single .select2-selection__rendered {
+        display: block;
+        padding-left: 8px;
+        padding-right: 20px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        word-break: break-all;
+        height: 28px;
+        white-space: unset;
+      }
+    </style>
+</head>
+<body>
+
+  #set ($current_page="schedule")
+  #parse ("azkaban/webapp/servlet/velocity/nav.vm")
+
+  #if ($errorMsg)
+    #parse ("azkaban/webapp/servlet/velocity/errormsg.vm")
+  #else
+
+  ## Page header.
+
+  <div class="az-page-header">
+    <div class="container-full">
+      <div class="row">
+        <div class="header-title">
+          <h1><a href="${context}/schedule">$schFlowList</a></h1>
+        </div>
+        <div class="header-control">
+          <form id="search-form" method="get" class="form-inline header-form" role="form">
+            <input type="hidden" name="search" value="true">
+            <div class="form-group">
+              <div class="input-group">
+                <input type="text" style="display: none"/>
+                <input type="text" id="searchtextbox"
+                       placeholder="${floworprogramNameIncl}" value=#if($search_term) "$esc.html(${search_term})" #else
+                "" #end class="form-control input-sm" name="searchterm" />
+                <span class="input-group-btn">
+                  <button id="quick-serach-btn" type="button" class="btn btn-primary btn-sm">$quickSearch</button>
+                </span>
+              </div>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script type="text/javascript" src="${context}/js/azkaban/view/hideHead.js?version=1.10.0"></script>
+
+
+  ## Page content.
+
+  <div class="container-full">
+
+    #parse ("azkaban/webapp/servlet/velocity/alerts.vm")
+
+    <div class="row" id="schedule-view">
+      <div class="col-xs-12">
+        <i>$clickColumntoRank</i>
+        <button id="batch-setSla-btn" type="button" class="btn btn-primary btn-sm" style="float:right">$batchSetSla</button>
+        <table id="scheduledFlowsTbl"
+               class="table table-striped table-condensed table-bordered table-hover">
+          <thead>
+          <tr>
+            <!--th class="execid">Execution Id</th-->
+            <th>#</th>
+            <th>ID</th>
+            <th>$flow</th>
+            <th>$program</th>
+            <th>$submitter</th>
+            <th class="date">$updateSchTime</th>
+            <th class="date">$nextExecTime</th>
+            <th class="date">$cronExpre</th>
+            <th>$activeSch</th>
+            <th>$flowValid</th>
+            <th>$execParam</th>
+            <th>$setAlertorNo</th>
+            <th colspan="4" class="action ignoresort">$operate</th>
+          </tr>
+          </thead>
+          <tbody id="schedules-tbody">
+          </tbody>
+        </table>
+        <div>
+          <table id="pageTable">
+            <tr>
+              <td>
+                <select id="pageSizeSelect" class="form-control select2" style="margin-bottom:5px;height:34px;">
+                  <option value="20">$pp_20</option>
+                  <option value="50">$pp_50</option>
+                  <option value="100">$pp_100</option>
+                </select>
+              </td>
+              <td>
+                <ul id="projectPageSelection" class="pagination">
+                  <li id="previous" class="first"><a><span class="arrow">&larr;</span>$previousPage</a></li>
+                  <li id="page1"><a href="">1</a></li>
+                  <li id="page2"><a href="">2</a></li>
+                  <li id="page3"><a href="">3</a></li>
+                  <li id="page4"><a href="">4</a></li>
+                  <li id="page5"><a href="">5</a></li>
+                  <li id="next"><a>$nextPage<span class="arrow">&rarr;</span></a></li>
+                </ul>
+              </td>
+              <td>
+                <input id="pageNumInput" class="form-control" type="number" min="1"  style="margin-bottom:5px;width:100px;"/>
+              </td>
+              <td>
+                <button id="pageNumJump" class="btn btn-default" style="margin-bottom:5px" >$to</button>
+              </td>
+            </tr>
+          </table>
+        </div>
+      </div><!-- /col-xs-12 -->
+    </div><!-- /row -->
+
+  ## Set SLA modal.
+
+    #parse ("azkaban/webapp/servlet/velocity/slapanel.vm")
+    #parse ("azkaban/webapp/servlet/velocity/batch-sla-panel.vm")
+
+  ## Set schedule modal.
+
+    #parse ("azkaban/webapp/servlet/velocity/schedule-edit-panel.vm")
+    #parse ("azkaban/webapp/servlet/velocity/messagedialog.vm")
+
+  ## Set schedule flow model.
+    #parse ("azkaban/webapp/servlet/velocity/schedule-flow-edit-panel.vm")
+  </div>
+  #end
+## Delete project modal.
+
+<div class="modal" id="delete-schedule-flow-modal">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+        <h4 id="delete-schedule-title" class="modal-title">$removeSch</h4>
+      </div>
+      <div class="modal-body">
+        <p><strong>$warn</strong> $warnContent
+        </p>
+      </div>
+      <div class="modal-footer">
+        <form id="delete-form">
+          <input type="hidden" id="schedule-id" value="">
+          <button type="button" class="btn btn-default" data-dismiss="modal">$cancel</button>
+          <button type="button" class="btn btn-danger" id="delete-btn">$removeSch</button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+## Distinguished executionOptions of each schedule with unique count number to fix
+## the issue of same display for all schedules
+<div class="modal fade" id="executionOptions-modal">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span></button>
+        <h4 class="modal-title" id="executionOptionsLabel">Execution Options</h4>
+      </div>
+      <div class="modal-body">
+      ## Used <pre> to display text with code format
+        <pre id="executionOptions-pre"></pre>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-default" data-dismiss="modal">Close
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+## 提示用户操作权限是否可用会话框
+<div class="modal" id="user-operator-schedule-flow-permit-panel">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+        <h4 id="title-user-operator-schedule-flow-permit" class="modal-title"></h4>
+      </div>
+      <div class="modal-body" >
+        <p id="body-user-operator-schedule-flow-permit"></p>
+      </div>
+      <div class="modal-footer">
+        <form id="button-user-operator-schedule-flow-permit-close">
+          <button type="button" class="btn btn-default" data-dismiss="modal">$close</button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>
