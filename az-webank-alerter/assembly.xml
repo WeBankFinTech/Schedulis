@@ -1,0 +1,20 @@
+<assembly>
+  <id>123</id>
+
+  <formats>
+    <format>zip</format>
+  </formats>
+
+  <fileSets>
+    <!-- 从目标目录拷贝文件去压缩 -->
+    <fileSet>
+      <directory>target/WebankIMS/lib</directory>
+      <outputDirectory>/lib</outputDirectory>
+    </fileSet>
+    <fileSet>
+      <directory>target/WebankIMS/conf</directory>
+      <outputDirectory>/conf</outputDirectory>
+    </fileSet>
+  </fileSets>
+
+</assembly>

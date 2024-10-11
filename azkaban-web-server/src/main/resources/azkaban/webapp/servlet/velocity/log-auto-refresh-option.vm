@@ -1,0 +1,60 @@
+#*
+ * Copyright 2012 LinkedIn Corp.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not
+ * use this file except in compliance with the License. You may obtain a copy of
+ * the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations under
+ * the License.
+*#
+
+      ## Log auto refresh Modal.
+
+      <div class="modal" id="log-auto-refresh-panel">
+        <div class="modal-dialog">
+          <div class="modal-content">
+            <div class="modal-header">
+              <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+              <h4 class="modal-title">$jobLogAutoRefreshSet</h4>
+            </div>
+            <div class="modal-body">
+              <div class="alert alert-danger" id="log-error-msg">$error_msg</div>
+              <fieldset class="form-horizontal">
+                <div class="form-group">
+                  <label for="datetimebegin" class="col-sm-2 control-label">$refreshInterval</label>
+##                  <div class="col-sm-3">
+##                    <input type="number" id="refresh-num" value="1" step="1" min="1" max="888" class="form-control">
+##                  </div>
+                  <div class="col-sm-3">
+                    <select id="refresh-flowlog-time-select" class="form-control">
+                      <option value="0">$interval20s</option>
+                      <option value="1">$interval15s</option>
+                      <option value="2">$interval10s</option>
+                      <option value="3">$interval5s</option>
+                      <option value="4">$plsSelect</option>
+                    </select>
+                  </div>
+##                  <label for="datetimebegin" class="col-sm-2 control-label">间隔单位</label>
+##                  <div class="col-sm-3">
+##                    <select id="refresh-interval" name="" class="form-control form-control-auto">
+##                      <option value="second">秒</option>
+##                      <option value="min">分</option>
+##                    </select>
+##                  </div>
+                </div>
+              </fieldset>
+            </div>
+            <div class="modal-footer">
+              <button type="button" class="btn btn-default closeLogAutoPanel" data-dismiss="modal">$cancel</button>
+              <button class="btn btn-success" id="auto-btn">$exec</button>
+            </div>
+          </div>
+        </div>
+      </div>
+

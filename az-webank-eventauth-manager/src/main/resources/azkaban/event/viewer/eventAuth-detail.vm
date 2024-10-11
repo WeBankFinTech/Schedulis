@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Cache-Control" content="no-cache, must-revalidate">
+    <meta http-equiv="Expires" content="0">
+    #parse("azkaban/webapp/servlet/velocity/style.vm")
+    #parse("azkaban/webapp/servlet/velocity/javascript.vm")
+    <script type="text/javascript">
+        var langType = "${currentlangType}";
+    </script>
+    <script type="text/javascript" src="/js/azkaban/i18n-config.js?version=1.43.0"></script>
+    <script type="text/javascript" src="/js/azkaban/util/ajax.js?version=1.43.0"></script>
+    <script type="text/javascript" src="/event/auth/js/authevent-manager.js?version=1.43.0"></script>
+</head>
+
+<body>
+    #set ($current_page=$signalManage)
+    #parse ("azkaban/webapp/servlet/velocity/nav.vm")
+    #if ($errorMsg)
+        #parse ("azkaban/webapp/servlet/velocity/errormsg.vm")
+    #else
+        #parse ("azkaban/event/viewer/eventAuth-detail-header.vm")
+        <div class="container-full container-fill" id="senderLogView">
+            <div class="row">
+            <div class="col-xs-12 col-content">
+                <div class="log-viewer">
+                    <div class="panel panel-default">
+                        <div class="panel-heading">$signalLog</div>
+                        <div id="job-log-view" class="panel-body">
+                            <pre id="logSection">${senderLog}</pre>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        </div>
+    #end
+</body>
+</html>

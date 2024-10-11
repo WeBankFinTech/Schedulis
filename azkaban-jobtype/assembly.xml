@@ -1,0 +1,16 @@
+<assembly>
+  <id>123</id>
+
+  <formats>
+    <format>zip</format>
+  </formats>
+
+  <fileSets>
+    <!-- 从目标目录拷贝文件去压缩 -->
+    <fileSet>
+      <directory>target/jobtypes</directory>
+      <outputDirectory>/jobtypes</outputDirectory>
+    </fileSet>
+  </fileSets>
+
+</assembly>

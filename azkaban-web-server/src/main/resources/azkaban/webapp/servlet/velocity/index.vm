@@ -1,0 +1,335 @@
+#*
+ * Copyright 2012 LinkedIn Corp.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not
+ * use this file except in compliance with the License. You may obtain a copy of
+ * the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations under
+ * the License.
+*#
+<!-- index.vm -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Cache-Control" content="no-cache, must-revalidate">
+  <meta http-equiv="Expires" content="0">
+  #parse("azkaban/webapp/servlet/velocity/style.vm")
+  #parse("azkaban/webapp/servlet/velocity/javascript.vm")
+  <script type="text/javascript">
+    var contextURL = "${context}";
+    var currentTime = ${currentTime};
+    var timezone = "${timezone}";
+    var errorMessage = null;
+    var successMessage = null;
+    var langType = "${currentlangType}";
+    $(document).ready(function () {
+      $("#pageSizeSelect").select2({
+        minimumResultsForSearch: Infinity,
+        height: 'resolve'
+      });
+
+//      $("#orderSelect").select2({
+//        minimumResultsForSearch: Infinity,
+//        height: 'resolve'
+//      });
+
+    });
+  </script>
+  <script type="text/javascript" src="${context}/js/azkaban/i18n-config.js?version=1.10.0"></script>
+  <script type="text/javascript" src="${context}/js/azkaban/view/table-sort.js?version=1.10.0"></script>
+  <script type="text/javascript" src="${context}/js/azkaban/view/main.js?version=1.10.0"></script>
+  <script type="text/javascript" src="${context}/js/azkaban/util/date.js?version=1.10.0"></script>
+  <script src="${context}/js/select2/select2.js?version=1.10.0"></script>
+  <link href="${context}/css/select2/select2.css?version=1.10.0" rel="stylesheet" />
+  
+  <style type="text/css">
+
+  </style>
+
+</head>
+<body>
+
+  #set ($current_page="all")
+  #parse ("azkaban/webapp/servlet/velocity/nav.vm")
+
+## Page Header and project search form.
+
+<div class="az-page-header">
+  <div class="container-full">
+    <div class="row">
+      <div class="header-title">
+        <h1><a href="${context}/index">$programList</a></h1>
+      </div>
+
+      <div class="header-control program-header-control">
+        <form id="search-form" method="get" class="form-inline header-form" role="form">
+          <input type="hidden" name="doaction" value="search">
+          #if ($viewProjects == 'all')
+            <input type="hidden" name="all" value="true">
+          #elseif ($viewProjects == 'group')
+            <input type="hidden" name="group" value="true">
+          #end
+          <div class="form-group col-xs-6">
+            <div class="input-group">
+            <input id="search-textbox" type="text"
+                   placeholder="${descorprogramNameIncl}" value=#if($search_term) "$esc.html(${search_term})" #else
+              "" #end class="form-control input-sm" name="searchterm">
+              <span class="input-group-btn">
+                    <button class="btn btn-sm btn-primary">$quickSearch</button>
+                  </span>
+            </div>
+          </div>
+          <div id="order-select" class="form-group col-xs-3">
+            <select id="orderSelect" class="form-control select2" style="margin-left:15px;width:90%">
+              <option value="orderProjectName">$programRank</option>
+              <option value="orderUpdateTimeSort">$updateTimeSort</option>
+            </select>
+          </div>
+          #if (!$hideCreateProject)
+            <div class="form-group col-xs-3" id="create-project">
+            ## Note: The Create Project button is not completely flush to the right because
+            ## form-group has padding.
+              <div>
+                <button type="button" id="create-project-btn" class="btn btn-sm btn-success" style="margin-left:15px"><span
+                    class="glyphicon glyphicon-plus"></span> $createProgram
+                </button>
+              </div>
+            </div>
+          #end
+        </form>
+      </div>
+
+
+    </div>
+  </div>
+</div>
+
+<div class="container-full">
+
+  #parse ("azkaban/webapp/servlet/velocity/alerts.vm")
+
+## Table of projects.
+
+  <div id="project-view" class="row row-offcanvas row-offcanvas-left">
+
+    ## Delete project modal.
+    <div class="modal" id="delete-project-modal">
+      <div class="modal-dialog">
+        <div class="modal-content">
+          <div class="modal-header">
+            <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+            <h4 class="modal-title">$deleteProgram</h4>
+          </div>
+          <div class="modal-body">
+            <p><strong>$warn</strong> $warnContent
+            </p>
+          </div>
+          <div class="modal-footer">
+            <form id="delete-form">
+              <input type="hidden" name="project" value="$project.name">
+              <input type="hidden" name="delete" value="true">
+              <button type="button" class="btn btn-default" data-dismiss="modal">$cancel</button>
+              <button type="button" class="btn btn-danger" id="delete-btn">$deleteProgram</button>
+            </form>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    ## 提示用户部门权限信息变更会话框
+      <div class="modal" id="delete-expand-project-permit-change-panel">
+        <div class="modal-dialog">
+          <div class="modal-content">
+            <div class="modal-header">
+              <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+              <h4 id="title-delete-expand-project-permit" class="modal-title">$deleteProjectPer</h4>
+            </div>
+            <div class="modal-body">
+              <p id="body-delete-expand-project-permit">$deleteProjectPerContent</p>
+            </div>
+            <div class="modal-footer">
+              <form id="button-delete-expand-project-permit-close">
+                <button type="button" class="btn btn-default" data-dismiss="modal">$close</button>
+              </form>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    <div class="col-xs-6 col-sm-3 sidebar-offcanvas">
+      <ul class="nav nav-pills nav-stacked">
+        <li#if ($viewProjects == 'personal') class="active"#end id="project-personal"><a
+            href="${context}/index">$personP</a></li>
+##        <li#if ($viewProjects == 'group') class="active"#end id="project-group"><a
+##            href="${context}/index?group">组项目</a></li>
+        <li#if ($viewProjects == 'all') class="active"#end id="project-all"><a
+            href="${context}/index?all">$allP</a>
+        </li>
+      </ul>
+    </div>
+    <div class="col-xs-12 col-sm-9 col-content">
+      ##if (!$projects.isEmpty())
+        <ul id="project-list">
+          <!--
+          ##foreach ($project in $projects)
+            <li>
+              <div class="project-info">
+              ## The UI logic elsewhere enforces that $project.name must start with a letter, followed by any number
+              ## of letters, digits, '-' or '_'. Escape it just to play it safe.
+              ## todo: make escaping the default.
+                <h4 style="word-break:break-all;"><a
+                    href="${context}/manager?project=${project.name}">$esc.html($project.name)</a>
+                </h4>
+                <p class="project-description">$esc.html($project.description)</p>
+                <p class="project-last-modified">最后一次是由用户
+		              <strong>$project.lastModifiedUser</strong>.
+		            </p> 在
+                <strong>$utils.formatDate($project.lastModifiedTimestamp)</strong>
+                  修改。
+              </div>
+              <div class="project-expander">
+                <button class="btn btn-sm btn-danger">
+                  <span class="glyphicon glyphicon-trash"></span> 删除项目
+                </button>
+              </div>
+              <div class="project-expander" id="${project.name}">
+                <span class="glyphicon glyphicon-chevron-down project-expander-icon"></span>
+              </div>
+              <div class="clearfix"></div>
+              <div class="project-flows" id="${project.name}-child">
+                <h5>工作流列表</h5>
+                <div class="list-group" id="${project.name}-tbody">
+                  <table id="${project.name}-detail-table">
+                  </table>
+                </div>
+              </div>
+            </li>
+          ##end
+          -->
+        </ul>
+        <div>
+          <table id="pageTable">
+            <tr>
+              <td>
+                <select id="pageSizeSelect" class="form-control select2" style="margin-bottom:5px;width:100px;">
+                  <option value="10">$pp_10</option>
+                  <option value="20">$pp_20</option>
+                  <option value="50">$pp_50</option>
+                  <option value="100">$pp_100</option>
+                </select>
+              </td>
+              <td>
+                <ul id="projectPageSelection" class="pagination">
+                  <li id="previous" class="first"><a><span class="arrow">&larr;</span>$previousPage</a></li>
+                  <li id="page1"><a href="#page1">1</a></li>
+                  <li id="page2"><a href="#page2">2</a></li>
+                  <li id="page3"><a href="#page3">3</a></li>
+                  <li id="page4"><a href="#page4">4</a></li>
+                  <li id="page5"><a href="#page5">5</a></li>
+                  <li id="next"><a>$nextPage<span class="arrow">&rarr;</span></a></li>
+                </ul>
+              </td>
+              <td>
+                <input id="pageNumInput" class="form-control" type="number" min="1"  style="margin-bottom:5px;width:100px;"/>
+              </td>
+              <td>
+                <button id="pageNumJump" class="btn btn-default" style="margin-bottom:5px" >$to</button>
+              </td>
+            </tr>
+          </table>
+        </div>
+
+##      #else
+##        <div class="callout callout-default">
+##          <h4>没有项目</h4>
+##          <p>单击创建项目按钮创建一个新项目。</p>
+##        </div>
+##      #end
+    </div>
+  </div>
+
+## Modal dialog to be displayed to create a new project.
+
+  <div class="modal" id="create-project-modal">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;
+          </button>
+          <h4 class="modal-title">$createProgram</h4>
+        </div>
+        <div class="modal-body">
+          <div class="alert alert-danger" id="modal-error-msg" style="word-break:break-all;">$error_msg</div>
+          <fieldset class="form-horizontal">
+            <div class="form-group">
+              <label for="path" class="col-sm-2 control-label">$programName</label>
+              <div class="col-sm-10">
+                <input id="path" name="project" type="text" class="form-control"
+                       placeholder="${programName}">
+              </div>
+            </div>
+            <div class="form-group">
+              <label for="description" class="col-sm-2 control-label">$programdesc</label>
+              <div class="col-sm-10">
+                <textarea id="description" name="description" rows="2" cols="40"
+                          class="form-control" placeholder="${programdesc}"></textarea>
+              </div>
+            </div>
+##            <div class="form-group">
+##              <label for="description" class="col-sm-2 control-label">项目组选择</label>
+##              <div class="col-sm-10">
+##                <select id="project-group-select" class="form-control">
+##                  <option value="">无项目组</option>
+##                  #foreach ($group in $userGroups)
+##                    <option value=${group}>${group}</option>
+##                  #end
+##                </select>
+##              </div>
+##            </div>
+          </fieldset>
+        </div>
+        <div class="modal-footer">
+          <input name="action" type="hidden" value="create">
+          <input name="redirect" type="hidden" value="$!context/">
+          <button type="button" class="btn btn-default" data-dismiss="modal">$cancel</button>
+          <button type="button" class="btn btn-primary" id="create-btn">$create</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  #parse ("azkaban/webapp/servlet/velocity/invalidsessionmodal.vm")
+
+## 提示用户创建项目权限是否可用会话框
+<div class="modal" id="user-create-project-permit-panel">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+        <h4 id="title-user-create-project-permit" class="modal-title">$permissionCreP</h4>
+      </div>
+      <div class="modal-body">
+        <p> $permissionCrePC </p>
+      </div>
+      <div class="modal-footer">
+        <form id="button-user-create-project-permit-close">
+          <button type="button" class="btn btn-default" data-dismiss="modal">$close</button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+</div><!-- /container -->
+</body>
+</html>
+
+

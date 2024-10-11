@@ -1,0 +1,24 @@
+<assembly>
+  <id>123</id>
+
+  <formats>
+    <format>zip</format>
+  </formats>
+
+  <fileSets>
+    <!-- 从目标目录拷贝文件去压缩 -->
+    <fileSet>
+      <directory>target/batch/lib</directory>
+      <outputDirectory>/lib</outputDirectory>
+    </fileSet>
+    <fileSet>
+      <directory>target/batch/conf</directory>
+      <outputDirectory>/conf</outputDirectory>
+    </fileSet>
+    <fileSet>
+      <directory>target/batch/web</directory>
+      <outputDirectory>/web</outputDirectory>
+    </fileSet>
+  </fileSets>
+
+</assembly>

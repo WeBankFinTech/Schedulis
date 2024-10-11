@@ -1,0 +1,119 @@
+
+- hosts: all_nodes
+  tasks:
+    - name: create schedulisconfig dir
+      file: path={{item}} group=hadoop owner=hadoop state=directory mode=750
+      with_items:
+        - "/appcom/config/schedulis-config/"
+      
+    - name: create log dir
+      file: path={{item}} group=hadoop owner=hadoop state=directory mode=775
+      with_items:
+        - "/appcom/logs/lineage"
+        - "/appcom/logs/lineage/spark"
+        - "/appcom/logs/lineage/hive"
+        - "/appcom/logs/lineage/sqoop"
+        - "/appcom/config/spark-config"
+        - "/appcom/logs/hive"
+        - "/appcom/logs/hadoop"
+        - "/appcom/logs/hadoop/permission_check"
+        - "/appcom/logs/hbase"
+        - "/appcom/logs/spark"
+        - "/appcom/logs/spark/pyspark"
+        - "/appcom/logs/spark/spark-sql"
+        - "/appcom/logs/spark/spark-submit"
+        - "/appcom/logs/spark/thriftserver"
+        - "/appcom/logs/spark/tmp"
+        - "/appcom/logs/mask_etl"
+        - "/appcom/logs/sqoop"
+        - "/appcom/tmp/hive"
+        - "/appcom/tmp/sqoop"
+        - "/appcom/logs/azkaban"
+        - "/data/bdp/bdp_etl_deploy"
+ 
+    - name: create hostname file
+      copy: src=/appcom/config/schedulis-config/host.properties dest=/appcom/config/schedulis-config/
+        owner=hadoop group=hadoop mode=750
+        
+    - name: judge schedulis_{{version}}_exec is exist
+      shell: ls /appcom/Install/AzkabanInstall/schedulis_{{version}}_exec
+      ignore_errors: True
+      register: newpackageexist
+      
+    - name: rm -rf schedulis_{{version}}_exec*
+      shell: rm -rf /appcom/Install/AzkabanInstall/schedulis-exec*
+      when: newpackageexist is success
+      
+    - name: copy executor package
+      copy: src=/appcom/Install/AzkabanInstall/schedulisdeploy/material/schedulis_{{version}}_exec.zip dest=/appcom/Install/AzkabanInstall/
+        owner=hadoop group=hadoop mode=750
+      
+    - name: unzip executor package
+      unarchive:
+            src=/appcom/Install/AzkabanInstall/schedulis_{{version}}_exec.zip
+            dest=/appcom/Install/AzkabanInstall/
+            copy=no
+            owner=hadoop
+            group=hadoop
+            mode=750
+            
+    - name: create ln
+      shell: ln -sf /appcom/Install/AzkabanInstall/schedulis_{{version}}_exec /appcom/Install/AzkabanInstall/schedulis-exec;
+             ln -sf /appcom/config/schedulis-config/schedulis-exec/exec_azkaban.properties /appcom/Install/AzkabanInstall/schedulis-exec/conf/azkaban.properties;
+             ln -sf /appcom/config/schedulis-config/schedulis-exec/common.properties /appcom/Install/AzkabanInstall/schedulis-exec/plugins/jobtypes/common.properties;
+             ln -sf /appcom/config/schedulis-config/schedulis-exec/commonprivate.properties /appcom/Install/AzkabanInstall/schedulis-exec/plugins/jobtypes/commonprivate.properties;
+             ln -sf /appcom/config/schedulis-config/schedulis-exec/exec_plugin.properties /appcom/Install/AzkabanInstall/schedulis-exec/plugins/alerter/WebankIMS/conf/plugin.properties;
+             ln -sf /appcom/config/schedulis-config/schedulis-exec/linkis_plugin.properties /appcom/Install/AzkabanInstall/schedulis-exec/plugins/jobtypes/linkis/plugin.properties;
+    - name: judge execute-as-user is exist
+      shell: ls /appcom/Install/AzkabanInstall/schedulis_{{version}}_exec/lib/execute-as-user
+      ignore_errors: True
+      register: libexist
+ 
+    - name: copy exec-as-user
+      copy: src=/appcom/Install/AzkabanInstall/schedulisdeploy/construct/execute-as-user dest=/appcom/Install/AzkabanInstall/schedulis_{{version}}_exec/lib/
+      when: libexist is failed
+
+    - name: chown and chmod exec-as-user
+      shell: cd /appcom/Install/AzkabanInstall/schedulis-exec/lib/;sudo chown root execute-as-user;sudo chmod 6050 execute-as-user
+      when: libexist is failed
+
+    - name: copy derby
+      shell: cp /nemo/jdk8/db/lib/derby.jar /appcom/Install/AzkabanInstall/schedulis-exec/lib
+
+    - name: set hive lineage
+      shell: cd /appcom/logs/lineage/hive;touch Hive.txt;chmod 777 Hive.txt
+
+    - name: set sqoop lineage
+      shell: cd /appcom/logs/lineage/sqoop;touch Sqoop.txt;chmod 777 Sqoop.txt
+
+    - name: set spark lineage
+      shell: cd /appcom/logs/lineage/spark;touch sparkLineage.lock;chmod 777 sparkLineage.lock
+
+    - name: copy crontab sh
+      copy: src=/appcom/Install/AzkabanInstall/schedulisdeploy/construct/removeLogsDir.sh dest=/appcom/Install/AzkabanInstall/
+
+    - name: cron setting
+      cron: name="remove logs" minute="0" hour="0" day="*" job="/appcom/Install/AzkabanInstall/removeLogsDir.sh >> /appcom/Install/AzkabanInstall/removeJobDataDir.log 2>&1" state="present"
+
+    - name: install expect
+      become: yes 
+      yum: name=expect state=present
+
+    - name: install expect-devel
+      become: yes
+      yum: name=expect-devel state=present
+
+    - name: install tcl
+      become: yes      
+      yum: name=tcl state=present
+
+    - name: install mysql
+      become: yes      
+      yum: name=mysql state=present
+
+    - name: copy ExitCodeCheck.sh
+      become: yes
+      copy: src=/appcom/Install/AzkabanInstall/schedulisdeploy/construct/ExitCodeCheck.sh dest=/usr/local/bin/ group=hadoop owner=hadoop
+
+    - name: print over
+      shell: echo playbook over

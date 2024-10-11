@@ -1,0 +1,53 @@
+<assembly>
+  <id>1.1.11</id>
+  <formats>
+    <format>zip</format>
+  </formats>
+  <!-- 使用assembly拷贝依赖包 -->
+  <!--<dependencySets>-->
+  <!--<dependencySet>-->
+  <!--&lt;!&ndash; 是否包含自己（将项目生成的jar包也输出到lib目录） &ndash;&gt;-->
+  <!--<useProjectArtifact>false</useProjectArtifact>-->
+  <!--<outputDirectory>lib</outputDirectory>-->
+  <!--</dependencySet>-->
+  <!--</dependencySets>-->
+  <fileSets>
+    <!-- 从目标目录拷贝文件去压缩 -->
+    <fileSet>
+      <directory>target/bin</directory>
+      <outputDirectory>/bin</outputDirectory>
+      <lineEnding>unix</lineEnding>
+      <fileMode>0755</fileMode>
+    </fileSet>
+    <fileSet>
+      <directory>target/lib</directory>
+      <outputDirectory>/lib</outputDirectory>
+    </fileSet>
+    <fileSet>
+      <directory>target/conf</directory>
+      <outputDirectory>/conf</outputDirectory>
+      <lineEnding>unix</lineEnding>
+    </fileSet>
+    <fileSet>
+      <directory>src/main/logs</directory>
+      <outputDirectory>/logs</outputDirectory>
+    </fileSet>
+
+    <!-- 从源目录拷贝文件去压缩
+    <fileSet>
+      <directory>src/main/run</directory>
+      <includes>
+        <include>*.sh</include>
+        <include>*.cmd</include>
+      </includes>
+      <outputDirectory>/</outputDirectory>
+    </fileSet>
+    <fileSet>
+      <directory>src/main</directory>
+      <includes>
+        <include>ReadMe.txt</include>
+      </includes>
+      <outputDirectory>/</outputDirectory>
+    </fileSet> -->
+  </fileSets>
+</assembly>

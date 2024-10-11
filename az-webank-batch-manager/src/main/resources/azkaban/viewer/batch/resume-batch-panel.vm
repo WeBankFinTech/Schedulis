@@ -1,0 +1,56 @@
+## Modal dialog to be displayed to create a new project.
+
+<div class="modal" id="resume-batch-panel">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;
+        </button>
+        <h4 class="modal-title">$resumeBatchTitle</h4>
+      </div>
+      <div class="modal-body">
+        <fieldset class="form-horizontal">
+          <div class="form-group">
+            <label for="resume-level-select" class="col-sm-3 control-label">$holdLevelLabel</label>
+            <div class="col-sm-7">
+              <select id="resume-level-select" class="form-control">
+                <option value="0">$overallHoldSelect</option>
+                <option value="1">$tenantHoldSelect</option>
+                <option value="2">$userHoldSelect</option>
+                <option value="3">$customizeHoldSelect</option>
+              </select>
+            </div>
+          </div>
+          <div class="form-group">
+            <label for="resume-batch-select" class="col-sm-3 control-label">$batchIdLabel</label>
+            <div class="col-sm-7">
+              <select id="resume-batch-select" class="form-control selectpicker" data-live-search="true" title="${batchIdSelectTips}" data-size="8">
+              </select>
+            </div>
+          </div>
+          <div class="form-group" id="resumeDataListDiv">
+            <label for="resume-data-list-select" class="col-sm-3 control-label">$dataListLabel</label>
+            <div class="col-sm-7">
+              <select id="resume-data-list-select" class="form-control" style="width: 100%">
+              </select>
+            </div>
+          </div>
+          <div class="form-group" id="resumeBlackListDiv">
+            <label for="resume-black-list-select" class="col-sm-3 control-label">$blackListLabel</label>
+            <div class="col-sm-7">
+              <select id="resume-black-list-select" class="form-control" style="width: 100%">
+              </select>
+            </div>
+          </div>
+        </fieldset>
+      </div>
+      <div class="modal-footer">
+        <input name="action" type="hidden" value="create">
+        <input name="redirect" type="hidden" value="$!context/">
+        <button type="button" class="btn btn-primary" id="resume-batch-btn">$resumeBatchBtn</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+

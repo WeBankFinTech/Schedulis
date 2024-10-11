@@ -1,0 +1,60 @@
+#*
+ * Copyright 2012 LinkedIn Corp.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not
+ * use this file except in compliance with the License. You may obtain a copy of
+ * the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations under
+ * the License.
+*#
+<!-- login.vm -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Cache-Control" content="no-cache, must-revalidate">
+  <meta http-equiv="Expires" content="0">
+  #parse("azkaban/webapp/servlet/velocity/style.vm")
+  #parse("azkaban/webapp/servlet/velocity/javascript.vm")
+
+  <script type="text/javascript" src="${context}/js/azkaban/view/login.js?version=1.10.0"></script>
+  <script type="text/javascript">
+    var contextURL = "${context}";
+    var langType = "${currentlangType}";
+    function system_time() {
+      return new Date().getTime();
+    }
+  </script>
+</head>
+<body>
+
+  #set ($current_page = "all")
+  #set ($navbar_disabled = 1)
+  #parse ("azkaban/webapp/servlet/velocity/nav.vm")
+
+<div class="container-full">
+  <div class="login">
+    <div class="alert alert-danger" id="error-msg"></div>
+    <div class="well">
+      <form id="checkin-form" role="form">
+        <fieldset>
+          <legend>$loginPage</legend>
+          <input type="text" class="form-control" id="username" placeholder=$userName>
+          <input type="password" class="form-control" id="userpwd" placeholder="${passwordPlaceholder}">
+          <button type="button" class="btn btn-primary btn-lg btn-block" id="checkin-submit">$login
+          </button>
+        </fieldset>
+      </form>
+    </div><!-- /.well -->
+  </div><!-- /.login -->
+
+</div><!-- /container -->
+</body>
+</html>
+

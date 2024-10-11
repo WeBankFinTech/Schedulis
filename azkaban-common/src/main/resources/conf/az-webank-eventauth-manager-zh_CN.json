@@ -1,0 +1,57 @@
+{
+  "module": "az-webank-eventauth-manager",
+  "language": "zh_CN",
+  "azkaban.viewer.event.common": {
+    "signalManage": "信号管理",
+    "signalLog": "信号日志",
+    "messageSender": "消息发送者"
+  },
+  "azkaban.viewer.event.eventAuth-detail.vm": {
+  },
+  "azkaban.viewer.event.eventAuth-detail-header.vm": {
+  },
+  "azkaban.viewer.event.eventAuth-manager.vm": {
+    "authedMessagePage": "已授权信号页面",
+    "messageInfoInclude": "消息发送者、消息主題或消息名称包含 ...",
+    "quicklySearch": "快速查找",
+    "clickNameToRank": "* 点击列名可排序",
+    "messageTopic": "消息主题",
+    "messageName": "消息名称",
+    "messageRecordTime": "消息记录时间",
+    "messageDetail": "详情",
+    "previousPage": "上一页",
+    "nextPage": "下一页",
+    "alarmsetting": "告警设置",
+    "selectAlertLevel": "告警级别选择",
+    "backlogAlarmSet": "设置信号积压的告警列表，可以用逗号、空格或分号分隔列表.",
+    "entertip": "请录入一个批量运维人员英文名和一个批量负责人英文名",
+    "cancel": "取消",
+    "setAlarm": "设置告警"
+  },
+  "azkaban.viewer.event.eventQueue-manager.vm": {
+    "eventQueuePage": "信号详情页面",
+    "messageInfoInclude": "消息ID、消息发送者包含...",
+    "quicklySearch": "快速查找",
+    "clickNameToRank": "* 点击列名可排序",
+    "messageTopic": "消息主题",
+    "messageName": "消息名称",
+    "messageSendTime": "消息发送时间",
+    "messageBody": "消息体",
+    "previousPage": "上一页",
+    "nextPage": "下一页",
+    "rmbnum": "RMB流水号"
+  },
+  "azkaban.viewer.event.eventStatus-manager.vm": {
+    "eventStatusPage": "消费详情页面",
+    "messageInfoInclude": "消息接收者包含 ...",
+    "quicklySearch": "快速查找",
+    "clickNameToRank": "* 点击列名可排序",
+    "messageReceive": "消息接受者",
+    "messageTopic": "消息主题",
+    "messageName": "消息名称",
+    "messageReceiveTime": "消息接收时间",
+    "consumeId": "消费ID",
+    "previousPage": "上一页",
+    "nextPage": "下一页"
+  }
+}

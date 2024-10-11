@@ -1,0 +1,71 @@
+
+- hosts: all_nodes
+  tasks:
+    - name: judge web-{{version_old}} is exist
+      shell: ls /appcom/config/schedulis-config/web-{{version_old}}
+      ignore_errors: True        
+      register: oldconfigexist 
+      
+    - name: backup old config
+      shell: sudo cp -r /appcom/config/schedulis-config/schedulis-web /appcom/config/schedulis-config/web-{{version_old}}
+      when: oldconfigexist is failed
+      
+      
+    - name: rm -rf schedulis_{{version_new}}_web*
+      shell: rm -rf /appcom/Install/AzkabanInstall/schedulis_{{version_new}}_web*
+      
+      
+    - name: judge schedulis_{{version_new}}_web is exist
+      shell: ls /appcom/Install/AzkabanInstall/schedulis_{{version_new}}_web
+      ignore_errors: True
+      register: newpackageexist
+      
+    - name: copy webserver package
+      copy: src=/appcom/Install/AzkabanInstall/schedulisdeploy/material/schedulis_{{version_new}}_web.zip dest=/appcom/Install/AzkabanInstall/
+        owner=hadoop group=hadoop mode=750
+      when: newpackageexist is failed 
+   
+    - name: unzip webserver package
+      unarchive:
+            src=/appcom/Install/AzkabanInstall/schedulis_{{version_new}}_web.zip
+            dest=/appcom/Install/AzkabanInstall/
+            copy=no
+            owner=hadoop
+            group=hadoop
+            mode=750
+      when: newpackageexist is failed 
+      
+    - name: judge AzkabanWebServer status
+      shell: jps|grep AzkabanWebServer
+      ignore_errors: True
+      register: servicestatus
+      
+      
+    - name: shutdown service
+      shell: cd /appcom/Install/AzkabanInstall;bin/shutdown-web.sh
+      ignore_errors: True      
+      when: servicestatus.stdout.find('AzkabanWebServer') != -1
+      
+    - name: remove old ln
+      shell: cd /appcom/Install/AzkabanInstall;rm -rf schedulis-web
+            
+    - name: create ln
+      shell: ln -sf /appcom/Install/AzkabanInstall/schedulis_{{version_new}}_web /appcom/Install/AzkabanInstall/schedulis-web;
+             ln -sf /appcom/config/schedulis-config/schedulis-web/web_azkaban.properties /appcom/Install/AzkabanInstall/schedulis-web/conf/azkaban.properties;
+             ln -sf /appcom/config/schedulis-config/schedulis-web/web_plugin_ims.properties /appcom/Install/AzkabanInstall/schedulis-web/plugins/alerter/WebankIMS/conf/plugin.properties;
+             ln -sf /appcom/config/schedulis-config/schedulis-web/web_plugin_system.properties /appcom/Install/AzkabanInstall/schedulis-web/plugins/viewer/system/conf/plugin.properties;
+
+    - name: copy derby
+      shell: cp /nemo/jdk8/db/lib/derby.jar /appcom/Install/AzkabanInstall/schedulis-web/lib
+      
+    - name: judge AzkabanWebServer status
+      shell: jps|grep AzkabanWebServer
+      ignore_errors: True
+      register: servicestatus
+
+    - name: start service
+      shell: cd /appcom/Install/AzkabanInstall/schedulis-web;nohup sh bin/start-web.sh &
+      when: servicestatus.stdout.find('AzkabanWebServer') == -1
+      
+    - name: print over
+      shell: echo playbook over

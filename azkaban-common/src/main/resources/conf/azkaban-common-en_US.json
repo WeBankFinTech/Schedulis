@@ -1,0 +1,16 @@
+{
+  "module": "azkaban-common",
+  "language": "en_US",
+  "azkaban.project.ProjectManager": {
+    "noBlankProgramName": "Can not submit blank project name.",
+    "noBlankProgramDesc": "Can not submit blank project description.",
+    "noInvalidUser": "Can not use invalid account to create project.",
+    "checkProgramName": "Specific start with letter,and accept letter or number or '-' or a blank as separator.",
+    "hasExistProgram": "Existed Project.",
+    "projectNameLength": "The length of project name can not exceed 64.",
+    "projectDescLength": "The length of project description can not exceed 2048."
+  },
+  "azkaban.system.SystemManager": {
+    "errorFormatProxy": "Error format Proxy User Name, accept combined letters or number or underline, and multi proxy use comma as separate."
+  }
+}

@@ -1,0 +1,7 @@
+<azkaban-users>
+  <user groups="" password="" roles="" username=""/>
+  <user password="" roles="" username=""/>
+
+  <role name="" permissions=""/>
+  <role name="" permissions=""/>
+</azkaban-users>

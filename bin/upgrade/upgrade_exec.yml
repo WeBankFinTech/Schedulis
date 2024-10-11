@@ -1,0 +1,87 @@
+
+- hosts: all_nodes
+  vars:
+      oldconfigexist: ls /appcom/config/schedulis-config/exec-{{version_old}}
+      newpackageexist: ls /appcom/Install/AzkabanInstall/exec-{{version_new}}
+      libexist: ls /appcom/Install/AzkabanInstall/schedulis_{{version_new}}_exec/lib/execute-as-user
+      servicestatus: jps|grep AzkabanExecutorServer
+  tasks:
+    - name: judge exec-{{version_old}} is exist
+      shell: ls /appcom/config/schedulis-config/exec-{{version_old}}
+      ignore_errors: True        
+      register: oldconfigexist 
+
+    - name: backup old config exec-{{version_old}}
+      shell: sudo cp -r /appcom/config/schedulis-config/schedulis-exec /appcom/config/schedulis-config/exec-{{version_old}}
+      when: oldconfigexist is failed
+
+    - name: rm -rf schedulis_{{version_new}}_exec*
+      shell: rm -rf /appcom/Install/AzkabanInstall/schedulis_{{version_new}}_exec*
+       
+    - name: judge schedulis_{{version_new}}_exec is exist
+      shell: ls /appcom/Install/AzkabanInstall/schedulis_{{version_new}}_exec
+      ignore_errors: True
+      register: newpackageexist
+
+    - name: copy schedulis_{{version_new}}_exec.zip package
+      copy: src=/appcom/Install/AzkabanInstall/schedulisdeploy/material/schedulis_{{version_new}}_exec.zip dest=/appcom/Install/AzkabanInstall/
+        owner=hadoop group=hadoop mode=750
+      when: newpackageexist is failed  
+   
+    - name: unzip executor package
+      unarchive:
+            src=/appcom/Install/AzkabanInstall/schedulis_{{version_new}}_exec.zip
+            dest=/appcom/Install/AzkabanInstall/
+            copy=no
+            owner=hadoop
+            group=hadoop
+            mode=750
+      when: newpackageexist is failed
+            
+    - name: judge execute-as-user is exist
+      shell: ls /appcom/Install/AzkabanInstall/schedulis_{{version_new}}_exec/lib/execute-as-user
+      ignore_errors: True
+      register: libexist
+      
+    - name: copy exec-as-user
+      copy: src=/appcom/Install/AzkabanInstall/schedulisdeploy/material/execute-as-user dest=/appcom/Install/AzkabanInstall/schedulis_{{version_new}}_exec/lib/
+      when: libexist is failed
+
+    - name: chown and chmod exec-as-user
+      shell: cd /appcom/Install/AzkabanInstall/schedulis_{{version_new}}_exec/lib/;sudo chown root execute-as-user;sudo chmod 6050 execute-as-user
+      when: libexist is failed
+      
+    - name: judge AzkabanExecutorServer status
+      shell: jps|grep AzkabanExecutorServer
+      ignore_errors: True
+      register: servicestatus
+
+    - name: shutdown service
+      shell: cd /appcom/Install/AzkabanInstall/schedulis-exec;bin/shutdown-exec.sh
+      ignore_errors: True
+      when: servicestatus.stdout.find('AzkabanExecutorServer') != -1
+
+    - name: remove old ln
+      shell: cd /appcom/Install/AzkabanInstall;rm -rf schedulis-exec
+            
+    - name: create ln
+      shell: ln -sf /appcom/Install/AzkabanInstall/schedulis_{{version_new}}_exec /appcom/Install/AzkabanInstall/schedulis-exec;
+             ln -sf /appcom/config/schedulis-config/schedulis-exec/exec_azkaban.properties /appcom/Install/AzkabanInstall/schedulis-exec/conf/azkaban.properties;
+             ln -sf /appcom/config/schedulis-config/schedulis-exec/common.properties /appcom/Install/AzkabanInstall/schedulis-exec/plugins/jobtypes/common.properties;
+             ln -sf /appcom/config/schedulis-config/schedulis-exec/commonprivate.properties /appcom/Install/AzkabanInstall/schedulis-exec/plugins/jobtypes/commonprivate.properties;
+             ln -sf /appcom/config/schedulis-config/schedulis-exec/exec_plugin.properties /appcom/Install/AzkabanInstall/schedulis-exec/plugins/alerter/WebankIMS/conf/plugin.properties;
+             ln -sf /appcom/config/schedulis-config/schedulis-exec/linkis_plugin.properties /appcom/Install/AzkabanInstall/schedulis-exec/plugins/jobtypes/linkis/plugin.properties;
+    - name: copy derby
+      shell: cp /nemo/jdk8/db/lib/derby.jar /appcom/Install/AzkabanInstall/schedulis-exec/lib
+     
+    - name: judge AzkabanExecutorServer status
+      shell: jps|grep AzkabanExecutorServer
+      ignore_errors: True
+      register: servicestatus
+ 
+    - name: start service
+      shell: cd /appcom/Install/AzkabanInstall/schedulis-exec;nohup sh bin/start-exec.sh &
+      when: servicestatus.stdout.find('AzkabanExecutorServer') == -1      
+
+    - name: print over
+      shell: echo playbook over

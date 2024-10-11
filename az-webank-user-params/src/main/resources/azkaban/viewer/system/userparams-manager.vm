@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+
+#parse("azkaban/webapp/servlet/velocity/style.vm")
+#parse("azkaban/webapp/servlet/velocity/javascript.vm")
+<script type="text/javascript">
+        var currentTime = ${currentTime};
+        var timezone = "${timezone}";
+        var errorMessage = null;
+        var successMessage = null;
+        var wtssUser = "${wtssUser}";
+
+        var langType = "${currentlangType}";
+    </script>
+    <script type="text/javascript" src="/js/azkaban/i18n-config.js?version=1.43.0"></script>
+    <script type="text/javascript" src="/js/azkaban/util/ajax.js?version=1.43.0"></script>
+    <script type="text/javascript" src="/js/jquery/jquery.tablesorter.js?version=1.43.0"></script>
+    <script type="text/javascript" src="/js/azkaban/util/utils.js?version=1.43.0"></script>
+    <script type="text/javascript" src="/js/azkaban/util/job-status.js?version=1.43.0"></script>
+    <script type="text/javascript" src="/js/raphael.min.js?version=1.43.0"></script>
+    <script type="text/javascript" src="/js/morris.min.js?version=1.43.0"></script>
+    <script type="text/javascript" src="/userparams/js/userparams-manager.js?version=1.43.0"></script>
+    <script src="/js/select2/select2.js?version=1.43.0"></script>
+    <script src="/js/select2/i18n/zh-CN.js?version=1.43.0"></script>
+    
+</head>
+<body>
+
+    #set ($current_page=$userParams)
+    #parse ("azkaban/webapp/servlet/velocity/nav.vm")
+
+## Page header.
+<div class="az-page-header">
+    <div class="container-full">
+        <div class="row">
+            <div class="header-title" id="project-page-header">
+                <h1><a href="/userparams">$userParamsSetPage</a></h1>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="container-full">
+
+    #parse ("azkaban/webapp/servlet/velocity/alerts.vm")
+
+    <div class="row" id="system-department-group-view">
+
+        <div class="col-xs-12" id="department-group-options">
+            <div class="from-group">
+                <div class="col-sm-9" id="">
+                    <button id="add-department-group" class="btn btn-sm btn-success">
+                        <span class="glyphicon glyphicon-plus"></span> $addUserParams
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <br/>
+        <br/>
+        <br/>
+
+        <div class="col-xs-12">
+            <table class="table table-striped table-bordered table-condensed table-hover" id="execTable">
+                <thead>
+                <tr>
+                    <th>#</th>
+                    <th class="user">$paramName</th>
+                    <th class="user">$desc</th>
+                    <th class="user">$paramValue</th>
+                    <th class="user">$owner</th>
+                    <th class="user">$userReadOnly</th>
+                    <th class="user">$createTime</th>
+                    <th class="user">$updateTime</th>
+                    <!--
+                    <th class="status">$status</th>-->
+                    <th class="action">$operate</th>
+                </tr>
+                </thead>
+                <tbody id="department-group-table-body">
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <div class="modal" id="messageDialog">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header" id="messageTitle">
+                    <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+                    <h4 class="modal-title">Error</h4>
+                </div>
+                <div class="modal-body" id="messageDiv">
+                    <p id="messageBox"></p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-primary" data-dismiss="modal"
+                            onclick="window.location.reload(true);">$quit</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    #parse ("azkaban/viewer/system/add-userparams-panel.vm")
+    #parse ("azkaban/viewer/system/update-userparams-panel.vm")
+</div>
+</body>
+</html>
