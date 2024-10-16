@@ -23,6 +23,11 @@ import azkaban.scheduler.ScheduleManagerException;
 import azkaban.server.AbstractAzkabanServer;
 import azkaban.server.session.Session;
 import azkaban.server.session.SessionCache;
+import azkaban.system.JdbcSystemUserImpl;
+import azkaban.system.SystemManager;
+import azkaban.system.SystemUserLoader;
+import azkaban.system.SystemUserManagerException;
+import azkaban.system.entity.WtssUser;
 import azkaban.trigger.TriggerManagerException;
 import azkaban.user.*;
 import azkaban.utils.*;
@@ -98,14 +103,14 @@ public abstract class AbstractLoginAzkabanServlet extends AbstractAzkabanServlet
     this.multipartParser = new MultipartParser(DEFAULT_UPLOAD_DISK_SPOOL_SIZE);
 
     this.shouldLogRawUserAgent = getApplication().getServerProps()
-        .getBoolean("accesslog.raw.useragent", false);
+            .getBoolean("accesslog.raw.useragent", false);
     //获取Web Server实体对象
     this.application = SERVICE_PROVIDER.getInstance(AzkabanWebServer.class);
     this.ajaxMaxSize = this.application.getServerProps().getInt("ajax.query.max.size", 500);
 
     this.notCheckSizeAjaxList = this.application.getServerProps()
-        .getStringList("request.size.limit.whitelist",
-            new ArrayList<>());
+            .getStringList("request.size.limit.whitelist",
+                    new ArrayList<>());
 
     this.requestWithoutSessionList = this.application.getServerProps().getStringList(REQUEST_WITHOUTSESSION,
             Arrays.asList("executeFlowCycleFromExecutor", "reloadWebData", "alertMissedSchedules", "reloadExecutors","recordRunningFlow"));
@@ -143,7 +148,7 @@ public abstract class AbstractLoginAzkabanServlet extends AbstractAzkabanServlet
       return;
     }
 
-      //session不为空，或者请求不需要检查session
+    //session不为空，或者请求不需要检查session
     if (session != null || isRequestWithoutSession(req)) {
       if("open".equals(nginxSSL)) {
         //XSS参数过滤
@@ -175,12 +180,12 @@ public abstract class AbstractLoginAzkabanServlet extends AbstractAzkabanServlet
       }
       //检查查询数量
       if (this.notCheckSizeAjaxList != null && !this.notCheckSizeAjaxList.contains(
-          getParam(req, "ajax", ""))) {
+              getParam(req, "ajax", ""))) {
         int querySize = getIntParam(req, "size", 0);
         int queryLength = getIntParam(req, "length", 0);
         int queryPageSize = getIntParam(req, "pageSize", 0);
         if (querySize > this.ajaxMaxSize || queryPageSize > this.ajaxMaxSize
-            || queryLength > this.ajaxMaxSize) {
+                || queryLength > this.ajaxMaxSize) {
           logger.error("request size more than {}, reject!", this.ajaxMaxSize);
           Map<String, Object> ret = new HashMap<>();
           ret.put("code", 400);
@@ -208,16 +213,16 @@ public abstract class AbstractLoginAzkabanServlet extends AbstractAzkabanServlet
   }
 
   private boolean validCsrf(HttpServletRequest req, HttpServletResponse resp, Session session,
-      boolean isGet, Map<String, Object> params)
-      throws IOException, ServletException {
+                            boolean isGet, Map<String, Object> params)
+          throws IOException, ServletException {
     if (!getApplication().getServerProps().getBoolean("azkaban.csrf.check", true) || session == null
-        || "/error".equals(req.getRequestURI()) || !StringUtils
-        .isFromBrowser(req.getHeader("User-Agent"))) {
+            || "/error".equals(req.getRequestURI()) || !StringUtils
+            .isFromBrowser(req.getHeader("User-Agent"))) {
       return false;
     }
     if (isGet) {
       if (!hasParam(req, "ajax") && !hasParam(req, "action") && !hasParam(req, "delete")
-          && !hasParam(req, "purge") && !hasParam(req, "download") && !hasParam(req, "logout")) {
+              && !hasParam(req, "purge") && !hasParam(req, "download") && !hasParam(req, "logout")) {
         return false;
       }
       String referer = req.getHeader("Referer");
@@ -228,7 +233,7 @@ public abstract class AbstractLoginAzkabanServlet extends AbstractAzkabanServlet
     } else {
       Object csrfToken = session.getSessionData("csrfToken");
       if (csrfToken != null && !csrfToken.equals(req.getHeader("csrfToken")) && (params == null
-          ? true : !csrfToken.equals(params.get("csrfToken") + ""))) {
+              ? true : !csrfToken.equals(params.get("csrfToken") + ""))) {
         resp.sendRedirect("/error");
         return true;
       }
@@ -387,17 +392,17 @@ public abstract class AbstractLoginAzkabanServlet extends AbstractAzkabanServlet
     Map<String, String> subPageMap1;
     if ("zh_CN".equalsIgnoreCase(languageType)) {
       // 添加国际化标签
-    loginMap = LoadJsonUtils.transJson("/conf/azkaban-web-server-zh_CN.json",
-            "azkaban.webapp.servlet.velocity.login.vm");
-    subPageMap1 = LoadJsonUtils.transJson("/conf/azkaban-web-server-zh_CN.json",
-            "azkaban.webapp.servlet.velocity.nav.vm");
+      loginMap = LoadJsonUtils.transJson("/conf/azkaban-web-server-zh_CN.json",
+              "azkaban.webapp.servlet.velocity.login.vm");
+      subPageMap1 = LoadJsonUtils.transJson("/conf/azkaban-web-server-zh_CN.json",
+              "azkaban.webapp.servlet.velocity.nav.vm");
       this.passwordPlaceholder = "密码";
     }else {
       loginMap = LoadJsonUtils.transJson("/conf/azkaban-web-server-en_US.json",
               "azkaban.webapp.servlet.velocity.login.vm");
       subPageMap1 = LoadJsonUtils.transJson("/conf/azkaban-web-server-en_US.json",
               "azkaban.webapp.servlet.velocity.nav.vm");
-        this.passwordPlaceholder = "Password";
+      this.passwordPlaceholder = "Password";
     }
     loginMap.forEach(page::add);
     subPageMap1.forEach(page::add);
@@ -478,41 +483,14 @@ public abstract class AbstractLoginAzkabanServlet extends AbstractAzkabanServlet
         }
 
         final String username = (String) params.get("username");
-        final String password  = (String) params.get("userpwd");
+        final String password = (String) params.get("userpwd");
         final String ip = getRealClientIpAddr(req);
-
-        String wtss_secret_de = props.getString("dss.secret", "");
-        String wtss_private_key = props.getString("wtss.private.key", "");
-        String from_dss_secret_de = "";
-        if(params.containsKey("dss_secret")){
-          String from_dss_secret_en = (String)params.get("dss_secret");
-          logger.info("handle dss login , secret > {}" , from_dss_secret_en);
-          try {
-            if(from_dss_secret_en!=null){
-              from_dss_secret_en = from_dss_secret_en.replaceAll(" ","+");
-            }
-            from_dss_secret_de = RSAUtils.decrypt(from_dss_secret_en,wtss_private_key);
-          } catch (Exception e) {
-            logger.error("parse dss.secret failed , caused by {} " , e);
-          }
-        }
-        if(wtss_secret_de.equals(from_dss_secret_de)){
-          logger.info("handle dss login , dss_secret pass check" );
-          try{
-              session = createSession(username, password, ip, wtss_secret_de);
-              resp.setHeader("csrfToken", session.getSessionData("csrfToken") + "");
-            } catch(final Exception e){
-              writeResponse(resp, "Login error: " + e.getMessage());
-              return;
-            }
-        }else{
-          try {
-            session = createSession(username, password, ip);
-            resp.setHeader("csrfToken", session.getSessionData("csrfToken") + "");
-          } catch (final UserManagerException e) {
-            writeResponse(resp, "Login error: " + e.getMessage());
-            return;
-          }
+        try {
+          session = createSession(username, password, ip);
+          resp.setHeader("csrfToken", session.getSessionData("csrfToken") + "");
+        } catch (final UserManagerException e) {
+          writeResponse(resp, "Login error: " + e.getMessage());
+          return;
         }
       }
       handleMultiformPost(req, resp, params, session);
@@ -588,32 +566,31 @@ public abstract class AbstractLoginAzkabanServlet extends AbstractAzkabanServlet
     return (req.getQueryString() != null && req.getQueryString().contains("password="));
   }
 
-    private Session createDssSession(final String username, final HttpServletRequest req)
-            throws UserManagerException, ServletException, IOException {
-      final String ip = getRealClientIpAddr(req);
-      try {
-        if (!StringUtils.isFromBrowser(req.getHeader("User-Agent"))) {
-          logger.info("not browser.");
-          Session cacheSession = this.application.getSessionCache().getSessionByUsername(username);
-          if (cacheSession != null) {
-            logger.info("session not found.");
-            return cacheSession;
-          }
+  private Session createDssSession(final String username, final HttpServletRequest req)
+          throws UserManagerException, ServletException, IOException {
+    final String ip = getRealClientIpAddr(req);
+    try {
+      if (!StringUtils.isFromBrowser(req.getHeader("User-Agent"))) {
+        logger.info("not browser.");
+        Session cacheSession = this.application.getSessionCache().getSessionByUsername(username);
+        if (cacheSession != null) {
+          logger.info("session not found.");
+          return cacheSession;
         }
-      } catch (final Exception e) {
-        logger.error("no super user", e);
       }
-      Session newSession = createSession(username, "dssToken", ip, req);
-      return newSession;
+    } catch (final Exception e) {
+      logger.error("no super user", e);
     }
-
+    Session newSession = createSession(username, "dssToken", ip, req);
+    return newSession;
+  }
 
   private Session createSession(final HttpServletRequest req)
           throws UserManagerException, ServletException, IOException {
     final String username = getParam(req, "username");
     String password = getParam(req, "userpwd");
     String frompage = "";
-    if(hasParam(req, "frompage")){
+    if (hasParam(req, "frompage")) {
       frompage = getParam(req, "frompage");
     }
 
@@ -633,18 +610,8 @@ public abstract class AbstractLoginAzkabanServlet extends AbstractAzkabanServlet
     }
 
     final String ip = getRealClientIpAddr(req);
-    try {
-      Session session = this
-          .validSecret(req, props, username, password, ip, "dss.secret", "dss_secret");
-      if (session != null) {
-        return session;
-      }
-    } catch (final Exception e) {
-      logger.error("no super user", e);
-      //没有超级用户，直接ignore
-    }
     Session session = this
-        .validSecret(req, props, username, password, ip, "common.secret", "common_secret");
+            .validSecret(req, props, username, password, ip, "common.secret", "common_secret");
     if (session != null) {
       return session;
     }
@@ -667,12 +634,15 @@ public abstract class AbstractLoginAzkabanServlet extends AbstractAzkabanServlet
   }
 
   private Session validSecret(HttpServletRequest req, Props props, String username, String password,
-      String ip, String secretKey, String reqSecret) throws ServletException, UserManagerException {
+                              String ip, String secretKey, String reqSecret) throws ServletException, UserManagerException {
     if (!hasParam(req, reqSecret)) {
       return null;
     }
 
     String wtss_secret_de = props.getString(secretKey, "");
+    if ("".equals(wtss_secret_de)) {
+      return null;
+    }
     String wtss_private_key = props.getString("wtss.private.key", "");
     String from_dss_secret_de = "";
     String from_dss_secret_en = getParam(req, reqSecret);
@@ -802,25 +772,21 @@ public abstract class AbstractLoginAzkabanServlet extends AbstractAzkabanServlet
           throws UserManagerException, ServletException, IOException {
     final UserManager manager = getApplication().getTransitionService().getUserManager();
     User user = null;
-    if ("dssToken".equals(password)) {
-      user = new User(username);
+    if (hasParam(request, "isOps") && "true".equals(getParam(request, "isOps"))) {
+      String normalUserName = getParam(request, "normalUserName");
+      String normalPassword = getParam(request, "normalPassword");
+      user = manager.validateNonRealNameUser(username, password, normalUserName, normalPassword, UserType.OPS);
+    } else if (hasParam(request, "isSys") && "true".equals(getParam(request, "isSys"))) {
+      String normalUserName = getParam(request, "normalUserName");
+      String normalPassword = getParam(request, "normalPassword");
+      user = manager.validateNonRealNameUser(username, password, normalUserName, normalPassword, UserType.SYSTEM);
     } else {
-      if (hasParam(request, "isOps") && "true".equals(getParam(request, "isOps"))) {
-        String normalUserName = getParam(request, "normalUserName");
-        String normalPassword = getParam(request, "normalPassword");
-        user = manager.validateNonRealNameUser(username, password, normalUserName, normalPassword, UserType.OPS);
-      } else if (hasParam(request, "isSys") && "true".equals(getParam(request, "isSys"))) {
-        String normalUserName = getParam(request, "normalUserName");
-        String normalPassword = getParam(request, "normalPassword");
-        user = manager.validateNonRealNameUser(username, password, normalUserName, normalPassword,UserType.SYSTEM);
-      } else {
-        user = manager.getUser(username, password);
-      }
+      user = manager.getUser(username, password);
     }
-    if(!StringUtils.isFromBrowser(request.getHeader("User-Agent"))){
+    if (!StringUtils.isFromBrowser(request.getHeader("User-Agent"))) {
       logger.info("not browser.");
       Session cacheSession = this.application.getSessionCache().getSessionByUser(user);
-      if(cacheSession != null){
+      if (cacheSession != null) {
         logger.info("session not found.");
         return cacheSession;
       }
@@ -993,8 +959,8 @@ public abstract class AbstractLoginAzkabanServlet extends AbstractAzkabanServlet
    */
   protected abstract void handlePost(HttpServletRequest req,
                                      HttpServletResponse resp, Session session)
-      throws ServletException,
-      IOException, TriggerManagerException, ScheduleManagerException;
+          throws ServletException,
+          IOException, TriggerManagerException, ScheduleManagerException;
 
   /**
    * The post request is handed off to the implementor after the user is logged in.
