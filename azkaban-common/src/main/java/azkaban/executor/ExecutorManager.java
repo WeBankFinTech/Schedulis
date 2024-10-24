@@ -1115,7 +1115,7 @@ public class ExecutorManager extends EventHandler implements
   private String getToken(){
     String token = "";
     try {
-      String dss_secret = azkProps.getString("dss.secret", "***REMOVED***");
+      String dss_secret = azkProps.getString("dss.secret");
       token = JwtTokenUtils.getToken(null,false,dss_secret,300);
     }catch (RuntimeException e){
       logger.error("getToken failed when execute httppost ,caused by {}",e);

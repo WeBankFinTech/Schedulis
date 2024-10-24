@@ -21,6 +21,11 @@ import azkaban.utils.JSONUtils;
 import azkaban.utils.Pair;
 import azkaban.utils.Props;
 import com.google.inject.Inject;
+import com.webank.wedatasphere.schedulis.common.utils.JwtTokenUtils;
+import okhttp3.*;
+import org.codehaus.jackson.map.ObjectMapper;
+
+import javax.inject.Singleton;
 import java.io.IOException;
 import java.net.URI;
 import java.util.ArrayList;
@@ -28,11 +33,6 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
-import javax.inject.Singleton;
-
-import com.webank.wedatasphere.schedulis.common.utils.JwtTokenUtils;
-import okhttp3.*;
-import org.codehaus.jackson.map.ObjectMapper;
 
 @Singleton
 public class ExecutorApiGateway {
@@ -88,8 +88,8 @@ public class ExecutorApiGateway {
       paramList.add(new Pair<>(ConnectorParams.USER_PARAM, user));
 
       if(this.azkProps.getBoolean(Constants.ConfigurationKeys.IP_WHITELIST_ENABLED,false)){
-        String dss_secret = azkProps.getString("dss.secret", "***REMOVED***");
-        String token = JwtTokenUtils.getToken(null,false,dss_secret,300);
+        String dss_secret = azkProps.getString("dss.secret");
+        String token = JwtTokenUtils.getToken(null, false, dss_secret, 300);
         paramList.add(new Pair<>(ConnectorParams.TOKEN_PARAM, token));
       }
 
@@ -143,8 +143,8 @@ public class ExecutorApiGateway {
         ExecutorApiClient.buildUri(host, port, path, true);
 
     if(this.azkProps.getBoolean(Constants.ConfigurationKeys.IP_WHITELIST_ENABLED,false)){
-      String dss_secret = azkProps.getString("dss.secret", "***REMOVED***");
-      String token = JwtTokenUtils.getToken(null,false,dss_secret,300);
+      String dss_secret = azkProps.getString("dss.secret");
+      String token = JwtTokenUtils.getToken(null, false, dss_secret, 300);
       paramList.add(new Pair<>(ConnectorParams.TOKEN_PARAM, token));
     }
 
