@@ -577,9 +577,8 @@ public class WebankUsersSync {
    * @return
    */
   private Map<String, String> initSelectParams(){
-    String appid = this.prop.getString("esb.app.id", "48097337");//"48097337";
-    String token = this.prop.getString("esb.app.token", "6RSFdEjI8S");//"6RSFdEjI8S";
-
+    String appid = this.prop.getString("esb.app.id");
+    String token = this.prop.getString("esb.app.token");
 
     Long cur_time = System.currentTimeMillis() / 1000;
 
