@@ -1,22 +1,15 @@
 package azkaban.execapp;
 
+import azkaban.executor.ConnectorParams;
 import com.webank.wedatasphere.schedulis.common.utils.JwtTokenUtils;
+import io.jsonwebtoken.Claims;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.IOException;
-
-import javax.servlet.Filter;
-import javax.servlet.FilterChain;
-import javax.servlet.FilterConfig;
-import javax.servlet.ServletException;
-import javax.servlet.ServletRequest;
-import javax.servlet.ServletResponse;
+import javax.servlet.*;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
-
-import azkaban.executor.ConnectorParams;
-import io.jsonwebtoken.Claims;
+import java.io.IOException;
 
 /**
  * @author georgeqiao
@@ -40,7 +33,7 @@ public class ExecutorAccessFilter implements Filter {
             if ("activate".equals(req.getParameter("action"))){
                 filterChain.doFilter(req, response);
             } else if (token != null){
-                Claims claims = JwtTokenUtils.getClaimsBody(token,"***REMOVED***");
+                Claims claims = JwtTokenUtils.getClaimsBody(token, "");
                 if("webserver_to_executorserver".equals(claims.getSubject())
                         && "webservercontainer".equals(claims.getIssuer())
                         && "executorservercontainer".equals(claims.getAudience())){
