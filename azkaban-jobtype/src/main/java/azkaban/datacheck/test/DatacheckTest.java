@@ -49,12 +49,12 @@ public class DatacheckTest {
 //		p.setProperty("data.object.10", "majunweidb3.mjw_pt2");
 //		
 //		p.setProperty("bdp.datachecker.jdo.option.name", "bdp");
-//		p.setProperty("job.datachecker.jdo.option.url", "***REMOVED***");
+//		p.setProperty("job.datachecker.jdo.option.url", "jdbc:mysql://127.0.0.1:3306/metastore");
 //		p.setProperty("job.datachecker.jdo.option.username", "hive");
 //		p.setProperty("job.datachecker.jdo.option.password", "aGl2ZSMyMDE4QDA3Cg==");
 //
 //		p.setProperty("job.datachecker.jdo.option.name", "job_");
-//		p.setProperty("job.datachecker.jdo.option.url", "***REMOVED***");
+//		p.setProperty("job.datachecker.jdo.option.url", "jdbc:mysql://127.0.0.1:3306/metastore");
 //		p.setProperty("job.datachecker.jdo.option.username", "hive");
 //		p.setProperty("job.datachecker.jdo.option.password", "aGl2ZSMyMDE4QDA3Cg==");
 //
