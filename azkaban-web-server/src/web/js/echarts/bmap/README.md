@@ -47,7 +47,7 @@ option = {
     // 加载 bmap 组件
     bmap: {
         // 百度地图中心经纬度
-        center: [120.***REMOVED***, 30.240018034923],
+        center: [,],
         // 百度地图缩放
         zoom: 14,
         // 是否开启拖拽缩放，可以只设置 'scale' 或者 'move'
