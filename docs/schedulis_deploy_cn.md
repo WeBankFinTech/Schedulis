@@ -449,9 +449,9 @@ nginx -s reload
 参数1：所部署节点的ip:主机名
 参数2：版本号
 
-例： （在***REMOVED***，10.255.10.97部署1.5.0版本）：
+
 # 在需要部署 Executor 的节点上运行以下脚本
-sudo sh 1.hdp_schedulis_deploy_exec.sh ***REMOVED***:bdphdp02jobs05，10.255.10.97:bdphdp02jobs04 1.5.0
+sudo sh 1.hdp_schedulis_deploy_exec.sh 127.0.0.1:abc，127.0.0.1:1234 1.5.0
 ```
 
 #### 2. WebServer 搭建
@@ -461,9 +461,9 @@ sudo sh 1.hdp_schedulis_deploy_exec.sh ***REMOVED***:bdphdp02jobs05，10.255.10.
 参数1：所部署节点的ip:主机名
 参数2：版本号
 
-例： （在***REMOVED***部署1.5.0版本）：
+
 # 在部署 WebServer 的节点上运行以下脚本
-sudo sh 2.hdp_schedulis_deploy_web.sh ***REMOVED***:bdphdp02jobs05 1.5.0
+sudo sh 2.hdp_schedulis_deploy_web.sh 127.0.0.1:1234 1.5.0
 ```
 
 #### 3. 初始化数据库
@@ -477,7 +477,7 @@ sudo sh 2.hdp_schedulis_deploy_web.sh ***REMOVED***:bdphdp02jobs05 1.5.0
 参数6：数据库密码(base64加密)
 
 例： （初始化部署1.5.0版本数据库）：
-sudo sh 3.hdp_schedulis_deploy_script.sh 1.5.0 10.255.0.76 3306 schedulisdb root 123456
+sudo sh 3.hdp_schedulis_deploy_script.sh 1.5.0 127.0.0.1 3306 schedulisdb root 123456
 ```
 
 #### 4. 进程启动
@@ -487,9 +487,9 @@ sudo sh 3.hdp_schedulis_deploy_script.sh 1.5.0 10.255.0.76 3306 schedulisdb root
 参数1：服务所在机器IP
 参数2：启动类型(exec or web)
 
-例： （在***REMOVED***启动web服务）：
+
 # 在部署 Executor 或者 WebServer 的节点上运行以下脚本来启动服务
-sudo sh 4.hdp_schedulis_start.sh ***REMOVED*** web
+sudo sh 4.hdp_schedulis_start.sh 127.0.0.1 web
 
 ```
 
@@ -499,8 +499,8 @@ sudo sh 4.hdp_schedulis_start.sh ***REMOVED*** web
 参数1：exec服务ip
 参数2：web服务ip
 
-例： （在***REMOVED*** 校验 web 和 exec 是否存在）：
-sh 5.hdp_schedulis_process_check.sh ***REMOVED*** ***REMOVED***
+：
+sh 5.hdp_schedulis_process_check.sh 127.0.0.1 127.0.0.1
 
 ```
 
@@ -508,8 +508,8 @@ sh 5.hdp_schedulis_process_check.sh ***REMOVED*** ***REMOVED***
 1. 若是单 WebServer 部署模式，则在浏览器中输入 http://webserver_ip:webserver_port    
 2. 若是多 WebServer 部署模式，则在浏览器中输入 http://nginx_ip:nginx_port   
 3. 在跳出的登录界面输入默认的用户名和密码    
-username : superadmin    
-pwd : ***REMOVED***    
+username :   
+pwd :    
 4. 成功登录后，请参考用户使用手册，自己创建一个项目并上传测试运行
 5. 运行成功，恭喜 Schedulis 成功安装了
 
