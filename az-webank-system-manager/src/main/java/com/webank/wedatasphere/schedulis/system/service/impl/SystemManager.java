@@ -457,7 +457,7 @@ public class SystemManager {
         wtssUser.setUsername(username);
         wtssUser.setFullName(username);
         wtssUser.setEmail("");
-        wtssUser.setPassword("***REMOVED***");
+        wtssUser.setPassword("Abcd1234");
       }
 
       if (null == existUser) {

@@ -204,7 +204,7 @@ public class HttpUtils {
 
     Properties props = new Properties();
     props.put(DataChecker.MASK_APP_ID, "wtss");
-    props.put(DataChecker.MASK_APP_TOKEN, "***REMOVED***");
+    props.put(DataChecker.MASK_APP_TOKEN, "20a0ccdfc0");
 
     Map<String, String> dataMap = HttpUtils.initSelectParams(props);
 
