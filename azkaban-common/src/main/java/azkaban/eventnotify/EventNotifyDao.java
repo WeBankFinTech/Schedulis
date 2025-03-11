@@ -3,9 +3,11 @@ package azkaban.eventnotify;
 import azkaban.db.DatabaseOperator;
 import azkaban.eventnotify.entity.EventNotify;
 import azkaban.flow.Flow;
+import azkaban.system.entity.DepartmentMaintainer;
+import azkaban.system.entity.WtssUser;
 import org.apache.commons.dbutils.ResultSetHandler;
-import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.slf4j.Logger;
 
 import javax.inject.Inject;
 import javax.inject.Singleton;

@@ -47,7 +47,7 @@ azkaban.JMXTableView = Backbone.View.extend({
     var childID = id + "-child";
     var tbody = id + "-tbody";
 
-    var requestURL = contextURL + "/jmx";
+    var requestURL = "/jmx";
     var canonicalName = $(target).attr("domain") + ":name=" + $(target).attr(
         "name");
 
@@ -96,7 +96,7 @@ azkaban.JMXTableView = Backbone.View.extend({
     var childID = id + "-child";
     var tbody = id + "-tbody";
 
-    var requestURL = contextURL + "/jmx";
+    var requestURL = "/jmx";
     var canonicalName = $(target).attr("domain") + ":name=" + $(target).attr(
         "name");
     var hostPort = $(target).attr("hostport");

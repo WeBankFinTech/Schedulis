@@ -44,7 +44,7 @@ import org.slf4j.LoggerFactory;
  */
 public class JobCallbackManager implements EventListener {
 
-  private static final Logger logger = LoggerFactory.getLogger(JobCallbackManager.class);
+  private static final org.slf4j.Logger logger = LoggerFactory.getLogger(JobCallbackManager.class);
 
   private static final JobCallbackStatusEnum[] ON_COMPLETION_JOB_CALLBACK_STATUS =
       {SUCCESS, FAILURE, COMPLETED};

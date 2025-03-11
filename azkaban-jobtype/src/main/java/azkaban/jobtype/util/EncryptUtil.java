@@ -1,7 +1,7 @@
 
 package azkaban.jobtype.util;
 
-import bsp.encrypt.ParamType;
+import azkaban.utils.RSAUtils;
 
 public class EncryptUtil {
 	private static final String RRS_PEM = new StringBuilder()
@@ -50,12 +50,15 @@ public class EncryptUtil {
 	
 	
 	public static String decryptPassword(final String encryptedPassword) throws Exception {
-		String dec = bsp.encrypt.EncryptUtil.decrypt(ParamType.STRING,
-				SYS_PUB_PEM,
-				ParamType.STRING,
-				RRS_PEM,
-				ParamType.STRING,
-				encryptedPassword);
+
+		//String dec = bsp.encrypt.EncryptUtil.decrypt(ParamType.STRING,
+		//		SYS_PUB_PEM,
+		//		ParamType.STRING,
+		//		RRS_PEM,
+		//		ParamType.STRING,
+		//		encryptedPassword);
+
+		String dec = RSAUtils.decrypt(encryptedPassword,SYS_PUB_PEM);
 		return dec;
 	}
 

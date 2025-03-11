@@ -6,7 +6,7 @@
   <parent>
     <groupId>com.webank.wedatasphere.schedulis</groupId>
     <artifactId>schedulis</artifactId>
-    <version>0.9.0</version>
+    <version>1.50.0</version>
   </parent>
 
   <artifactId>az-core</artifactId>
@@ -33,16 +33,6 @@
       <groupId>commons-io</groupId>
       <artifactId>commons-io</artifactId>
       <version>${commons.io.version}</version>
-    </dependency>
-    <dependency>
-      <groupId>org.codehaus.jackson</groupId>
-      <artifactId>jackson-core-asl</artifactId>
-      <version>${jackson.version}</version>
-    </dependency>
-    <dependency>
-      <groupId>org.codehaus.jackson</groupId>
-      <artifactId>jackson-mapper-asl</artifactId>
-      <version>${jackson.version}</version>
     </dependency>
     <dependency>
       <groupId>io.dropwizard.metrics</groupId>
@@ -82,4 +72,16 @@
       </plugin>
     </plugins>
   </build>
+  <!--<distributionManagement>-->
+    <!--<repository>-->
+      <!--<id>webank-releases</id>-->
+      <!--<name>webank-releases</name>-->
+      <!--<url>http://***REMOVED***/nexus/content/repositories/releases</url>-->
+    <!--</repository>-->
+    <!--<snapshotRepository>-->
+      <!--<id>webank-snapshots</id>-->
+      <!--<name>webank-snapshots</name>-->
+      <!--<url>http://***REMOVED***/nexus/content/repositories/snapshots</url>-->
+    <!--</snapshotRepository>-->
+  <!--</distributionManagement>-->
 </project>

@@ -8,17 +8,47 @@ public class JobIdRelation {
   private String jobNamePath;
   private String jobServerJobId;
   private String applicationId;
+  private String linkisId;
+  private String proxyUrl;
+
+  public static final String EXEC_ID = "exec_id";
+  public static final String ATTEMPT = "attempt";
+  public static final String JOB_NAME_PATH = "job_id";
+  public static final String JOBSERVER_JOB_ID = "job_server_job_id";
+  public static final String APPLICATION_ID = "application_id";
+  public static final String LINKIS_ID = "linkis_id";
+  public static final String PROXY_URL = "proxy_url";
 
   public JobIdRelation() {
   }
 
-  public JobIdRelation(Integer id, Integer execId, Integer attempt, String jobNamePath, String jobServerJobId, String applicationId) {
+  public JobIdRelation(Integer id, Integer execId, Integer attempt, String jobNamePath, String jobServerJobId, String applicationId, String linkisId, String proxyUrl) {
     this.id = id;
     this.execId = execId;
     this.attempt = attempt;
     this.jobNamePath = jobNamePath;
     this.jobServerJobId = jobServerJobId;
     this.applicationId = applicationId;
+    this.linkisId = linkisId;
+    this.proxyUrl = proxyUrl;
+  }
+
+  public JobIdRelation(Integer id, Integer execId, Integer attempt, String jobNamePath, String jobServerJobId, String applicationId, String proxyUrl) {
+    this.id = id;
+    this.execId = execId;
+    this.attempt = attempt;
+    this.jobNamePath = jobNamePath;
+    this.jobServerJobId = jobServerJobId;
+    this.applicationId = applicationId;
+    this.proxyUrl = proxyUrl;
+  }
+
+  public String getLinkisId() {
+    return linkisId;
+  }
+
+  public void setLinkisId(String linkisId) {
+    this.linkisId = linkisId;
   }
 
   public Integer getId() {
@@ -69,6 +99,14 @@ public class JobIdRelation {
     this.applicationId = applicationId;
   }
 
+  public String getProxyUrl() {
+    return proxyUrl;
+  }
+
+  public void setProxyUrl(String proxyUrl) {
+    this.proxyUrl = proxyUrl;
+  }
+
   @Override
   public String toString() {
     return "JobIdRelation{" +
@@ -78,6 +116,7 @@ public class JobIdRelation {
         ", jobNamePath='" + jobNamePath + '\'' +
         ", jobServerJobId='" + jobServerJobId + '\'' +
         ", applicationId='" + applicationId + '\'' +
+        ", proxyUrl='" + proxyUrl + '\'' +
         '}';
   }
 }

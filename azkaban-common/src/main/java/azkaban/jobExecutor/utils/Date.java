@@ -21,6 +21,15 @@ public enum Date {
   RUN_MON("run_mon", "month", "yyyyMM"),
   RUN_MON_STD("run_mon_std", "month", "yyyy-MM"),
 
+  /**
+   * run_today所在月，格式为yyyyMM
+   */
+  RUN_CURRENT_MON_NOW("run_current_mon_now", "month", "yyyyMM"),
+  /**
+   * run_today所在月（标准格式），格式为yyyy-MM
+   */
+  RUN_CURRENT_MON_NOW_STD("run_current_mon_now_std", "month", "yyyy-MM"),
+
   RUN_MONTH_BEGIN("run_month_begin", "month", "yyyyMMdd"),
   RUN_MONTH_BEGIN_STD("run_month_begin_std", "month", "yyyy-MM-dd"),
   RUN_MONTH_NOW_BEGIN("run_month_now_begin", "month", "yyyyMMdd"),
@@ -45,6 +54,16 @@ public enum Date {
   RUN_YEAR_END("run_year_end", "year", "yyyyMMdd"),
   RUN_YEAR_NOW_BEGIN("run_year_now_begin", "year", "yyyyMMdd"),
   RUN_YEAR_NOW_END("run_year_now_end", "year", "yyyyMMdd"),
+
+  /**
+   * 增加基于run_today所在月的上个月的变量： run_last_mon_now: run_today所在上月，格式yyyyMM，如202312
+   */
+  RUN_LAST_MON_NOW("run_last_mon_now", "month", "yyyyMM"),
+
+  /**
+   * 增加基于run_today所在月的上个月的变量： run_last_mon_now_std：run_today所在上月标准日期格式，格式yyyy-MM如2023-12
+   */
+  RUN_LAST_MON_NOW_STD("run_last_mon_now_std", "month", "yyyy-MM"),
 
   RUN_LAST_MONTH_END("run_last_month_end", "month", "yyyyMMdd"),
   RUN_LAST_QUARTER_END("run_last_quarter_end", "quarter", "yyyyMMdd"),

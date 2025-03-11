@@ -18,9 +18,6 @@
 package com.azkaban.webank.ims;
 
 import com.google.gson.Gson;
-import org.apache.commons.codec.binary.Hex;
-import org.slf4j.Logger;
-
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -33,10 +30,12 @@ import java.security.NoSuchAlgorithmException;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import org.apache.commons.codec.binary.Hex;
+import org.slf4j.Logger;
 
 
 /**
- * Created by kirkzhou on 7/3/17.
+ * Created by peacwwong on 7/3/17.
  */
 public class IMSAlert {
   public static class Result {
@@ -145,6 +144,11 @@ public class IMSAlert {
    */
   private List<String> alertReceivers;
 
+  /**
+   * ECC 通知人，最多支持3个通知人
+   */
+  private List<String> eccReceiver;
+
   private Logger logger;
 
   public IMSAlert(String server, String port, int subSystemID, String alertTitle, Logger logger) {
@@ -231,6 +235,19 @@ public class IMSAlert {
         sb.append("&alert_reciver=");
         for (String receiver : alertReceivers) {
           sb.append(receiver).append(",");
+        }
+        sb.deleteCharAt(sb.length() - 1);
+
+        // ecc_receiver 处理
+        sb.append("&ecc_receiver=");
+        int count = 0;
+        for (String receiver : alertReceivers) {
+          sb.append(receiver).append(",");
+          count++;
+          if (count >= 3) {
+            // ecc_receiver 最多支持3个通知人，否则会报错
+            break;
+          }
         }
         sb.deleteCharAt(sb.length() - 1);
       }
@@ -350,6 +367,19 @@ public class IMSAlert {
         sb.append("&alert_reciver=");
         for (String receiver : alertReceivers) {
           sb.append(receiver).append(",");
+        }
+        sb.deleteCharAt(sb.length() - 1);
+
+        // ecc_receiver 处理
+        sb.append("&ecc_receiver=");
+        int count = 0;
+        for (String receiver : alertReceivers) {
+          sb.append(receiver).append(",");
+          count++;
+          if (count >= 3) {
+            // ecc_receiver 最多支持3个通知人，否则会报错
+            break;
+          }
         }
         sb.deleteCharAt(sb.length() - 1);
       }

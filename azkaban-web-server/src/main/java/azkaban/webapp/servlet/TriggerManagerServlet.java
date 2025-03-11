@@ -16,6 +16,7 @@
 
 package azkaban.webapp.servlet;
 
+import azkaban.i18n.utils.LoadJsonUtils;
 import azkaban.server.session.Session;
 import azkaban.trigger.Trigger;
 import azkaban.trigger.TriggerManager;
@@ -24,7 +25,7 @@ import azkaban.user.User;
 import azkaban.webapp.AzkabanWebServer;
 import org.slf4j.LoggerFactory;
 import org.slf4j.Logger;
-import com.webank.wedatasphere.schedulis.common.i18nutils.LoadJsonUtils;
+
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.List;
@@ -34,7 +35,7 @@ import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
-public class TriggerManagerServlet extends LoginAbstractAzkabanServlet {
+public class TriggerManagerServlet extends AbstractLoginAzkabanServlet {
 
   private static final Logger logger = LoggerFactory.getLogger(TriggerManagerServlet.class);
 
@@ -65,7 +66,7 @@ public class TriggerManagerServlet extends LoginAbstractAzkabanServlet {
     final String ajaxName = getParam(req, "ajax");
 
     try {
-      if (ajaxName.equals("expireTrigger")) {
+      if ("expireTrigger".equals(ajaxName)) {
         ajaxExpireTrigger(req, ret, session.getUser());
       }
     } catch (final Exception e) {

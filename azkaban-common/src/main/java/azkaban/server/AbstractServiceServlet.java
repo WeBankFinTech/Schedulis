@@ -17,6 +17,9 @@
 package azkaban.server;
 
 import azkaban.Constants;
+import azkaban.utils.JSONUtils;
+import com.fasterxml.jackson.databind.ObjectMapper;
+
 import java.io.IOException;
 import java.io.OutputStream;
 import javax.servlet.ServletConfig;
@@ -24,18 +27,17 @@ import javax.servlet.ServletException;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
-import org.codehaus.jackson.map.ObjectMapper;
 
 public class AbstractServiceServlet extends HttpServlet {
 
   public static final String JSON_MIME_TYPE = "application/json";
   private static final long serialVersionUID = 1L;
-  private AzkabanServer application;
+  private AbstractAzkabanServer application;
 
   @Override
   public void init(final ServletConfig config) throws ServletException {
     this.application =
-        (AzkabanServer) config.getServletContext()
+        (AbstractAzkabanServer) config.getServletContext()
             .getAttribute(Constants.AZKABAN_SERVLET_CONTEXT_KEY);
 
     if (this.application == null) {
@@ -47,9 +49,8 @@ public class AbstractServiceServlet extends HttpServlet {
   protected void writeJSON(final HttpServletResponse resp, final Object obj)
       throws IOException {
     resp.setContentType(JSON_MIME_TYPE);
-    final ObjectMapper mapper = new ObjectMapper();
     final OutputStream stream = resp.getOutputStream();
-    mapper.writeValue(stream, obj);
+    JSONUtils.mapper.writeValue(stream, obj);
   }
 
   public boolean hasParam(final HttpServletRequest request, final String param) {

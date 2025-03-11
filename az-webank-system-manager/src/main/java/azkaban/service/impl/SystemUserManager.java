@@ -3,21 +3,30 @@ package azkaban.service.impl;
 import azkaban.ServiceProvider;
 import azkaban.dao.SystemUserLoader;
 import azkaban.dao.impl.JdbcSystemUserImpl;
-import azkaban.entity.*;
+import azkaban.entity.Permission;
+import azkaban.entity.Role;
+import azkaban.entity.User;
+import azkaban.entity.WtssPermissions;
+import azkaban.entity.WtssRole;
+import azkaban.entity.WtssUser;
 import azkaban.exception.SystemUserManagerException;
 import azkaban.exception.UserManagerException;
 import azkaban.service.UserManager;
 import azkaban.utils.LdapCheckCenter;
 import azkaban.utils.Props;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import javax.inject.Inject;
 import org.apache.commons.lang.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import javax.inject.Inject;
-import java.util.*;
-
 /**
- * Created by kirkzhou on 7/11/18.
+ * Created by johnnwang on 7/11/18.
  */
 public class SystemUserManager implements UserManager {
 

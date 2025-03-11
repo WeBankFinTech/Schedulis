@@ -52,7 +52,7 @@ public class GangliaMetricEmitter implements IMetricEmitter {
   /**
    * Report metric by executing command line interface of gmetrics {@inheritDoc}
    *
-   * @see IMetricEmitter#reportMetric(IMetric)
+   * @see azkaban.metric.IMetricEmitter#reportMetric(azkaban.metric.IMetric)
    */
   @Override
   public void reportMetric(final IMetric<?> metric) throws MetricException {

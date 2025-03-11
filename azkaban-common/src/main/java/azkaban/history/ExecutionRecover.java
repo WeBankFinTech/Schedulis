@@ -3,9 +3,15 @@ package azkaban.history;
 import azkaban.executor.ExecutionOptions;
 import azkaban.executor.Status;
 import azkaban.sla.SlaOption;
+import azkaban.utils.JSONUtils;
 import azkaban.utils.TypedMapWrapper;
+import com.fasterxml.jackson.core.type.TypeReference;
+import org.apache.commons.lang3.StringUtils;
+
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -21,6 +27,7 @@ public class ExecutionRecover {
   public static final String RECOVER_STATUS_PARAM = "recoverStatus";
   public static final String RECOVER_START_TIME_PARAM = "recoverStartTime";
   public static final String RECOVER_END_TIME_PARAM = "recoverEndTime";
+  public static final String RE_RUN_TIME_INTERVAL = "reRunTimeInterval";
   public static final String EX_INTERVAL_PARAM = "exInterval";
   public static final String NOW_EXECUTION_ID_PARAM = "nowExecutionId";
   public static final String PROJECT_ID_PARAM = "projectId";
@@ -30,6 +37,7 @@ public class ExecutionRecover {
   public static final String UPDATE_TIME_PARAM = "updateTime";
   public static final String START_TIME_PARAM = "startTime";
   public static final String END_TIME_PARAM = "endTime";
+  public static final String TASK_INDEX = "taskIndex";
   public static final String REPEATOPTIONS_PARAM = "repeatOptions";
   public static final String PROXY_USER_PARAM = "proxyUsers";
   public static final String EXECUTION_OPTIONS_PARAM = "executionOptions";
@@ -37,8 +45,21 @@ public class ExecutionRecover {
   public static final String SLAOPTIONS_PARAM = "slaOptions";
 
   public static final String LAST_EXEC_ID = "lastExecId";
+  public static final String PROJECT_VERSION = "projectVersion";
+  public static final String RUN_DATE_TIME_LIST = "runDateTimeList";
+  public static final String SKIP_DATE_TIME_LIST = "skipDateTimeList";
 
+  public static final String TASK_DISTRIBUTE_METHOD = "taskDistributeMethod";
+  public static final String TASK_UNIFORMLY_DISTRIBUTE = "uniform";
+  public static final String TASK_SEQUENTIALLY_DISTRIBUTE = "sequential";
+  public static final String GROUP = "group";
+  public static final String LAST_SUBMIT_TIME = "lastSubmitTime";
+
+  private List<GroupTask> group = new LinkedList<>();
+  private int taskIndex = 0;
   private int recoverId = -1;
+  private int reRunTimeInterval = 0;
+  private long lastSubmitTime = 0;
   private Status recoverStatus = Status.READY;
   private long recoverStartTime = -1;
   private long recoverEndTime = -1;
@@ -54,6 +75,10 @@ public class ExecutionRecover {
   private Map<String, Object> repeatOption = new HashMap<>();
   private String proxyUsers;
   private ExecutionOptions executionOptions;
+  private List<Long> runDateTimeList;
+  private List<Long> skipDateTimeList;
+
+  private String taskDistributeMethod = TASK_UNIFORMLY_DISTRIBUTE;
 
   private String recoverErrorOption;
 
@@ -71,6 +96,8 @@ public class ExecutionRecover {
   // 判断是否是准备执行提交的
   private int lastExecId = -1;
 
+  private int projectVersion = -1;
+
 //  public ExecutionRecover(final Project project, final Flow flow) {
 //    this.projectId = project.getId();
 //    this.projectName = project.getName();
@@ -84,7 +111,7 @@ public class ExecutionRecover {
   public ExecutionRecover() {
   }
 
-  public static ExecutionRecover createExecutionRecoverFromObject(final Object obj) {
+  public static ExecutionRecover createExecutionRecoverFromObject(final Object obj) throws IOException {
     final ExecutionRecover executionRecover = new ExecutionRecover();
     final HashMap<String, Object> recoverObj = (HashMap<String, Object>) obj;
     executionRecover.fillExecutableFromMapObject(recoverObj);
@@ -92,6 +119,21 @@ public class ExecutionRecover {
     return executionRecover;
   }
 
+  public List<Long> getRunDateTimeList() {
+    return runDateTimeList;
+  }
+
+  public void setRunDateTimeList(List<Long> runDateTimeList) {
+    this.runDateTimeList = runDateTimeList;
+  }
+
+  public List<Long> getSkipDateTimeList() {
+    return skipDateTimeList;
+  }
+
+  public void setSkipDateTimeList(List<Long> skipDateTimeList) {
+    this.skipDateTimeList = skipDateTimeList;
+  }
 
   public int getTaskSize() {
     return taskSize;
@@ -171,6 +213,22 @@ public class ExecutionRecover {
 
   public void setNowExecutionId(int nowExecutionId) {
     this.nowExecutionId = nowExecutionId;
+  }
+
+  public int getTaskIndex() {
+    return taskIndex;
+  }
+
+  public void setTaskIndex(int taskIndex) {
+    this.taskIndex = taskIndex;
+  }
+
+  public List<GroupTask> getGroup() {
+    return group;
+  }
+
+  public void setGroup(List<GroupTask> group) {
+    this.group = group;
   }
 
   public int getProjectId() {
@@ -261,6 +319,18 @@ public class ExecutionRecover {
     this.executionOptions = executionOptions;
   }
 
+  public int getProjectVersion() {
+    return projectVersion;
+  }
+
+  public void setProjectVersion(int projectVersion) {
+    this.projectVersion = projectVersion;
+  }
+
+  public String getTaskDistributeMethod() { return taskDistributeMethod; }
+
+  public void setTaskDistributeMethod(String taskDistributeMethod) {    this.taskDistributeMethod = taskDistributeMethod;  }
+
   public Map<String, Object> toObject() {
     final HashMap<String, Object> recoverObj = new HashMap<>();
 
@@ -269,6 +339,10 @@ public class ExecutionRecover {
     recoverObj.put(RECOVER_START_TIME_PARAM, this.recoverStartTime);
     recoverObj.put(RECOVER_END_TIME_PARAM, this.recoverEndTime);
     recoverObj.put(EX_INTERVAL_PARAM, this.exInterval);
+    recoverObj.put(RE_RUN_TIME_INTERVAL, this.reRunTimeInterval);
+    recoverObj.put(LAST_SUBMIT_TIME, this.lastSubmitTime);
+    recoverObj.put(TASK_INDEX, this.taskIndex);
+    recoverObj.put(GROUP, JSONUtils.toJSON(this.group));
 
     recoverObj.put(NOW_EXECUTION_ID_PARAM, this.nowExecutionId);
     recoverObj.put(PROJECT_ID_PARAM, this.projectId);
@@ -300,24 +374,37 @@ public class ExecutionRecover {
     recoverObj.put("recoverErrorOption", this.recoverErrorOption);
 
     recoverObj.put("taskSize", this.taskSize);
+    recoverObj.put(TASK_DISTRIBUTE_METHOD, this.taskDistributeMethod);
     recoverObj.put("finishedAlert", this.finishedAlert);
     recoverObj.put(LAST_EXEC_ID, this.lastExecId);
+    recoverObj.put(PROJECT_VERSION, this.projectVersion);
+    recoverObj.put(RUN_DATE_TIME_LIST, this.runDateTimeList);
+    recoverObj.put(SKIP_DATE_TIME_LIST, this.skipDateTimeList);
     return recoverObj;
   }
 
-  public void fillExecutableFromMapObject(final Map<String, Object> objMap) {
+  public void fillExecutableFromMapObject(final Map<String, Object> objMap) throws IOException {
     final TypedMapWrapper<String, Object> wrapper =
-        new TypedMapWrapper<>(objMap);
+            new TypedMapWrapper<>(objMap);
     fillExecutableFromMapObject(wrapper);
   }
 
-  public void fillExecutableFromMapObject(final TypedMapWrapper<String, Object> recoverObj) {
+  public void fillExecutableFromMapObject(final TypedMapWrapper<String, Object> recoverObj) throws IOException {
 
     this.recoverId = recoverObj.getInt(RECOVER_ID_PARAM);
+    this.taskIndex = recoverObj.getInt(TASK_INDEX);
+
+    if (!StringUtils.isEmpty(recoverObj.getString(GROUP))) {
+      this.group = JSONUtils.parseObject(recoverObj.getString(GROUP), new TypeReference<List<GroupTask>>() {
+      });
+    }
+
     this.recoverStatus = Status.valueOf(recoverObj.getString(RECOVER_STATUS_PARAM));
     this.recoverStartTime = recoverObj.getLong(RECOVER_START_TIME_PARAM);
     this.recoverEndTime = recoverObj.getLong(RECOVER_END_TIME_PARAM);
     this.exInterval = recoverObj.getString(EX_INTERVAL_PARAM);
+    this.reRunTimeInterval = recoverObj.getInt(RE_RUN_TIME_INTERVAL);
+    this.lastSubmitTime = recoverObj.getLong(LAST_SUBMIT_TIME);
 
     this.nowExecutionId = recoverObj.getInt(NOW_EXECUTION_ID_PARAM);
     this.projectId = recoverObj.getInt(PROJECT_ID_PARAM);
@@ -328,15 +415,20 @@ public class ExecutionRecover {
     this.updateTime = recoverObj.getLong(UPDATE_TIME_PARAM);
     this.startTime = recoverObj.getLong(START_TIME_PARAM);
     this.endTime = recoverObj.getLong(END_TIME_PARAM);
+    this.runDateTimeList = recoverObj.getList(RUN_DATE_TIME_LIST);
+    this.skipDateTimeList = recoverObj.getList(SKIP_DATE_TIME_LIST);
+    if (recoverObj.containsKey(TASK_DISTRIBUTE_METHOD)) {
+      this.taskDistributeMethod = recoverObj.getString(TASK_DISTRIBUTE_METHOD);
+    }
 
     //设置其他数据参数
-    if(recoverObj.containsKey(OTHEROPTIONS_PARAM)){
+    if (recoverObj.containsKey(OTHEROPTIONS_PARAM)) {
       final Map<String, Object> otherOptions = recoverObj.getMap(OTHEROPTIONS_PARAM);
       this.setOtherOption(otherOptions);
     }
 
     // 设置数据补采参数
-    if(recoverObj.containsKey(REPEATOPTIONS_PARAM)){
+    if (recoverObj.containsKey(REPEATOPTIONS_PARAM)) {
       final Map<String, Object> repeatOption = recoverObj.getMap(REPEATOPTIONS_PARAM);
 
       this.setRepeatOption(repeatOption);
@@ -344,20 +436,21 @@ public class ExecutionRecover {
     //超时告警
     if (recoverObj.containsKey(SLAOPTIONS_PARAM)) {
       final List<SlaOption> slaOptions =
-          recoverObj.getList(SLAOPTIONS_PARAM).stream().map(SlaOption::fromObject)
-              .collect(Collectors.toList());
+              recoverObj.getList(SLAOPTIONS_PARAM).stream().map(SlaOption::fromObject)
+                      .collect(Collectors.toList());
       this.setSlaOptions(slaOptions);
     }
 
     this.proxyUsers = recoverObj.getString(PROXY_USER_PARAM);
 
-    this.executionOptions =  ExecutionOptions.createFromObject(recoverObj
-        .getObject(EXECUTION_OPTIONS_PARAM));
+    this.executionOptions = ExecutionOptions.createFromObject(recoverObj
+            .getObject(EXECUTION_OPTIONS_PARAM));
 
     this.recoverErrorOption = recoverObj.getString("recoverErrorOption");
     this.taskSize = recoverObj.getInt("taskSize", 1);
     this.finishedAlert = recoverObj.getBool("finishedAlert", true);
     this.lastExecId = recoverObj.getInt(LAST_EXEC_ID, -1);
+    this.projectVersion = recoverObj.getInt(PROJECT_VERSION, -1);
   }
 
   public int getLastExecId() {
@@ -379,6 +472,22 @@ public class ExecutionRecover {
 //  }
 
 
+  public int getReRunTimeInterval() {
+    return reRunTimeInterval;
+  }
+
+  public void setReRunTimeInterval(int reRunTimeInterval) {
+    this.reRunTimeInterval = reRunTimeInterval;
+  }
+
+  public long getLastSubmitTime() {
+    return lastSubmitTime;
+  }
+
+  public void setLastSubmitTime(long lastSubmitTime) {
+    this.lastSubmitTime = lastSubmitTime;
+  }
+
   public String getRecoverErrorOption() {
     return recoverErrorOption;
   }
@@ -387,4 +496,14 @@ public class ExecutionRecover {
     this.recoverErrorOption = recoverErrorOption;
   }
 
+  @Override
+  public String toString() {
+    return "ExecutionRecover{" +
+            "recoverId=" + recoverId +
+            ", recoverStatus=" + recoverStatus +
+            ", projectId=" + projectId +
+            ", flowId='" + flowId + '\'' +
+            ", submitUser='" + submitUser + '\'' +
+            '}';
+  }
 }

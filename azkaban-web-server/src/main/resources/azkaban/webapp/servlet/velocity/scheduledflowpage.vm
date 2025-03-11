@@ -23,10 +23,9 @@
   #parse ("azkaban/webapp/servlet/velocity/style.vm")
   #parse ("azkaban/webapp/servlet/velocity/javascript.vm")
   #parse ("azkaban/webapp/servlet/velocity/svgflowincludes.vm")
-  <link rel="stylesheet" type="text/css" href="${context}/css/bootstrap-datetimepicker.css?version=1.10.0"/>
+  <link rel="stylesheet" type="text/css" href="/css/bootstrap-datetimepicker.css?version=1.49.0"/>
 
   <script type="text/javascript">
-    var contextURL = "${context}";
     var currentTime = ${currentTime};
     var timezone = "${timezone}";
     var errorMessage = null;
@@ -36,24 +35,37 @@
     var loginUser = "${loginUser}";
     $(document).ready(function () {
       var jobTable = $("#scheduledFlowsTbl");
+      var eventJobTable=$("#eventScheduledFlowsTbl");
+      var cycleTable=$("#cycleScheduledFlowsTbl");
       jobTable.tablesorter();
+      eventJobTable.tablesorter();
+      cycleTable.tablesorter();
     });
+    // load cmdb data switch
+    var isCmdbLoaded=false;
   </script>
-  <script type="text/javascript" src="${context}/js/moment.min.js?version=1.10.0"></script>
-  <script type="text/javascript" src="${context}/js/bootstrap-datetimepicker.min.js?version=1.10.0"></script>
-  <script type="text/javascript" src="${context}/js/azkaban/i18n-config.js?version=1.10.0"></script>
-  <script type="text/javascript" src="${context}/js/azkaban/view/table-sort.js?version=1.10.0"></script>
-  <script type="text/javascript" src="${context}/js/azkaban/view/schedule-sla.js?version=1.10.0"></script>
-  <script type="text/javascript" src="${context}/js/azkaban/view/scheduled.js?version=1.10.0"></script>
-  <script type="text/javascript" src="${context}/js/azkaban/util/schedule.js?version=1.10.0"></script>
-  <script type="text/javascript" src="${context}/js/jquery/jquery.tablesorter.js?version=1.10.0"></script>
-  <script type="text/javascript" src="${context}/js/azkaban/view/schedule-edit-panel.js?version=1.10.0"></script>
-  <script type="text/javascript" src="${context}/js/azkaban/view/schedule-flow-edit-dialog.js?version=1.10.0"></script>
-  <script type="text/javascript" src="${context}/js/azkaban/view/schedule-context-menu.js?version=1.10.0"></script>
-  <script type="text/javascript" src="${context}/js/azkaban/view/schedule-page.js?version=1.10.0"></script>
-  <script src="${context}/js/select2/select2.js?version=1.10.0"></script>
-  <script src="${context}/js/select2/i18n/zh-CN.js?version=1.10.0"></script>
-  <link href="${context}/css/select2/select2.css?version=1.10.0" rel="stylesheet"/>
+   <script type="text/javascript" src="/js/azkaban/util/utils.js?version=1.49.0"></script>
+  <link href="/css/bootstrap-select.min.css?version=1.49.0" rel="stylesheet">
+  <script type="text/javascript" src="/js/moment-2.29.4.min.js?version=1.49.0"></script>
+  <script type="text/javascript" src="/js/bootstrap-datetimepicker.min.js?version=1.49.0"></script>
+  <script type="text/javascript" src="/js/azkaban/i18n-config.js?version=1.49.0"></script>
+  <script type="text/javascript" src="/js/azkaban/view/table-sort.js?version=1.49.0"></script>
+  <script type="text/javascript" src="/js/azkaban/view/execute-job-list.js?version=1.49.0"></script>
+  <script type="text/javascript" src="/js/azkaban/view/schedule-sla.js?version=1.49.0"></script>
+  <script type="text/javascript" src="/js/azkaban/view/scheduled.js?version=1.49.0"></script>
+  <script type="text/javascript" src="/js/azkaban/util/schedule.js?version=1.49.0"></script>
+  <script type="text/javascript" src="/js/jquery/jquery.tablesorter.js?version=1.49.0"></script>
+  <script type="text/javascript" src="/js/azkaban/view/schedule-edit-panel.js?version=1.49.0"></script>
+  <script type="text/javascript" src="/js/azkaban/view/schedule-flow-edit-dialog.js?version=1.49.0"></script>
+  <script type="text/javascript" src="/js/azkaban/view/flow-event-schedule-dialog.js?version=1.49.0"></script>
+  <script type="text/javascript" src="/js/azkaban/view/cycle-execution.js?version=1.49.0"></script>
+  <script type="text/javascript" src="/js/azkaban/view/history-recover.js?version=1.49.0"></script>
+  <script type="text/javascript" src="/js/azkaban/view/flow-execute-dialog.js?version=1.49.0"></script>
+  <script type="text/javascript" src="/js/azkaban/view/schedule-context-menu.js?version=1.49.0"></script>
+  <script type="text/javascript" src="/js/azkaban/view/schedule-page.js?version=1.49.0"></script>
+  <script src="/js/select2/select2.js?version=1.49.0"></script>
+  <script src="/js/select2/i18n/zh-CN.js?version=1.49.0"></script>
+  <script type="text/javascript" src="/js/bootstrap-select.js?version=1.49.0"></script>
   <style type="text/css">
       .select2-container .select2-selection--single .select2-selection__rendered {
         display: block;
@@ -80,12 +92,15 @@
 
   <div class="az-page-header">
     <div class="container-full">
+
+     #parse ("azkaban/webapp/servlet/velocity/alerts.vm")
+
       <div class="row">
         <div class="header-title">
-          <h1><a href="${context}/schedule">$schFlowList</a></h1>
+          <h1><a href="/schedule">$schFlowList</a></h1>
         </div>
         <div class="header-control">
-          <form id="search-form" method="get" class="form-inline header-form" role="form">
+          <form id="search-form" method="get" class="form-inline header-form" role="form" >
             <input type="hidden" name="search" value="true">
             <div class="form-group">
               <div class="input-group">
@@ -95,6 +110,37 @@
                 "" #end class="form-control input-sm" name="searchterm" />
                 <span class="input-group-btn">
                   <button id="quick-serach-btn" type="button" class="btn btn-primary btn-sm">$quickSearch</button>
+                  <button id="filter-search-btn" type="button" class="btn btn-success btn-sm" style="margin-left:10px;">$advancedFilter</button>
+                </span>
+              </div>
+            </div>
+          </form>
+          <form id="event-search-form" method="get" class="form-inline header-form" role="form" style="display: none">
+            <input type="hidden" name="search" value="true">
+            <div class="form-group">
+              <div class="input-group">
+                <input type="text" style="display: none"/>
+                      <input type="text" id="event-searchtextbox"
+                             placeholder="${floworprogramNameIncl}" value=#if($search_term) "$esc.html(${search_term})" #else
+                "" #end class="form-control input-sm" name="searchterm" />
+                <span class="input-group-btn">
+                  <button id="event-quick-search-btn" type="button" class="btn btn-primary btn-sm">$quickSearch</button>
+                  <button id="event-filter-search-btn" type="button" class="btn btn-success btn-sm" style="margin-left:10px;">$advancedFilter</button>
+                </span>
+              </div>
+            </div>
+          </form>
+          <form id="cycle-search-form" method="get" class="form-inline header-form" role="form" style="display: none">
+            <input type="hidden" name="search" value="true">
+            <div class="form-group">
+              <div class="input-group">
+                <input type="text" style="display: none"/>
+                      <input type="text" id="cycle-searchtextbox"
+                             placeholder="${floworprogramNameIncl}" value=#if($search_term) "$esc.html(${search_term})" #else
+                "" #end class="form-control input-sm" name="searchterm" />
+                <span class="input-group-btn">
+                  <button id="cycle-quick-search-btn" type="button" class="btn btn-primary btn-sm">$quickSearch</button>
+                  <button id="cycle-filter-search-btn" type="button" class="btn btn-success btn-sm" style="margin-left:10px;">$advancedFilter</button>
                 </span>
               </div>
             </div>
@@ -104,24 +150,39 @@
     </div>
   </div>
 
-  <script type="text/javascript" src="${context}/js/azkaban/view/hideHead.js?version=1.10.0"></script>
+  <script type="text/javascript" src="/js/azkaban/view/hideHead.js?version=1.49.0"></script>
 
 
   ## Page content.
 
   <div class="container-full">
 
-    #parse ("azkaban/webapp/servlet/velocity/alerts.vm")
+     ##parse ("azkaban/webapp/servlet/velocity/alerts.vm")
 
-    <div class="row" id="schedule-view">
+    <ul class="nav nav-tabs nav-sm" id="header-tabs">
+      <li id="time-schedule-view-link"><a href="#time-schedule">$timeSchedule</a></li>
+      <li id="event-schedule-view-link"><a href="#event-schedule">$eventScheduleTag</a></li>
+      <li id="cycle-schedule-view-link"><a href="#cycle-schedule">$cycleSchedule</a></li>
+    </ul>
+
+    ## time schedule
+    <div class="row" id="time-schedule-view">
       <div class="col-xs-12">
         <i>$clickColumntoRank</i>
-        <button id="batch-setSla-btn" type="button" class="btn btn-primary btn-sm" style="float:right">$batchSetSla</button>
+        <div class="schedule-batch-opr" >
+            <button id="batch-enable-btn" type="button" class="btn btn-primary btn-sm">$batchopen</button>
+            <button id="batch-disable-btn"  type="button" class="btn  btn-sm btn-primary">$batchclose</button>
+            <button id="batch-delete-btn" type="button" class="btn btn-sm btn-danger">$batchdelete</button>
+            <button id="batch-setSla-btn" type="button" class="btn btn-primary btn-sm">$batchmodifyalarmuser</button>
+            <button id="batch-schedule-download" type="button" class="btn btn-primary btn-sm">$batchExport</button>
+            <button id="batch-schedule-project" type="button" class="btn btn-primary btn-sm">$downloadproject</button>
+        </div>
         <table id="scheduledFlowsTbl"
                class="table table-striped table-condensed table-bordered table-hover">
           <thead>
           <tr>
             <!--th class="execid">Execution Id</th-->
+            <th class="checkbox-th"><div id="selectAllFlowBox" class="head-checkbox-box"> <input type="checkbox" id="selectAllFlowcheckbox" value="all"></div></th>
             <th>#</th>
             <th>ID</th>
             <th>$flow</th>
@@ -134,7 +195,8 @@
             <th>$flowValid</th>
             <th>$execParam</th>
             <th>$setAlertorNo</th>
-            <th colspan="4" class="action ignoresort">$operate</th>
+            <th>$note</th>
+            <th colspan="5" class="action ignoresort">$operate</th>
           </tr>
           </thead>
           <tbody id="schedules-tbody">
@@ -142,36 +204,91 @@
         </table>
         <div>
           <table id="pageTable">
-            <tr>
-              <td>
-                <select id="pageSizeSelect" class="form-control select2" style="margin-bottom:5px;height:34px;">
-                  <option value="20">$pp_20</option>
-                  <option value="50">$pp_50</option>
-                  <option value="100">$pp_100</option>
-                </select>
-              </td>
-              <td>
-                <ul id="projectPageSelection" class="pagination">
-                  <li id="previous" class="first"><a><span class="arrow">&larr;</span>$previousPage</a></li>
-                  <li id="page1"><a href="">1</a></li>
-                  <li id="page2"><a href="">2</a></li>
-                  <li id="page3"><a href="">3</a></li>
-                  <li id="page4"><a href="">4</a></li>
-                  <li id="page5"><a href="">5</a></li>
-                  <li id="next"><a>$nextPage<span class="arrow">&rarr;</span></a></li>
-                </ul>
-              </td>
-              <td>
-                <input id="pageNumInput" class="form-control" type="number" min="1"  style="margin-bottom:5px;width:100px;"/>
-              </td>
-              <td>
-                <button id="pageNumJump" class="btn btn-default" style="margin-bottom:5px" >$to</button>
-              </td>
-            </tr>
+            #parse ("azkaban/webapp/servlet/velocity/commonPagination.vm")
+
           </table>
         </div>
-      </div><!-- /col-xs-12 -->
-    </div><!-- /row -->
+      </div>
+    </div>
+
+    ## event schedule
+    <div class="row" id="event-schedule-view">
+      <div class="col-xs-12">
+        <i>$clickColumntoRank</i>
+        <div class="event-schedule-batch-opr" >
+            <button id="event-batch-enable-btn" type="button" class="btn btn-primary btn-sm">$batchopen</button>
+            <button  id="event-batch-disable-btn" type="button" class="btn  btn-sm btn-primary">$batchclose</button>
+            <button  id="event-batch-delete-btn" type="button" class="btn btn-sm btn-danger">$batchdelete</button>
+            <button id="event-batch-setSla-btn" type="button" class="btn btn-primary btn-sm">$batchmodifyalarmuser</button>
+            <button id="event-batch-schedule-download" type="button" class="btn btn-primary btn-sm">$batchExport</button>
+            <button id="event-batch-schedule-project" type="button" class="btn btn-primary btn-sm">$downloadproject</button>
+        </div>
+        <table id="eventScheduledFlowsTbl"
+               class="table table-striped table-condensed table-bordered table-hover">
+          <thead>
+          <tr>
+            <!--th class="execid">Execution Id</th-->
+            <th class="checkbox-th"><div id="EventSelectAllFlowBox" class="head-checkbox-box"> <input type="checkbox" id="EventSelectAllFlowcheckbox" value="all"></div></th>
+            <th>#</th>
+            <th>ID</th>
+            <th>$flow</th>
+            <th>$program</th>
+            <th>$submitter</th>
+            <th class="date">$updateSchTime</th>
+##            <th>sender</th>
+            <th>$topic</th>
+            <th>$msgName</th>
+            <th>$activeSch</th>
+            <th>$flowValid</th>
+            <th>$setAlertorNo</th>
+            <th>$note</th>
+            <th colspan="5" class="action ignoresort">$operate</th>
+          </tr>
+          </thead>
+          <tbody id="event-schedules-tbody">
+          </tbody>
+        </table>
+        <div>
+          <table id="eventSchedulePageTable">
+            #parse ("azkaban/webapp/servlet/velocity/commonPagination.vm")
+
+          </table>
+        </div>
+      </div>
+    </div>
+
+    ## cycle schedule
+    <div class="row" id="cycle-schedule-view">
+      <div class="col-xs-12">
+        <i>$clickColumntoRank</i>
+        <table id="cycleScheduledFlowsTbl"
+               class="table table-striped table-condensed table-bordered table-hover">
+          <thead>
+          <tr>
+            <!--th class="execid">Execution Id</th-->
+            <th>#</th>
+            <th>ID</th>
+            <th>$flow</th>
+            <th>$program</th>
+            <th>$submitter</th>
+            <th class="date">$updateSchTime</th>
+            <th>$activeSch</th>
+            <th>$flowValid</th>
+            <th>$execParam</th>
+            <th colspan="5" class="action ignoresort">$operate</th>
+          </tr>
+          </thead>
+          <tbody id="cycle-schedules-tbody">
+          </tbody>
+        </table>
+        <div>
+          <table id="cycleSchedulePageTable">
+            #parse ("azkaban/webapp/servlet/velocity/commonPagination.vm")
+
+          </table>
+        </div>
+      </div>
+    </div>
 
   ## Set SLA modal.
 
@@ -185,8 +302,141 @@
 
   ## Set schedule flow model.
     #parse ("azkaban/webapp/servlet/velocity/schedule-flow-edit-panel.vm")
+  ## Set cycleSchedule flow model. 即执行工作流model
+    #parse  ("azkaban/webapp/servlet/velocity/flowexecutionpanel.vm")
+  ## Set schedule ims model.
+    #parse ("azkaban/webapp/servlet/velocity/imsreportpanel.vm")
+    ## Set eventSchedule flow model.
+     #parse ("azkaban/webapp/servlet/velocity/flow-event-schedule-panel.vm")
   </div>
   #end
+
+  ## Set schedule filter model.
+<div class="modal" id="adv-filter">
+      <div class="modal-dialog">
+        <div class="modal-content" style="width: 700px">
+          <div class="modal-header">
+            <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;
+            </button>
+            <h4 class="modal-title">$advancedFilter</h4>
+            <input id="advfilter" type="text" hidden="hidden">
+          </div>
+          <div class="modal-body">
+         ##   <div class="alert alert-danger" id="adv-filter-error-msg">$error_msg</div>
+            <fieldset class="form-horizontal">
+              <div class="form-group">
+                <label for="projcontain" class="col-sm-2 control-label">$program</label>
+                <div class="col-sm-10">
+                  <input id="projcontain" type="text" placeholder="${programNameIncl}"
+                         value="" class="form-control" name="projcontain">
+                </div>
+              </div>
+              <div class="form-group">
+                <label for="flowcontain" class="col-sm-2 control-label">$flow</label>
+                <div class="col-sm-10">
+                  <input id="flowcontain" type="text" placeholder="${flowNameInclude}"
+                         value="" class="form-control" name="flowcontain">
+                </div>
+              </div>
+              <div class="form-group" id="usercontain-div">
+                <label for="usercontain" class="col-sm-2 control-label">$submitter</label>
+                <div class="col-sm-10">
+                  <input id="usercontain" type="text" placeholder="$entersubmitter"
+                         value="" class="form-control" name="usercontain">
+                </div>
+              </div>
+              <div class="form-group" id="subsystem-div">
+                <label for="subSystemQuery" class="col-sm-2 control-label">$subsystem</label>
+                <div class="col-sm-10" id="subSystemQueryBox">
+                    <select id="subSystemQuery" class="form-control" style="width: 100%;height:32px">
+                    </select>
+                </div>
+              </div>
+              <div class="form-group" id="buspath-div">
+                <label for="busPathQuery" class="col-sm-2 control-label">$busPath</label>
+                <div class="col-sm-10" id="busPathQueryBox">
+                    <select id="busPathQuery" class="form-control" style="width: 100%">
+                    </select>
+                </div>
+              </div>
+              <div class="form-group" id="department-div">
+                <label for="departmentSelect" class="col-sm-2 control-label">$department</label>
+                <div class="col-sm-10">
+                  <select id="departmentSelect" class="form-control selectpicker" data-live-search="true"  title="$departmentName">
+                  </select>
+                </div>
+              </div>
+              <div class="form-group" id="nextExecutionTime">
+                <label for="datetimebegin" class="col-sm-2 control-label">$nextExecTime</label>
+                <div class="col-sm-4">
+                <input type="text" id="datetimebegin" value=""
+                        class="ui-datetime-container form-control">
+                </div>
+                <label for="datetimeend"
+                    class="col-sm-2 control-label control-label-center">-</label>
+                <div class="col-sm-4">
+                <input type="text" id="datetimeend" value=""
+                        class="ui-datetime-container form-control">
+                </div>
+              </div>
+              <div class="form-group" id="frequency-div">
+                <label class="col-sm-2 control-label">$executionFrequency</label>
+                <div class="col-sm-10" id="executeFrequency">
+                    <label class="radio-inline">
+                        <input type="radio" name="frequency" id="dayExecuteFrequency" value="day">$dayExecuteFrequency
+                    </label>
+                    <label class="radio-inline">
+                        <input type="radio" name="frequency" id="hourExecuteFrequency" value="hour">$hourExecuteFrequency
+                    </label>
+                    <label class="radio-inline" style="margin-left: 0;">
+                        <input type="radio" name="frequency" id="minuteExecuteFrequency" value="minute">$minuteExecuteFrequency
+                    </label>
+                </div>
+              </div>
+              <div class="form-group" id="is-job-flow-valid">
+                  <label class="col-sm-2 control-label">$isJobFlowValid</label>
+                  <div class="col-sm-10" id="isVlidFlow">
+                      <label class="radio-inline">
+                          <input type="radio" name="vlidFlow" id="isVlidFlowTrue" value="true"> $selectYes
+                      </label>
+                      <label class="radio-inline">
+                          <input type="radio" name="vlidFlow" id="isVlidFlowFalse" value="false"> $selectNo
+                      </label>
+                  </div>
+              </div>
+              <div class="form-group" id="is-active-sch">
+                  <label class="col-sm-2 control-label">$isactiveSch</label>
+                  <div class="col-sm-10" id="isValid">
+                      <label class="radio-inline">
+                          <input type="radio" name="optionsRadiosinline" id="isValidTrue" value="true"> $selectYes
+                      </label>
+                      <label class="radio-inline">
+                          <input type="radio" name="optionsRadiosinline" id="isValidFalse" value="false"> $selectNo
+                      </label>
+                  </div>
+              </div>
+              <div class="form-group" id="alarm-div">
+                <label class="col-sm-2 control-label">$setAlertorNo</label>
+                <div class="col-sm-10" id="isAlarm">
+                    <label class="radio-inline">
+                        <input type="radio" name="settingAlarm" id="isSettingAlarmTrue" value="true"> $selectYes
+                    </label>
+                    <label class="radio-inline">
+                        <input type="radio" name="settingAlarm" id="isSettingAlarmFalse" value="false"> $selectNo
+                    </label>
+                </div>
+              </div>
+            </fieldset>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-default" data-dismiss="modal">$cancel</button>
+            <button class="btn btn-success" id="filter-btn">$commit</button>
+          </div>
+        </div>
+      </div>
+    </div>
+## end filter model.
+
 ## Delete project modal.
 
 <div class="modal" id="delete-schedule-flow-modal">
@@ -203,6 +453,9 @@
       <div class="modal-footer">
         <form id="delete-form">
           <input type="hidden" id="schedule-id" value="">
+          <input type="hidden" id="project-id" value="">
+          <input type="hidden" id="flow-id" value="">
+          <input type="hidden" id="exec-id" value="">
           <button type="button" class="btn btn-default" data-dismiss="modal">$cancel</button>
           <button type="button" class="btn btn-danger" id="delete-btn">$removeSch</button>
         </form>
@@ -210,7 +463,27 @@
     </div>
   </div>
 </div>
-
+<div class="modal" id="delete-event-schedule-flow-modal">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+        <h4 id="delete-schedule-title" class="modal-title">$delsch alter_test_end_all_jobs</h4>
+      </div>
+      <div class="modal-body">
+        <p><strong>$warn</strong> $warnContent
+        </p>
+      </div>
+      <div class="modal-footer">
+        <form id="delete-form">
+          <input type="hidden" id="schedule-id" value="">
+          <button type="button" class="btn btn-default" data-dismiss="modal">$cancel</button>
+          <button type="button" class="btn btn-danger" id="event-delete-btn">$removeSch</button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
 ## Distinguished executionOptions of each schedule with unique count number to fix
 ## the issue of same display for all schedules
 <div class="modal fade" id="executionOptions-modal">
@@ -252,6 +525,29 @@
     </div>
   </div>
 </div>
+
+## Active project modal.
+<div class="modal" id="active-schedule-flow-modal">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+        <h4 id="active-schedule-title" class="modal-title"></h4>
+      </div>
+      <div class="modal-body">
+        <p style="word-break: break-all;"></p>
+      </div>
+      <div class="modal-footer">
+        <div id="active-form">
+          <input type="hidden" id="active-schedule-props" value="">
+          <button type="button" class="btn btn-default" data-dismiss="modal">$cancel</button>
+          <button type="button" class="btn btn-danger" id="active-btn"></button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
 
 </body>
 </html>

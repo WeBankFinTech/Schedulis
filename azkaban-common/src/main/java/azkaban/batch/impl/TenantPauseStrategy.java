@@ -5,10 +5,9 @@ import azkaban.batch.HoldBatchAlert;
 import azkaban.executor.ExecutorManagerException;
 import azkaban.scheduler.Schedule;
 import azkaban.scheduler.ScheduleManager;
-import org.apache.commons.collections.CollectionUtils;
-
 import java.util.List;
 import java.util.stream.Collectors;
+import org.apache.commons.collections.CollectionUtils;
 
 public class TenantPauseStrategy extends AbstractPauseBatchStrategy {
 

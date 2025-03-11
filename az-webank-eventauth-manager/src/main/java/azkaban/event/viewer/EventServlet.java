@@ -4,14 +4,17 @@ import azkaban.ServiceProvider;
 import azkaban.event.entity.EventAuth;
 import azkaban.event.entity.EventQueue;
 import azkaban.event.entity.EventStatus;
+import azkaban.event.entity.EventUnauth;
 import azkaban.event.module.EventModule;
 import azkaban.event.service.EventAuthManager;
 import azkaban.event.service.EventQueueManager;
 import azkaban.event.service.EventStatusManager;
+import azkaban.event.service.EventUnauthManager;
 import azkaban.function.TriadConsumer;
 import azkaban.i18n.utils.LoadJsonUtils;
 import azkaban.server.HttpRequestUtils;
 import azkaban.server.session.Session;
+import azkaban.system.SystemManager;
 import azkaban.utils.Props;
 import azkaban.utils.WebUtils;
 import azkaban.webapp.servlet.AbstractLoginAzkabanServlet;
@@ -23,6 +26,8 @@ import io.jsonwebtoken.lang.Collections;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang.StringEscapeUtils;
 import org.apache.commons.lang3.StringUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import javax.servlet.ServletConfig;
 import javax.servlet.ServletException;
@@ -30,6 +35,7 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.File;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -41,12 +47,13 @@ public class EventServlet extends AbstractLoginAzkabanServlet {
     private static final long serialVersionUID = 1L;
     private final Props props;
     private EventAuthManager eventAuthManager;
+    private EventUnauthManager eventUnauthManager;
     private EventQueueManager eventQueueManager;
     private EventStatusManager eventStatusManager;
     private SystemManager systemManager;
 
     private boolean checkRealNameSwitch;
-
+    Logger logger = LoggerFactory.getLogger(EventServlet.class);
 
     public EventServlet(final Props props) {
         this.props = props;
@@ -64,6 +71,7 @@ public class EventServlet extends AbstractLoginAzkabanServlet {
         eventAuthManager = injector.getInstance(EventAuthManager.class);
         eventQueueManager = injector.getInstance(EventQueueManager.class);
         eventStatusManager = injector.getInstance(EventStatusManager.class);
+        eventUnauthManager = injector.getInstance(EventUnauthManager.class);
     }
 
     @Override
@@ -71,10 +79,13 @@ public class EventServlet extends AbstractLoginAzkabanServlet {
             throws ServletException, IOException {
         switch (req.getRequestURI()) {
             case "/event":
-                handleEventAuthPage(req, resp, session);
+                handleEventPage(req, resp, session);
                 break;
             case "/event/auth":
-                handleRequest(req, resp, session, this::handleEventAuthPage);
+                handleRequest(req, resp, session, this::handleEventPage);
+                break;
+            case "/event/unauth":
+                handleRequest(req, resp, session, this::handleEventPage);
                 break;
             case "/event/queue":
                 handleRequest(req, resp, session, this::handleEventQueuePage);
@@ -97,6 +108,9 @@ public class EventServlet extends AbstractLoginAzkabanServlet {
         if (hasParam(req, "ajax")) {
             if("setEventAuthBacklogAlarmUser".equals(getParam(req, "ajax"))) {
                 ajaxSetEventAuthBacklogAlarmUser(req, ret);
+            }
+            if ("setEventUnauthBacklogAlarmUser".equals(getParam(req, "ajax"))) {
+                ajaxSetEventUnauthBacklogAlarmUser(req, ret);
             }
         }
         if (!Collections.isEmpty(ret)) {
@@ -123,6 +137,9 @@ public class EventServlet extends AbstractLoginAzkabanServlet {
                 break;
             case "loadEventQueueData":
                 ajaxLoadEventQueueData(req, resp);
+                break;
+            case "loadEventUnauthData":
+                ajaxLoadEventUnauthData(req, resp);
                 break;
             case "loadEventStatusData":
                 ajaxLoadEventStatusData(req, resp);
@@ -194,6 +211,41 @@ public class EventServlet extends AbstractLoginAzkabanServlet {
         ret.put("status", "success");
     }
 
+    private void ajaxSetEventUnauthBacklogAlarmUser(HttpServletRequest req, final HashMap<String, Object> ret)
+            throws ServletException {
+        JsonObject json = HttpRequestUtils.parseRequestToJsonObject(req);
+        final String topic = json.get("topic").getAsString();
+        final String sender = json.get("sender").getAsString();
+        final String msgName = json.get("msgName").getAsString();
+        final String backlogAlarmUser = json.get("backlogAlarmUser").getAsString();
+        final String alertLevel = json.get("alertLevel").getAsString();
+        final String[] split = StringUtils.isNotBlank(backlogAlarmUser) ? backlogAlarmUser.split("\\s*,\\s*|\\s*;\\s*|\\s+") : new String[0];
+        final List<String> emailList = Lists.newArrayList(split);
+        if (this.checkRealNameSwitch && WebUtils
+                .checkEmailNotRealName(emailList, true, systemManager.findAllWebankUserList(null))) {
+            ret.put("error", "Please configure the correct real-name user");
+            return;
+        }
+
+        List<EventUnauth> eventUnauthList = eventUnauthManager.getEventUnauth(topic, sender, msgName);
+        if (CollectionUtils.isEmpty(eventUnauthList)) {
+            ret.put("error",
+                    "Error loading event auth. topic=" + topic + ",sender=" + sender + ",msgName=" + msgName
+                            + " doesn't exist");
+            return;
+        }
+        EventUnauth eventUnauth = eventUnauthList.get(0);
+        if (StringUtils.isNotBlank(backlogAlarmUser)) {
+            eventUnauth.setBacklogAlarmUser(backlogAlarmUser);
+            eventUnauth.setAlertLevel(alertLevel);
+        } else {
+            eventUnauth.setBacklogAlarmUser(null);
+            eventUnauth.setAlertLevel(null);
+        }
+        eventUnauthManager.setBacklogAlarmUser(eventUnauth);
+        ret.put("status", "success");
+    }
+
     private void ajaxLoadEventAuthList(HttpServletRequest req, HttpServletResponse resp)
         throws IOException {
 
@@ -203,7 +255,7 @@ public class EventServlet extends AbstractLoginAzkabanServlet {
         writeJSON(resp, map);
     }
 
-    private void handleEventAuthPage(HttpServletRequest req, HttpServletResponse resp, Session session) {
+    private void handleEventPage(HttpServletRequest req, HttpServletResponse resp, Session session) {
         Page page = newPage(req, resp, session, "azkaban/event/viewer/eventAuth-manager.vm");
         String search = getParam(req,"search", "").trim();
         String languageType = LoadJsonUtils.getLanguageType();
@@ -274,6 +326,20 @@ public class EventServlet extends AbstractLoginAzkabanServlet {
         writeJSON(resp, map);
     }
 
+    private void ajaxLoadEventUnauthData(HttpServletRequest req, HttpServletResponse resp) throws IOException {
+        String search = getParam(req, "search", "").trim();
+        int pageNum = getIntParam(req, "pageNum", 1);
+        int pageSize = getIntParam(req, "pageSize", 20);
+        int eventTotalCount = eventUnauthManager.getEventUnauthTotal(search);
+        List<EventUnauth> eventList = eventUnauthManager.findEventUnauthList(search, pageNum, pageSize);
+        HashMap<String, Object> map = new HashMap<>();
+        map.put("total", eventTotalCount);
+        map.put("pageNum", pageNum);
+        map.put("pageSize", pageSize);
+        map.put("eventAuthList", eventList);
+        writeJSON(resp, map);
+    }
+
     private void ajaxLoadEventQueueData(HttpServletRequest req, HttpServletResponse resp) throws IOException {
         String search = getParam(req,"search", "").trim();
         int pageNum = getIntParam(req, "pageNum", 1);
@@ -281,14 +347,15 @@ public class EventServlet extends AbstractLoginAzkabanServlet {
         String topic = getParam(req,"topic", "").trim();
         String msgName = getParam(req,"msgName", "").trim();
         int showPageNum = getIntParam(req, "showPageNum", 0);
-        List<EventQueue> eventList = eventQueueManager.findEventQueueList(search, pageNum, pageSize, topic, msgName);
+        boolean authType = getBooleanParam(req, "authType", false);
+        List<?> eventList = eventQueueManager.findEventQueueList(search, pageNum, pageSize, authType, topic, msgName);
         int eventTotalCount;
         if (showPageNum > 0) {
             int index = (pageNum - 1) * pageSize;
             int sum = pageSize * showPageNum;
-            eventTotalCount = eventQueueManager.getEventQueueTotal4Page(search, index, sum, topic, msgName) + index;
+            eventTotalCount = eventQueueManager.getEventQueueTotal4Page(search, authType, index, sum, topic, msgName) + index;
         } else {
-            eventTotalCount = eventQueueManager.getEventQueueTotal(search, topic, msgName);
+            eventTotalCount = eventQueueManager.getEventQueueTotal(search, authType, topic, msgName);
         }
         HashMap<String, Object> map = new HashMap<>();
         map.put("total", eventTotalCount);
@@ -304,8 +371,9 @@ public class EventServlet extends AbstractLoginAzkabanServlet {
         int pageSize = getIntParam(req, "pageSize", 20);
         String topic = getParam(req,"topic", "").trim();
         String msgName = getParam(req,"msgName", "").trim();
-        int eventTotalCount = eventStatusManager.getEventStatusTotal(search, topic, msgName);
-        List<EventStatus> eventList = eventStatusManager.findEventStatusList(search, pageNum, pageSize, topic, msgName);
+        boolean authType = getBooleanParam(req, "authType", false);
+        int eventTotalCount = eventStatusManager.getEventStatusTotal(search, authType, topic, msgName);
+        List<EventStatus> eventList = eventStatusManager.findEventStatusList(search, authType, pageNum, pageSize, topic, msgName);
         HashMap<String, Object> map = new HashMap<>();
         map.put("total", eventTotalCount);
         map.put("pageNum",pageNum);
@@ -353,22 +421,48 @@ public class EventServlet extends AbstractLoginAzkabanServlet {
         String topic = getParam(req,"topic");
         String msgName = getParam(req,"msgName");
         String msgBody = getParam(req,"msgBody");
+        String isLike = getParam(req, "isLike");
+        int pageNo = 0;
+        int pageSize = 0;
+        if (hasParam(req, "pageNo") && hasParam(req, "pageSize")) {
+            pageNo = getIntParam(req, "pageNo");
+            pageSize = getIntParam(req, "pageSize");
+        }
+
         if (StringUtils.isBlank(sender) && StringUtils.isBlank(topic) && StringUtils.isBlank(msgName) && StringUtils.isBlank(msgBody)) {
             map.put("status", "error");
             map.put("errorMsg", "query param is empty.");
             writeJSON(resp, map);
             return;
         }
-        int eventQueueNum = eventQueueManager.queryMessageNum(sender, topic, msgName, msgBody);
-        if (eventQueueNum == -1) {
-            map.put("status", "error");
-            map.put("errorMsg", "Error in query database! Please contact the administrator");
-            writeJSON(resp, map);
-            return;
+        if (StringUtils.isBlank(isLike)) {
+            isLike = "N";
         }
-        map.put("status", "success");
-        map.put("senderStatus", eventQueueNum > 0 ? "S" : "W");
+
+
+        try {
+            List<EventQueue> eventQueueList = eventQueueManager.queryMessage(topic, sender, msgName, msgBody, isLike, pageNo, pageSize);
+            List<HashMap<String, Object>> msgMapList = new ArrayList<>();
+            if (CollectionUtils.isNotEmpty(eventQueueList)) {
+                for (EventQueue evenQueue : eventQueueList) {
+                    HashMap<String, Object> msgMap = new HashMap<>();
+                    msgMap.put("sendTime", evenQueue.getSendTime());
+                    msgMap.put("msgBody", evenQueue.getMsg());
+                    msgMapList.add(msgMap);
+                }
+            }
+            map.put("msg", msgMapList);
+            map.put("status", "success");
+            map.put("senderStatus", eventQueueList.size() > 0 ? "S" : "W");
+            writeJSON(resp, map);
+        } catch (Exception e) {
+            map.put("status", "error");
+            map.put("errorMsg", "get data failed.");
+            logger.error("get message error:{}", e.getMessage());
         writeJSON(resp, map);
+    }
+
+
     }
 
 }

@@ -23,12 +23,12 @@
   #parse("azkaban/webapp/servlet/velocity/style.vm")
   #parse("azkaban/webapp/servlet/velocity/javascript.vm")
   <script type="text/javascript">
-    var contextURL = "${context}";
     var currentTime = ${currentTime};
     var timezone = "${timezone}";
     var errorMessage = null;
     var successMessage = null;
     var langType = "${currentlangType}";
+    var projectChangeLimit = ${projectChangeLimit}
     $(document).ready(function () {
       $("#pageSizeSelect").select2({
         minimumResultsForSearch: Infinity,
@@ -42,13 +42,14 @@
 
     });
   </script>
-  <script type="text/javascript" src="${context}/js/azkaban/i18n-config.js?version=1.10.0"></script>
-  <script type="text/javascript" src="${context}/js/azkaban/view/table-sort.js?version=1.10.0"></script>
-  <script type="text/javascript" src="${context}/js/azkaban/view/main.js?version=1.10.0"></script>
-  <script type="text/javascript" src="${context}/js/azkaban/util/date.js?version=1.10.0"></script>
-  <script src="${context}/js/select2/select2.js?version=1.10.0"></script>
-  <link href="${context}/css/select2/select2.css?version=1.10.0" rel="stylesheet" />
-  
+   <script type="text/javascript" src="/js/azkaban/util/utils.js?version=1.49.0"></script>
+
+    <link href="/css/bootstrap-select.min.css?version=1.49.0" rel="stylesheet">
+  <script type="text/javascript" src="/js/azkaban/i18n-config.js?version=1.49.0"></script>
+  <script type="text/javascript" src="/js/azkaban/view/table-sort.js?version=1.49.0"></script>
+  <script type="text/javascript" src="/js/azkaban/view/main.js?version=1.49.0"></script>
+  <script src="/js/select2/select2.js?version=1.49.0"></script>
+  <script type="text/javascript" src="/js/bootstrap-select.js?version=1.49.0"></script>
   <style type="text/css">
 
   </style>
@@ -63,43 +64,55 @@
 
 <div class="az-page-header">
   <div class="container-full">
-    <div class="row">
-      <div class="header-title">
-        <h1><a href="${context}/index">$programList</a></h1>
+    <div style="display: flex;justify-content: space-between;width: 100%;">
+      <div>
+        <h1><a href="/index">$programList</a></h1>
       </div>
 
-      <div class="header-control program-header-control">
+      <div>
         <form id="search-form" method="get" class="form-inline header-form" role="form">
-          <input type="hidden" name="doaction" value="search">
-          #if ($viewProjects == 'all')
-            <input type="hidden" name="all" value="true">
-          #elseif ($viewProjects == 'group')
-            <input type="hidden" name="group" value="true">
-          #end
-          <div class="form-group col-xs-6">
-            <div class="input-group">
-            <input id="search-textbox" type="text"
-                   placeholder="${descorprogramNameIncl}" value=#if($search_term) "$esc.html(${search_term})" #else
-              "" #end class="form-control input-sm" name="searchterm">
-              <span class="input-group-btn">
-                    <button class="btn btn-sm btn-primary">$quickSearch</button>
-                  </span>
-            </div>
-          </div>
-          <div id="order-select" class="form-group col-xs-3">
-            <select id="orderSelect" class="form-control select2" style="margin-left:15px;width:90%">
+        ##  <input type="hidden" name="doaction" value="search">
+          <div id="order-select" class="form-group">
+            <select id="orderSelect" class="form-control select2" style="height: 30px;">
               <option value="orderProjectName">$programRank</option>
               <option value="orderUpdateTimeSort">$updateTimeSort</option>
             </select>
           </div>
+         ## #if ($viewProjects == 'all')
+         ##   <input type="hidden" name="all" value="true">
+         ## #elseif ($viewProjects == 'group')
+         ##   <input type="hidden" name="group" value="true">
+         ## #elseif ($viewProjects == 'projectDelete')
+          ##  <input type="hidden" name="projectDelete" value="true">
+        ##  #end
+          <div class="form-group">
+            <div class="input-group" style="margin-left: 15px;">
+             <input type="text" style="display: none">
+                <input type="text" id="search-textbox" placeholder="${descorprogramNameIncl}" value="" class="form-control input-sm" name="searchterm" style="width: 500px">
+                <span class="input-group-btn">
+                  <button id="quickSearchBtn" type="button" class="btn btn-primary btn-sm">$quickSearch</button>
+                </span>
+        ##    <input id="search-textbox" type="text"
+         ##           placeholder="${descorprogramNameIncl}" value=#if($search_term) "$esc.html(${search_term})" #else
+         ##      "" #end class="form-control input-sm" name="searchterm">
+        ##       <span class="input-group-btn">
+           ##          <button id="quickSearchBtn" class="btn btn-sm btn-primary" >$quickSearch</button>
+           ##        </span>
+            </div>
+          </div>
+
           #if (!$hideCreateProject)
-            <div class="form-group col-xs-3" id="create-project">
+            <div class="form-group" id="create-project">
             ## Note: The Create Project button is not completely flush to the right because
             ## form-group has padding.
-              <div>
-                <button type="button" id="create-project-btn" class="btn btn-sm btn-success" style="margin-left:15px"><span
+              <div class="input-group-btn ">
+                <button type="button" id="create-project-btn" class="btn btn-sm btn-success margin-l10"><span
                     class="glyphicon glyphicon-plus"></span> $createProgram
                 </button>
+                <button type="button" id="project-handover-btn" class="btn btn-sm btn-success margin-l10">$projectHandover</button>
+                <button type="button" id="filter-search-btn" class="btn btn-sm btn-success margin-l10">$advanceFilter</button>
+                <button type="button" id="project-alarm-btn" class="btn btn-sm btn-success margin-l10">$projectHourlyReport</button>
+                <button type="button" id="batch-upload-bussiness-job-btn" class="btn btn-sm btn-success margin-l10">$batchUploadBusinessJob</button>
               </div>
             </div>
           #end
@@ -164,13 +177,17 @@
       </div>
 
     <div class="col-xs-6 col-sm-3 sidebar-offcanvas">
-      <ul class="nav nav-pills nav-stacked">
+      <ul id="project-nav" class="nav nav-pills nav-stacked" >
         <li#if ($viewProjects == 'personal') class="active"#end id="project-personal"><a
-            href="${context}/index">$personP</a></li>
-##        <li#if ($viewProjects == 'group') class="active"#end id="project-group"><a
-##            href="${context}/index?group">组项目</a></li>
+            href="javascript:void(0);">$personP</a></li>
         <li#if ($viewProjects == 'all') class="active"#end id="project-all"><a
-            href="${context}/index?all">$allP</a>
+            href="javascript:void(0);">$allP</a>
+        </li>
+        <li
+             #if ($viewProjects == 'projectDelete')
+              class="active"
+             #end
+              id="project-delete"><a href="javascript:void(0);">$recentlyDeleted</a>
         </li>
       </ul>
     </div>
@@ -185,18 +202,18 @@
               ## of letters, digits, '-' or '_'. Escape it just to play it safe.
               ## todo: make escaping the default.
                 <h4 style="word-break:break-all;"><a
-                    href="${context}/manager?project=${project.name}">$esc.html($project.name)</a>
+                    href="javascript:void(0);" onclick="checkHrefUrlXss('/manager?project=${project.name}')">$esc.html($project.name)</a>
                 </h4>
                 <p class="project-description">$esc.html($project.description)</p>
-                <p class="project-last-modified">最后一次是由用户
+                <p class="project-last-modified">$projectLastModified1
 		              <strong>$project.lastModifiedUser</strong>.
-		            </p> 在
+		            </p> $projectLastModified2
                 <strong>$utils.formatDate($project.lastModifiedTimestamp)</strong>
-                  修改。
+                  $projectLastModified3
               </div>
               <div class="project-expander">
                 <button class="btn btn-sm btn-danger">
-                  <span class="glyphicon glyphicon-trash"></span> 删除项目
+                  <span class="glyphicon glyphicon-trash"></span> $deleteProject
                 </button>
               </div>
               <div class="project-expander" id="${project.name}">
@@ -204,7 +221,7 @@
               </div>
               <div class="clearfix"></div>
               <div class="project-flows" id="${project.name}-child">
-                <h5>工作流列表</h5>
+                <h5>$workflowList</h5>
                 <div class="list-group" id="${project.name}-tbody">
                   <table id="${project.name}-detail-table">
                   </table>
@@ -216,33 +233,8 @@
         </ul>
         <div>
           <table id="pageTable">
-            <tr>
-              <td>
-                <select id="pageSizeSelect" class="form-control select2" style="margin-bottom:5px;width:100px;">
-                  <option value="10">$pp_10</option>
-                  <option value="20">$pp_20</option>
-                  <option value="50">$pp_50</option>
-                  <option value="100">$pp_100</option>
-                </select>
-              </td>
-              <td>
-                <ul id="projectPageSelection" class="pagination">
-                  <li id="previous" class="first"><a><span class="arrow">&larr;</span>$previousPage</a></li>
-                  <li id="page1"><a href="#page1">1</a></li>
-                  <li id="page2"><a href="#page2">2</a></li>
-                  <li id="page3"><a href="#page3">3</a></li>
-                  <li id="page4"><a href="#page4">4</a></li>
-                  <li id="page5"><a href="#page5">5</a></li>
-                  <li id="next"><a>$nextPage<span class="arrow">&rarr;</span></a></li>
-                </ul>
-              </td>
-              <td>
-                <input id="pageNumInput" class="form-control" type="number" min="1"  style="margin-bottom:5px;width:100px;"/>
-              </td>
-              <td>
-                <button id="pageNumJump" class="btn btn-default" style="margin-bottom:5px" >$to</button>
-              </td>
-            </tr>
+            #parse ("azkaban/webapp/servlet/velocity/commonPagination.vm")
+
           </table>
         </div>
 
@@ -278,21 +270,10 @@
             <div class="form-group">
               <label for="description" class="col-sm-2 control-label">$programdesc</label>
               <div class="col-sm-10">
-                <textarea id="description" name="description" rows="2" cols="40"
+                <textarea id="description" type="text" name="description" rows="2" cols="40"
                           class="form-control" placeholder="${programdesc}"></textarea>
               </div>
             </div>
-##            <div class="form-group">
-##              <label for="description" class="col-sm-2 control-label">项目组选择</label>
-##              <div class="col-sm-10">
-##                <select id="project-group-select" class="form-control">
-##                  <option value="">无项目组</option>
-##                  #foreach ($group in $userGroups)
-##                    <option value=${group}>${group}</option>
-##                  #end
-##                </select>
-##              </div>
-##            </div>
           </fieldset>
         </div>
         <div class="modal-footer">
@@ -304,6 +285,155 @@
       </div>
     </div>
   </div>
+##项目交接 model
+<div class="modal in" id="create-handover-modal" >
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <button type="button" class="close" data-dismiss="modal" aria-hidden="true">×
+          </button>
+          <h4 class="modal-title">$projectHandover</h4>
+        </div>
+        <div class="modal-body">
+            <h5 style="color: #f0ad4e;">$notice</h5>
+            <table class="table table-striped" id="projectHandoverTable">
+                        <thead>
+                        <tr>
+                          <th>$projectName</th>
+                          <th>$handoverPersonnel</th>
+                          <th>$operation</th>
+                        </tr>
+                        </thead>
+                        <tbody id="project-handover-body">
+                        </tbody>
+                      </table>
+            <input id="projectHandoverDesc" type="text" placeholder="$inputDescription" value="" class="form-control" name="projectHandoverDesc">
+        </div>
+        <div class="modal-footer">
+          <input name="action" type="hidden" value="create">
+          <input name="redirect" type="hidden" value="/">
+          <button type="button" class="btn btn-default" data-dismiss="modal">$cancel</button>
+          <button type="button" class="btn btn-primary" id="project-handover">$commit2</button>
+        </div>
+      </div>
+    </div>
+</div>
+
+## 项目小时报 modal
+<div class="modal in" id="add-project-alarm-modal" >
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <button type="button" class="close" data-dismiss="modal" aria-hidden="true">×
+          </button>
+          <h4 class="modal-title">$projectHourlyReport</h4>
+        </div>
+        <div class="modal-body">
+            <table class="table table-striped" id="projectHandoverTable">
+                <thead>
+                    <tr>
+                        <th  style="width: 323px;">$projectName</th>
+                        <th style="width: 130px;">$alerterWay</th>
+                        <th style="width: 280px;">$sender</th>
+                        <th style="width: 60px;">$operation</th>
+                    </tr>
+                </thead>
+                <tbody id="project-alarm-body"></tbody>
+            </table>
+            <button type="button" class="btn btn-xs btn-success" id="add-project-alarm">$add</button>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-default" data-dismiss="modal">$cancel</button>
+          <button type="button" class="btn btn-primary" id="submit-project-alarm">$commit2</button>
+        </div>
+      </div>
+    </div>
+</div>
+
+##filter model
+<div class="modal" id="adv-filter">
+      <div class="modal-dialog">
+        <div class="modal-content">
+          <div class="modal-header">
+            <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;
+            </button>
+            <h4 class="modal-title">$advancedFilter</h4>
+            <input id="advfilter" type="text" hidden="hidden">
+          </div>
+          <div class="modal-body">
+           ## <div class="alert alert-danger" id="adv-filter-error-msg">$error_msg</div>
+            <fieldset class="form-horizontal">
+              <div class="form-group">
+                <label for="projcontain" class="col-sm-2 control-label">$project</label>
+                <div class="col-sm-10">
+                  <input id="projcontain" type="text" placeholder="${programNameIncl}"
+                         value="" class="form-control" name="projcontain">
+                </div>
+              </div>
+              <div class="form-group" id="usercontain-div">
+                <label for="usercontain" class="col-sm-2 control-label">$createUser</label>
+                <div class="col-sm-10">
+                  <input id="usercontain" type="text" placeholder="$createUserTip"
+                         value="" class="form-control" name="usercontain">
+                </div>
+              </div>
+               <div class="form-group">
+                    <label for="subSystemQuery" class="col-sm-2 control-label">$subsystem</label>
+                    <div class="col-sm-10" id="subSystemQueryBox">
+                        <select id="subSystemQuery" class="form-control" style="width: 100%">
+                        </select>
+                    </div>
+                  </div>
+                  <div class="form-group">
+                    <label for="busPathQuery" class="col-sm-2 control-label">$busPath</label>
+                    <div class="col-sm-10" id="busPathQueryBox">
+                        <select id="busPathQuery" class="form-control" style="width: 100%">
+                        </select>
+                    </div>
+                  </div>
+                  <div class="form-group">
+                    <label for="departmentSelect" class="col-sm-2 control-label">$department</label>
+                    <div class="col-sm-10">
+                      <select id="departmentSelect" class="form-control selectpicker" data-live-search="true" title="$departmentName">
+                       </select>
+                    </div>
+                  </div>
+                  <div class="form-group" >
+                  <label for="descriptionCon" class="col-sm-2 control-label">$description</label>
+                  <div class="col-sm-10">
+                    <input id="descriptionCon" type="text" placeholder="$inputDescription2"
+                          value="" class="form-control" name="descriptionCon">
+                  </div>
+                  </div>
+                  <div class="form-group">
+                    <label for="jobNameSearch" class="col-sm-2 control-label">$jobname</label>
+                    <div class="col-sm-10">
+                      <input id="jobNameSearch" type="text" placeholder="$inputDesc"
+                            value="" class="form-control" name="jobNameSearch">
+                    </div>
+                  </div>
+                  <div class="form-group">
+                    <label for="projectSource" class="col-sm-2 control-label">$projectSource</label>
+                    <div class="col-sm-10">
+                      <select id="projectSource" class="select2-status-style" multiple="multiple">
+                        <option value="DSS">DSS</option>
+                        <option value="WTSS">WTSS</option>
+                      </select>
+                    </div>
+                  </div>
+              </div>
+            </fieldset>
+             <div class="modal-footer">
+              <button type="button" class="btn btn-default" data-dismiss="modal">$cancel</button>
+              <button class="btn btn-success" id="filter-btn">$commit</button>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+    ##end filter
+
 
   #parse ("azkaban/webapp/servlet/velocity/invalidsessionmodal.vm")
 
@@ -320,6 +450,81 @@
       </div>
       <div class="modal-footer">
         <form id="button-user-create-project-permit-close">
+          <button type="button" class="btn btn-default" data-dismiss="modal">$close</button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+## 上传应用信息
+<div class="modal" id="upload-business-modal">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <form id="upload-business-form" enctype="multipart/form-data" method="post"
+            action="$!context/manager">
+        <div class="modal-header">
+          <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;
+          </button>
+          <h4 class="modal-title">$uploadFile</h4>
+        </div>
+        <div class="modal-body">
+          <fieldset class="form-horizontal">
+            <div>
+              <label class="upload-button" for="businessfile">$uploadFile</label>
+              <input type="file" id="businessfile" name="businessfile"
+                     style="position:absolute;clip:rect(0 0 0 0);">
+              <span class="upload-file-name" id="businessfilefieldsNameBox">$noFileUploaded</span>
+            </div>
+          </fieldset>
+        </div>
+        <div class="modal-footer">
+          <input type="hidden" name="project" value="$project.name">
+          <input type="hidden" name="csrfToken" value="$csrfToken">
+          <input type="hidden" name="action" value="uploadBusinessInfo">
+          <input type="hidden" name="fileName" value="$noFileUploaded">
+          <button type="button" class="btn btn-default" data-dismiss="modal">$cancel</button>
+          <button type="button" class="btn btn-primary" id="upload-business-btn">$upload</button>
+
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+## 提示用户上传权限信息变更会话框
+<div class="modal" id="user-upload-permit-change-panel">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+        <h4 id="title-user-upload-permit" class="modal-title">$userUploadPerChange</h4>
+      </div>
+      <div class="modal-body">
+        <p id="body-user-upload-permit"> $tipsUserUploadPer</p>
+      </div>
+      <div class="modal-footer">
+        <form id="button-user-upload-permit-close">
+          <button type="button" class="btn btn-default" data-dismiss="modal">$close</button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+## 提示用户部门权限信息变更会话框
+<div class="modal" id="department-upload-permit-change-panel">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+        <h4 id="title-dep-upload-permit" class="modal-title">$depUploadPerChange</h4>
+      </div>
+      <div class="modal-body">
+        <p id="body-dep-upload-permit"> $tipsUploadPer</p>
+      </div>
+      <div class="modal-footer">
+        <form id="button-department-upload-permit-close">
           <button type="button" class="btn btn-default" data-dismiss="modal">$close</button>
         </form>
       </div>

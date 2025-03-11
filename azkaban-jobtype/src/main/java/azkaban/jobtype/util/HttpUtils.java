@@ -15,9 +15,10 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Properties;
+import java.util.concurrent.TimeUnit;
 
 /**
- * Created by kirkzhou on 2/3/18.
+ * Created by johnnwang on 2/3/18.
  */
 public class HttpUtils {
 
@@ -213,7 +214,7 @@ public class HttpUtils {
       System.out.println(result);
       Map resulMap = HttpUtils.getReturnMap(result);
       if("200".equals(resulMap.get("code"))){
-        System.out.println("数据查找成功变更datacheck状态");
+        logger.info("数据查找成功变更datacheck状态");
       }
     } catch (Exception e) {
       e.printStackTrace();

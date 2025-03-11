@@ -34,6 +34,8 @@ public class Executor implements Comparable<Executor> {
   private ExecutorInfo cachedExecutorStats;
   private Date lastStatsUpdatedTime;
 
+  private String lastDepartment;
+
   /**
    * <pre>
    * Construct an Executor Object
@@ -144,5 +146,13 @@ public class Executor implements Comparable<Executor> {
   @Override
   public int compareTo(final Executor o) {
     return null == o ? 1 : this.hashCode() - o.hashCode();
+  }
+
+  public String getLastDepartment() {
+    return lastDepartment;
+  }
+
+  public void setLastDepartment(String lastDepartment) {
+    this.lastDepartment = lastDepartment;
   }
 }

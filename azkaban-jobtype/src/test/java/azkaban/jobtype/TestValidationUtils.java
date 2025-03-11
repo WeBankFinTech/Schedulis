@@ -2,7 +2,7 @@ package azkaban.jobtype;
 
 import org.junit.Test;
 
-import com.webank.wedatasphere.schedulis.jobtype.javautils.ValidationUtils;
+import azkaban.jobtype.javautils.ValidationUtils;
 import azkaban.utils.Props;
 import azkaban.utils.UndefinedPropertyException;
 

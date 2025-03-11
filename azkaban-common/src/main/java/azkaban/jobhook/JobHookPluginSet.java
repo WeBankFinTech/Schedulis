@@ -1,11 +1,11 @@
 package azkaban.jobhook;
 
-import azkaban.hookExecutor.Hook;
-import azkaban.utils.Props;
-
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
+
+import azkaban.hookExecutor.Hook;
+import azkaban.utils.Props;
 
 public class JobHookPluginSet<T> {
 

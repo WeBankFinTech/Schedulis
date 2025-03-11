@@ -1,3 +1,8 @@
+/**
+ * Created by zhu on 7/5/18.
+ */
+
+
 //项目修改日期数据格式化
 var dateFormat = function(time) {
     var date = new Date();
@@ -69,6 +74,12 @@ azkaban.SystemDepartmentGroupView = Backbone.View.extend({
       $(tdDescription).text(department[i].description);
       $(tdDescription).attr("style","word-break:break-all;width:350px");
       row.appendChild(tdDescription);
+
+      //调度开关
+      var tdScheduleSwitch = document.createElement("td");
+      $(tdScheduleSwitch).text(department[i].scheduleSwitch);
+      $(tdScheduleSwitch).attr("style", "word-break:break-all;width:350px");
+      row.appendChild(tdScheduleSwitch);
 
       //组装executorHost
       var tdExecutors = document.createElement("td");
@@ -211,7 +222,7 @@ azkaban.SystemDepartmentGroupView = Backbone.View.extend({
   handlePageChange: function(evt) {
     var start = this.model.get("page") - 1;
     var pageSize = this.model.get("pageSize");
-    var requestURL = contextURL + "/system?ajax=fetchAllDepartmentGroup";
+    var requestURL = "/system?ajax=fetchAllDepartmentGroup";
     var searchString = $('#serarch-department-group').val();
     if(!searchString){
       searchString="";
@@ -261,7 +272,7 @@ azkaban.SystemDepartmentGroupView = Backbone.View.extend({
     systemDepartmentGroupModel.set({"groupId": groupId});
     $('#update-department-group-panel').modal();
     updateDepartmentGroupView.render();
-    var requestURL = contextURL + "/system?ajax=fetchExecutors";
+    var requestURL = "/system?ajax=fetchExecutors";
     var model = this.model;
     var successHandler = function (data) {
         if (data.error) {
@@ -310,7 +321,7 @@ azkaban.DepartmentGroupOptionsView = Backbone.View.extend({
     $('#executorTable tbody .jobSkipTr').remove();
     $('#add-department-group-modal-error-msg').hide();
     //初始化
-    var requestURL = contextURL + "/system?ajax=fetchExecutors";
+    var requestURL = "/system?ajax=fetchExecutors";
     var model = this.model;
     var successHandler = function (data) {
         if (data.error) {
@@ -403,6 +414,7 @@ azkaban.AddDepartmentGroupView = Backbone.View.extend({
     var groupId = $("#id").val();
     var groupName = $('#groupName').val();
     var description = $('#description').val();
+    var scheduleSwitch = $('#scheduleSwitch').val();
     var executorIds = [];
     $('#executorTable select').each(function(i, e){return executorIds.push(parseInt($(e).val()));});
     var tmp = Array.from(new Set(executorIds))
@@ -443,9 +455,10 @@ azkaban.AddDepartmentGroupView = Backbone.View.extend({
       "id": groupId,
       "name": groupName,
       "description": description,
-      "executorIds": executorIds
+      "executorIds": executorIds,
+      "scheduleSwitch": scheduleSwitch
     };
-    var requestUrl = contextURL + "/system?ajax=addDepartmentGroup";
+    var requestUrl = "/system?ajax=addDepartmentGroup";
     var model = this.model;
     var successHandler = function (data) {
         if (data.error) {
@@ -453,7 +466,7 @@ azkaban.AddDepartmentGroupView = Backbone.View.extend({
             $("#add-department-group-modal-error-msg").text(data.error);
             return false;
         } else {
-            window.location.href = contextURL + "/system#department-group";
+        window.location.href = "/system#department-group";
             window.location.reload();
         }
         model.trigger("render");
@@ -513,9 +526,12 @@ azkaban.UpdateDepartmentGroupView = Backbone.View.extend({
       var idSelect = $("<select></select>");
       idSelect.attr("class", "form-control");
       idSelect.attr("style", "width: 100%");
+    var idSelectHtml = ""
       for(var i=0; i < executors.length; i++) {
-          idSelect.append("<option value='" + executors[i].id + "'>" + executors[i].host + "</option>");
+      idSelectHtml += "<option value='" + executors[i].id + "'>" + executors[i].host + "</option>"
       }
+    idSelectHtml = filterXSS(idSelectHtml, { 'whiteList': { 'option': ['value'] } })
+    idSelect.append(idSelectHtml);
       $(cExecutor).append(idSelect);
 
       //删除按钮
@@ -534,9 +550,10 @@ azkaban.UpdateDepartmentGroupView = Backbone.View.extend({
     console.log("Update System Department button.");
     var oldGroupId = $('#old-groupId').val();
     var newGroupId = $('#new-groupId').val();
-    var requestUrl = contextURL + "/system?ajax=updateDepartmentGroup";
+    var requestUrl = "/system?ajax=updateDepartmentGroup";
     var groupName = $('#old-groupName').val();
     var description = $('#old-description').val();
+    var scheduleSwitch = $('#old-scheduleSwitch').val();
     var executorIds = [];
     $('#old-executorTable select').each(function(i, e){return executorIds.push(parseInt($(e).val()));});
     var tmp = Array.from(new Set(executorIds));
@@ -577,7 +594,8 @@ azkaban.UpdateDepartmentGroupView = Backbone.View.extend({
         "id": newGroupId,
         "name": groupName,
         "description": description,
-        "executorIds": executorIds
+      "executorIds": executorIds,
+      "scheduleSwitch": scheduleSwitch
     };
     var model = this.model;
     var successHandler = function (data) {
@@ -586,7 +604,7 @@ azkaban.UpdateDepartmentGroupView = Backbone.View.extend({
             $("#update-department-group-modal-error-msg").text(data.error);
             return false;
         } else {
-            window.location.href = contextURL + "/system#department-group";
+        window.location.href = "/system#department-group";
             window.location.reload();
         }
         model.trigger("render");
@@ -605,20 +623,21 @@ azkaban.UpdateDepartmentGroupView = Backbone.View.extend({
   },
 
   handleDeleteSystemDepartment: function (evt) {
+    deleteDialogView.show(wtssI18n.deletePro.deleteGroupingInformation, wtssI18n.deletePro.whetherDeleteGroupInformation, wtssI18n.common.cancel, wtssI18n.common.delete, '', function() {
     console.log("Delete System Department button.");
     var groupId = $('#old-groupId').val();
-    var requestUrl = contextURL + "/system?ajax=deleteDepartmentGroup";
-    var model = this.model;
+        var requestUrl = "/system?ajax=deleteDepartmentGroup";
+        // var model = this.model;
     var successHandler = function (data) {
         if (data.error) {
             $("#update-department-group-modal-error-msg").show();
             $("#update-department-group-modal-error-msg").text(data.error);
             return false;
         } else {
-            window.location.href = contextURL + "/system#department-group";
+            window.location.href = "/system#department-group";
             window.location.reload();
         }
-        model.trigger("render");
+        // model.trigger("render");
     };
     $.ajax({
         url: requestUrl,
@@ -630,13 +649,14 @@ azkaban.UpdateDepartmentGroupView = Backbone.View.extend({
             console.log(data);
         },
         success: successHandler
+        });
     });
   },
 
   loadDepartmentData: function () {
 
     var groupId = this.model.get("groupId");
-    var requestURL = contextURL + "/system?ajax=fetchDepartmentGroupById";
+    var requestURL = "/system?ajax=fetchDepartmentGroupById";
 
     var requestData = {
       "id": groupId,
@@ -652,6 +672,7 @@ azkaban.UpdateDepartmentGroupView = Backbone.View.extend({
         $("#new-groupId").val(data.departmentGroup.id);
         $("#old-groupName").val(data.departmentGroup.name);
         $("#old-description").val(data.departmentGroup.description);
+        $("#old-scheduleSwitch").val(data.departmentGroup.scheduleSwitch.toString());
         var ids = data.departmentGroup.executorIds;
         for(var index in ids){
             var executors = model.get("executors");
@@ -669,9 +690,12 @@ azkaban.UpdateDepartmentGroupView = Backbone.View.extend({
             var idSelect = $("<select></select>");
             idSelect.attr("class", "form-control");
             idSelect.attr("style", "width: 100%");
+          var idSelectHtml = ""
             for(var i=0; i < executors.length; i++) {
-                idSelect.append("<option value='" + executors[i].id + "'>" + executors[i].host + "</option>");
+            idSelectHtml += "<option value='" + executors[i].id + "'>" + executors[i].host + "</option>"
             }
+          idSelectHtml = filterXSS(idSelectHtml, { 'whiteList': { 'option': ['value'] } });
+          idSelect.append(idSelectHtml);
             $(cExecutor).append(idSelect);
             idSelect.val(ids[index]);
 

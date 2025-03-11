@@ -20,7 +20,6 @@
           <div class="form-group">
             <label for="path" class="col-sm-2 control-label">$parentDepId</label>
             <div class="col-sm-8">
-##              <div class="alert-warning" style="margin:5px">提示:可以不输入密码，默认使用LADP密码校验。</div>
               <input id="update-parent-id" type="text" class="form-control" maxlength="100"/>
             </div>
           </div>
@@ -66,12 +65,6 @@
                     </select>
                 </div>
             </div>
-##          <div class="form-group">
-##            <label for="description" class="col-sm-2 control-label">部门事业线</label>
-##            <div class="col-sm-8">
-##              <input id="deparment-id" type="text" class="form-control" maxlength="10"/>
-##            </div>
-##          </div>
         </fieldset>
       </div>
       <div class="modal-footer">

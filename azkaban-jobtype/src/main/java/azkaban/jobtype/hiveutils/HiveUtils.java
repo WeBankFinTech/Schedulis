@@ -16,12 +16,12 @@
 
 package azkaban.jobtype.hiveutils;
 
-import org.apache.hadoop.hive.cli.CliDriver;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import java.io.File;
 import java.io.IOException;
+
+import org.apache.hadoop.hive.cli.CliDriver;
+import org.slf4j.LoggerFactory;
+import org.slf4j.Logger;
 
 /**
  * Grab bag of utilities for working with Hive. End users should obtain

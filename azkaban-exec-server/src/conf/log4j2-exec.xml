@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration status="info" monitorInterval="60">
+  <properties>
+    <property name="logDir">/data/logs/wtss</property>
+    <property name="pattern">
+      %d{yyyy-MM-dd HH:mm:ss.SSS} [%-5level] [%-40t] %c{1.} (%L) [%M] - %msg%xEx%n
+    </property>
+  </properties>
+  <appenders>
+    <RollingFile name="fixedTimeFileAppender"
+      fileName="${logDir}/wtss-execserver.log"
+      filePattern="${logDir}/$${date:yyyy-MM}/exec/wtss-exec-log-%d{yyyy-MM-dd}-%i.log">
+      <PatternLayout
+        pattern="${pattern}"/>
+      <Policies>
+        <TimeBasedTriggeringPolicy/>
+        <SizeBasedTriggeringPolicy size="1GB"/>
+      </Policies>
+      <!--<DefaultRolloverStrategy max="24"/>-->
+    </RollingFile>
+
+    <Console name="console" target="SYSTEM_OUT">
+      <PatternLayout pattern="${pattern}"/>
+    </Console>
+  </appenders>
+  <loggers>
+    <AsyncRoot level="info" includeLocation="true">
+      <AppenderRef ref="fixedTimeFileAppender"/>
+    </AsyncRoot>
+
+    <AsyncLogger name="test" level="info" additivity="false" includeLocation="true">
+	  <AppenderRef ref="console"/>
+    </AsyncLogger>
+  </loggers>
+</configuration>
+

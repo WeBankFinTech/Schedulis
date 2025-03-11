@@ -16,39 +16,47 @@
 
 package azkaban.webapp.servlet;
 
+import azkaban.flow.SpecialJobTypes;
+import azkaban.i18n.utils.LoadJsonUtils;
 import azkaban.project.Project;
 import azkaban.project.ProjectManager;
 import azkaban.server.session.Session;
+import azkaban.system.SystemManager;
+import azkaban.system.common.TransitionService;
 import azkaban.user.Permission;
 import azkaban.user.Permission.Type;
 import azkaban.user.User;
 import azkaban.user.UserUtils;
+import azkaban.utils.PagingListStreamUtil;
 import azkaban.utils.Pair;
+import azkaban.utils.Props;
 import azkaban.utils.WebUtils;
 import azkaban.webapp.AzkabanWebServer;
-import com.webank.wedatasphere.schedulis.common.i18nutils.LoadJsonUtils;
-import com.webank.wedatasphere.schedulis.common.system.SystemManager;
-import com.webank.wedatasphere.schedulis.common.system.common.TransitionService;
-import com.webank.wedatasphere.schedulis.common.utils.PagingListStreamUtil;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import java.util.stream.Collectors;
 import javax.servlet.ServletConfig;
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
-import org.slf4j.LoggerFactory;
+import org.apache.commons.lang.StringUtils;
 import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * The main page
  */
-public class ProjectServlet extends LoginAbstractAzkabanServlet {
+public class ProjectServlet extends AbstractLoginAzkabanServlet {
 
   private static final Logger logger = LoggerFactory.getLogger(ProjectServlet.class.getName());
   private static final String LOCKDOWN_CREATE_PROJECTS_KEY = "lockdown.create.projects";
+  private static final String FILTER_BY_DATE_PATTERN = "MM/dd/yyyy hh:mm aa";
   private static final long serialVersionUID = -1;
   private TransitionService transitionService;
   private SystemManager systemManager;
@@ -61,7 +69,7 @@ public class ProjectServlet extends LoginAbstractAzkabanServlet {
     final AzkabanWebServer server = (AzkabanWebServer) getApplication();
 
     this.lockdownCreateProjects =
-        server.getServerProps().getBoolean(LOCKDOWN_CREATE_PROJECTS_KEY, false);
+            server.getServerProps().getBoolean(LOCKDOWN_CREATE_PROJECTS_KEY, false);
     if (this.lockdownCreateProjects) {
       logger.info("Creation of projects is locked down");
     }
@@ -71,10 +79,10 @@ public class ProjectServlet extends LoginAbstractAzkabanServlet {
 
   @Override
   protected void handleGet(final HttpServletRequest req, final HttpServletResponse resp,
-      final Session session) throws ServletException, IOException {
+                           final Session session) throws ServletException, IOException {
 
     final ProjectManager manager =
-        ((AzkabanWebServer) getApplication()).getProjectManager();
+            ((AzkabanWebServer) getApplication()).getProjectManager();
 
     if (hasParam(req, "ajax")) {
       handleAjaxAction(req, resp, session, manager);
@@ -92,22 +100,24 @@ public class ProjectServlet extends LoginAbstractAzkabanServlet {
    * project association
    */
   private void handleAjaxAction(final HttpServletRequest req,
-      final HttpServletResponse resp, final Session session, final ProjectManager manager)
-      throws ServletException, IOException {
+                                final HttpServletResponse resp, final Session session, final ProjectManager manager)
+          throws ServletException, IOException {
 
     final String ajaxName = getParam(req, "ajax");
     final HashMap<String, Object> ret = new HashMap<>();
 
-    if (ajaxName.equals("fetchallprojects")) {
-      final List<Project> projects = manager.getProjects();
+    if ("fetchallprojects".equals(ajaxName)) {
+      final List<Project> projects = manager.getProjects(true);
       final List<SimplifiedProject> simplifiedProjects =
-          toSimplifiedProjects(projects);
+              toSimplifiedProjects(projects);
       ret.put("projects", simplifiedProjects);
-    } else if (ajaxName.equals("fetchuserprojects")) {
+    } else if ("fetchuserprojects".equals(ajaxName)) {
       handleFetchUserProjects(req, session, manager, ret);
-    } else if (ajaxName.equals("fetchProjectPage")) {
+    } else if ("fetchProjectPage".equals(ajaxName)) {
       handleProjectPage(req, resp, session, manager, ret);
-    } else if (ajaxName.equals("getProjectPageLanguageType")) {
+    } else if ("fetchProjectPreciseSearchPage".equals(ajaxName)) {
+      handleProjectPreciseSearchPage(req, resp, session, manager, ret);
+    } else if ("getProjectPageLanguageType".equals(ajaxName)) {
       ajaxGetProjectPageLanguageType(req, resp, session, ret);
     }
 
@@ -121,8 +131,8 @@ public class ProjectServlet extends LoginAbstractAzkabanServlet {
    * defaults to the session user<br>
    */
   private void handleFetchUserProjects(final HttpServletRequest req, final Session session,
-      final ProjectManager manager, final HashMap<String, Object> ret)
-      throws ServletException {
+                                       final ProjectManager manager, final HashMap<String, Object> ret)
+          throws ServletException {
     User user = null;
 
     // if key "user" is specified, follow this logic
@@ -150,9 +160,9 @@ public class ProjectServlet extends LoginAbstractAzkabanServlet {
     final List<SimplifiedProject> simplifiedProjects = new ArrayList<>();
     for (final Project p : projects) {
       final SimplifiedProject sp =
-          new SimplifiedProject(p.getId(), p.getName(),
-              p.getLastModifiedUser(), p.getCreateTimestamp(),
-              p.getUserPermissions(), p.getGroupPermissions());
+              new SimplifiedProject(p.getId(), p.getName(),
+                      p.getLastModifiedUser(), p.getCreateTimestamp(),
+                      p.getUserPermissions(), p.getGroupPermissions());
       simplifiedProjects.add(sp);
     }
     return simplifiedProjects;
@@ -168,17 +178,17 @@ public class ProjectServlet extends LoginAbstractAzkabanServlet {
     String languageType = LoadJsonUtils.getLanguageType();
     Map<String, String> indexMap;
     Map<String, String> subPageMap1;
-    if (languageType.equalsIgnoreCase("zh_CN")) {
+    if ("zh_CN".equalsIgnoreCase(languageType)) {
       // 添加国际化标签
-      indexMap = LoadJsonUtils.transJson("/com.webank.wedatasphere.schedulis.i18n.conf/azkaban-web-server-zh_CN.json",
-          "azkaban.webapp.servlet.velocity.index.vm");
-      subPageMap1 = LoadJsonUtils.transJson("/com.webank.wedatasphere.schedulis.i18n.conf/azkaban-web-server-zh_CN.json",
-          "azkaban.webapp.servlet.velocity.nav.vm");
+      indexMap = LoadJsonUtils.transJson("/conf/azkaban-web-server-zh_CN.json",
+              "azkaban.webapp.servlet.velocity.index.vm");
+      subPageMap1 = LoadJsonUtils.transJson("/conf/azkaban-web-server-zh_CN.json",
+              "azkaban.webapp.servlet.velocity.nav.vm");
     }else {
-      indexMap = LoadJsonUtils.transJson("/com.webank.wedatasphere.schedulis.i18n.conf/azkaban-web-server-en_US.json",
-          "azkaban.webapp.servlet.velocity.index.vm");
-      subPageMap1 = LoadJsonUtils.transJson("/com.webank.wedatasphere.schedulis.i18n.conf/azkaban-web-server-en_US.json",
-          "azkaban.webapp.servlet.velocity.nav.vm");
+      indexMap = LoadJsonUtils.transJson("/conf/azkaban-web-server-en_US.json",
+              "azkaban.webapp.servlet.velocity.index.vm");
+      subPageMap1 = LoadJsonUtils.transJson("/conf/azkaban-web-server-en_US.json",
+              "azkaban.webapp.servlet.velocity.nav.vm");
     }
 
     dataMap.put("index.vm", indexMap);
@@ -190,7 +200,7 @@ public class ProjectServlet extends LoginAbstractAzkabanServlet {
    * Renders the user homepage that users see when they log in
    */
   private void handlePageRender(final HttpServletRequest req,
-      final HttpServletResponse resp, final Session session, final ProjectManager manager) {
+                                final HttpServletResponse resp, final Session session, final ProjectManager manager) {
     final User user = session.getUser();
 
     final Page page = newPage(req, resp, session, "azkaban/webapp/servlet/velocity/index.vm");
@@ -201,7 +211,7 @@ public class ProjectServlet extends LoginAbstractAzkabanServlet {
 
     page.add("userGroups", user.getGroups());
 
-    if (this.lockdownCreateProjects && !UserUtils.hasPermissionforAction(user, Type.CREATEPROJECTS)) {
+    if (this.lockdownCreateProjects && !UserUtils.hasPermissionforAction(user, Permission.Type.CREATEPROJECTS)) {
       page.add("hideCreateProject", true);
     }
 
@@ -209,7 +219,7 @@ public class ProjectServlet extends LoginAbstractAzkabanServlet {
       final List<Project> projects;
       // FIXME Add permission judgment, admin user can view all projects, user user can only view their own projects.
       if(user.getRoles().contains("admin")){
-        projects = manager.getProjects();
+        projects = manager.getProjects(true);
       }else{//user用户只能查看自己的Project
         projects = manager.getUserProjects(user);
       }
@@ -219,6 +229,10 @@ public class ProjectServlet extends LoginAbstractAzkabanServlet {
       final List<Project> projects = manager.getGroupProjects(user);
       page.add("viewProjects", "group");
       page.add("projects", projects);
+    } else if(hasParam(req, "projectDelete")){
+      final List<Project> projects = manager.getDeleteProjects(user);
+      page.add("viewProjects", "projectDelete");
+      page.add("projects", projects);
     } else {
       final List<Project> projects = manager.getUserProjects(user);
       page.add("viewProjects", "personal");
@@ -227,20 +241,24 @@ public class ProjectServlet extends LoginAbstractAzkabanServlet {
     String languageType = LoadJsonUtils.getLanguageType();
 
     page.add("currentlangType", languageType);
+
+    Props props = getApplication().getServerProps();
+    page.add("projectChangeLimit", props.getInt("project.change.limit", 5));
+
     page.render();
   }
 
   private void handleDoAction(final HttpServletRequest req, final HttpServletResponse resp,
-      final Session session) throws ServletException {
-    if (getParam(req, "doaction").equals("search")) {
+                              final Session session) throws ServletException {
+    if ("search".equals(getParam(req, "doaction"))) {
       //去除搜索字符串的空格
       final String searchTerm = getParam(req, "searchterm").trim();
-      if (!searchTerm.equals("") && !searchTerm.equals(".*")) {
+      if (!"".equals(searchTerm) && !".*".equals(searchTerm)) {
         handleFilter(req, resp, session, searchTerm);
         return;
       }else{
         final ProjectManager manager =
-            ((AzkabanWebServer) getApplication()).getProjectManager();
+                ((AzkabanWebServer) getApplication()).getProjectManager();
         final User user = session.getUser();
         final Page page = newPage(req, resp, session, "azkaban/webapp/servlet/velocity/index.vm");
 
@@ -251,18 +269,21 @@ public class ProjectServlet extends LoginAbstractAzkabanServlet {
         page.add("userGroups", user.getGroups());
 
         //final List<Project> projects = manager.getUserProjects(user);
-		    // FIXME Add permission judgment, admin user can view all projects, user user can only view their own projects.
+        // FIXME Add permission judgment, admin user can view all projects, user user can only view their own projects.
         if (hasParam(req, "all")) {
           final List<Project> projects;
           //添加权限判断 admin 用户能查看所有Project
           if(user.getRoles().contains("admin")){
-            projects = manager.getProjects();
+            projects = manager.getProjects(true);
           }else{//user用户只能查看自己的Project
             projects = manager.getUserProjects(user);
           }
           page.add("viewProjects", "all");
           page.add("projects", projects);
-        }else {
+        } else if (hasParam(req, "projectDelete")) {
+          page.add("search_term", searchTerm);
+          page.add("viewProjects", "projectDelete");
+        } else {
           final List<Project> projects = manager.getUserProjects(user);
           page.add("viewProjects", "personal");
           page.add("projects", projects);
@@ -277,12 +298,12 @@ public class ProjectServlet extends LoginAbstractAzkabanServlet {
   }
 
   private void handleFilter(final HttpServletRequest req, final HttpServletResponse resp,
-      final Session session, final String searchTerm) {
+                            final Session session, final String searchTerm) {
     final User user = session.getUser();
     final ProjectManager manager =
-        ((AzkabanWebServer) getApplication()).getProjectManager();
+            ((AzkabanWebServer) getApplication()).getProjectManager();
     final Page page =
-        newPage(req, resp, session, "azkaban/webapp/servlet/velocity/index.vm");
+            newPage(req, resp, session, "azkaban/webapp/servlet/velocity/index.vm");
 
     // 加载国际化资源
     Map<String, Map<String, String>> vmDataMap = loadIndexpageI18nData();
@@ -300,6 +321,9 @@ public class ProjectServlet extends LoginAbstractAzkabanServlet {
     } else if (hasParam(req, "group")) {
       page.add("search_term", searchTerm);
       page.add("viewProjects", "group");
+    } else if (hasParam(req, "projectDelete")) {
+      page.add("search_term", searchTerm);
+      page.add("viewProjects", "projectDelete");
     } else {
       final List<Project> projects = manager.getUserProjectsByRegex(user, searchTerm);
       page.add("projects", projects);
@@ -314,7 +338,7 @@ public class ProjectServlet extends LoginAbstractAzkabanServlet {
 
   @Override
   protected void handlePost(final HttpServletRequest req, final HttpServletResponse resp,
-      final Session session) throws ServletException, IOException {
+                            final Session session) throws ServletException, IOException {
     // TODO Auto-generated method stub
   }
 
@@ -336,9 +360,9 @@ public class ProjectServlet extends LoginAbstractAzkabanServlet {
     private List<Pair<String, Permission>> groupPermissions;
 
     public SimplifiedProject(final int projectId, final String projectName,
-        final String createdBy, final long createdTime,
-        final List<Pair<String, Permission>> userPermissions,
-        final List<Pair<String, Permission>> groupPermissions) {
+                             final String createdBy, final long createdTime,
+                             final List<Pair<String, Permission>> userPermissions,
+                             final List<Pair<String, Permission>> groupPermissions) {
       this.projectId = projectId;
       this.projectName = projectName;
       this.createdBy = createdBy;
@@ -384,7 +408,7 @@ public class ProjectServlet extends LoginAbstractAzkabanServlet {
     }
 
     public void setUserPermissions(
-        final List<Pair<String, Permission>> userPermissions) {
+            final List<Pair<String, Permission>> userPermissions) {
       this.userPermissions = userPermissions;
     }
 
@@ -393,7 +417,7 @@ public class ProjectServlet extends LoginAbstractAzkabanServlet {
     }
 
     public void setGroupPermissions(
-        final List<Pair<String, Permission>> groupPermissions) {
+            final List<Pair<String, Permission>> groupPermissions) {
       this.groupPermissions = groupPermissions;
     }
 
@@ -407,7 +431,7 @@ public class ProjectServlet extends LoginAbstractAzkabanServlet {
    * @param ret
    */
   private void ajaxGetProjectPageLanguageType(final HttpServletRequest req, final HttpServletResponse resp,
-      final Session session, final HashMap<String, Object> ret) {
+                                              final Session session, final HashMap<String, Object> ret) {
 
     try {
       String languageType = LoadJsonUtils.getLanguageType();
@@ -418,12 +442,82 @@ public class ProjectServlet extends LoginAbstractAzkabanServlet {
     }
   }
 
+  private void handleProjectPreciseSearchPage(final HttpServletRequest req,
+                                              final HttpServletResponse resp, final Session session, final ProjectManager manager,
+                                              final HashMap<String, Object> ret) throws ServletException {
+    final int start = getIntParam(req, "start");
+    final int pageSize = getIntParam(req, "length");
+    int pageNum = getIntParam(req, "pageNum");
+
+    if (pageNum < 0) {
+      pageNum = 1;
+    }
+
+    final User user = session.getUser();
+    Set<String> userRoleSet = new HashSet<>();
+    userRoleSet.addAll(user.getRoles());
+
+    try {
+      List<Project> projects;
+      if ("all".equals(getParam(req, "projectsType"))) {
+        projects = this.getProjectsByUserType(userRoleSet, manager, req, true, user);
+      } else if ("projectDelete".equals(getParam(req, "projectsType"))) {
+        projects = this.getProjectsByUserType(userRoleSet, manager, req, false, user);
+      } else {
+        projects = manager.getUserProjects(req, true, user, false);
+      }
+      final PagingListStreamUtil<Project> pageProjectsList = manager.getUserProjectsPage(pageNum, pageSize, projects);
+      assemblerProjectData(pageProjectsList.currentPageData(), projects.size(), start, pageSize, ret, user);
+    } catch (Exception e) {
+      logger.error("fetch projects failed", e);
+    }
+  }
+
+  private List<Project> getProjectsByUserType(Set<String> userRoleSet, final ProjectManager manager, HttpServletRequest req, Boolean active, User user)
+          throws ServletException {
+    List<Project> projects;
+    final String projContain = getParam(req, "projcontain").trim();
+    final String description = getParam(req, "description").trim();
+    final String userContain = getParam(req, "usercontain").trim();
+    final String subsystem = getParam(req, "subsystem");
+    final String busPath = getParam(req, "busPath");
+    final String departmentId = getParam(req, "departmentId");
+    final String orderOption = getParam(req, "order");
+    final String jobName = getParam(req, "jobName");
+    final String fromType = getParam(req, "fromType");
+    if (userRoleSet.contains("admin")) {
+      projects = manager
+              .getProjectsPreciseSearch(projContain, description, userContain, subsystem, busPath,
+                      departmentId, orderOption, active);
+    } else if (systemManager.isDepartmentMaintainer(user)) {
+      List<Integer> maintainedProjectIds = systemManager.getMaintainedProjects(user, 1);
+      projects = manager
+              .getMaintainerProjects(projContain, description, userContain, subsystem, busPath,
+                      departmentId, orderOption, active, maintainedProjectIds, user);
+    } else {
+      projects = manager.getUserProjects(req, active, user, true);
+    }
+    if (StringUtils.isNotEmpty(jobName)) {
+      projects = projects.stream().filter(project -> manager.getFlowsByProject(project).stream().anyMatch(
+              flow -> flow.getNodes().stream().anyMatch(
+                      node -> node != null && !node.getType().equals(SpecialJobTypes.EMBEDDED_FLOW_TYPE)
+                              && node.getId().contains(jobName)))).collect(Collectors.toList());
+    }
+
+    // 项目来源 WTSS/DSS
+    if (StringUtils.isNotEmpty(fromType)) {
+      List<String> fromTypes = Arrays.asList(fromType.split(","));
+      projects = projects.stream().filter(project -> fromTypes.contains(project.getFromType())).collect(Collectors.toList());
+    }
+
+    return projects;
+  }
   /**
    * 项目页面 项目分页处理方法
    */
   private void handleProjectPage(final HttpServletRequest req,
-      final HttpServletResponse resp, final Session session, final ProjectManager manager,
-      final HashMap<String, Object> ret) {
+                                 final HttpServletResponse resp, final Session session, final ProjectManager manager,
+                                 final HashMap<String, Object> ret) {
     final User user = session.getUser();
 
     try {
@@ -440,18 +534,18 @@ public class ProjectServlet extends LoginAbstractAzkabanServlet {
         if ("true".equals(getParam(req, "all"))) {
           //添加权限判断 admin 用户能查看所有Project
           if(user.getRoles().contains("admin")){
-            final List<Project> searchProjects = manager.getProjectsByRegex(searchTerm, orderOption);
+            final List<Project> searchProjects = manager.getProjectsByRegex(searchTerm, orderOption, true);
             final PagingListStreamUtil<Project> pageProjectsList = manager.getUserProjectsPage(pageNum, pageSize, searchProjects);
             assemblerProjectData(pageProjectsList.currentPageData(), searchProjects.size(), start, pageSize, ret, user);
             // 运维管理员可以查看该运维管理员运维部门下的所有工程
           } else if (systemManager.isDepartmentMaintainer(user)) {
-            final List<Integer> maintainedProjectIds = systemManager.getMaintainedProjects(user);
-            final List<Project> searchProjects = manager.getMaintainedProjectsByRegex(user, maintainedProjectIds,searchTerm, orderOption);
+            final List<Integer> maintainedProjectIds = systemManager.getMaintainedProjects(user, 1);
+            final List<Project> searchProjects = manager.getMaintainedProjectsByRegex(user, maintainedProjectIds,searchTerm, orderOption, true);
             final PagingListStreamUtil<Project> pageProjectsList = manager.getUserProjectsPage(pageNum, pageSize, searchProjects);
             assemblerProjectData(pageProjectsList.currentPageData(), searchProjects.size(), start, pageSize, ret, user);
           } else {//user用户只能查看自己的Project
             final List<Project> searchUserProject =
-                manager.getUserProjectsByRegex(user, searchTerm, orderOption);
+                    manager.getUserProjectsByRegex(user, searchTerm, orderOption);
 
             if(searchUserProject.size() > 0) {
 
@@ -465,58 +559,67 @@ public class ProjectServlet extends LoginAbstractAzkabanServlet {
 
         } else {//只查获自己创建的项目
           final List<Project> searchUserProject =
-              manager.getUserPersonProjectsByRegex(user, searchTerm, orderOption);
+                  manager.getUserPersonProjectsByRegex(user, searchTerm, orderOption);
           final PagingListStreamUtil<Project> pageProjectsList
-              = manager.getUserProjectsPage(pageNum, pageSize, searchUserProject);
+                  = manager.getUserProjectsPage(pageNum, pageSize, searchUserProject);
 
           assemblerProjectData(pageProjectsList.currentPageData(),
-              searchUserProject.size(), start, pageSize, ret, user);
+                  searchUserProject.size(), start, pageSize, ret, user);
         }
-      }else{
+      } else if("projectDelete".equals(projectsType) && hasParam(req, "searchterm")){
+        String searchTerm = getParam(req, "searchterm").trim();
+        final List<Project> searchUserProject = manager.handleProjectDeleteSearch(searchTerm, orderOption, user);
+        final PagingListStreamUtil<Project> pageProjectsList = manager.getUserProjectsPage(pageNum, pageSize, searchUserProject);
+        deleteProjectDataHandle(pageProjectsList.currentPageData(), searchUserProject.size(), start, pageSize, ret);
+      } else {
         if ("all".equals(projectsType)) {
           final List<Project> projects;
           //添加权限判断 admin 用户能查看所有Project
           if(user.getRoles().contains("admin")){
 
-            projects = manager.getProjects(orderOption);
+            projects = manager.getProjects(orderOption, true);
 
             final PagingListStreamUtil<Project> pageProjectsList
-                = manager.getAllProjectsPage(pageNum, pageSize, projects);
+                    = manager.getAllProjectsPage(pageNum, pageSize, projects);
 
             assemblerProjectData(pageProjectsList.currentPageData(),
-                projects.size(), start, pageSize, ret, user);
+                    projects.size(), start, pageSize, ret, user);
 
           } else if (systemManager.isDepartmentMaintainer(user)) {
-              List<Integer> maintainedProjectIds = systemManager.getMaintainedProjects(user);
-            projects = manager.getMaintainedProjects(user, maintainedProjectIds, orderOption);
+            List<Integer> maintainedProjectIds = systemManager.getMaintainedProjects(user, 1);
+            projects = manager.getMaintainedProjects(user, maintainedProjectIds, orderOption, true);
             final PagingListStreamUtil<Project> pageProjectsList
                     = manager.getAllProjectsPage(pageNum, pageSize, projects);
 
             assemblerProjectData(pageProjectsList.currentPageData(),
                     projects.size(), start, pageSize, ret, user);
           } else{//user用户只能查看自己有权限的项目
-            projects = manager.getUserAllProjects(user, orderOption);
+            projects = manager.getUserAllProjects(user, orderOption, true);
 
             if(projects.size() > 0) {
               final PagingListStreamUtil<Project> pageProjectsList
-                  = manager.getUserProjectsPage(pageNum, pageSize, projects);
+                      = manager.getUserProjectsPage(pageNum, pageSize, projects);
 
               assemblerProjectData(pageProjectsList.currentPageData(),
-                  projects.size(), start, pageSize, ret, user);
+                      projects.size(), start, pageSize, ret, user);
             }else {
               ret.put("total", 0);
             }
           }
+        } else if("projectDelete".equals(projectsType)){
+          final List<Project> searchUserProject = manager.getProjects(user, orderOption);
+          final PagingListStreamUtil<Project> pageProjectsList = manager.getAllProjectsPage(pageNum, pageSize, searchUserProject);
+          deleteProjectDataHandle(pageProjectsList.currentPageData(), searchUserProject.size(), start, pageSize, ret);
         } else {//只查获自己创建的项目
 
           final List<Project> projects = manager.getUserProjects(user, orderOption);
 
           if(projects.size() > 0){
             final PagingListStreamUtil<Project> pageProjectsList
-                = manager.getUserProjectsPage(pageNum, pageSize, projects);
+                    = manager.getUserProjectsPage(pageNum, pageSize, projects);
 
             assemblerProjectData(pageProjectsList.currentPageData(),
-                projects.size(), start, pageSize, ret, user);
+                    projects.size(), start, pageSize, ret, user);
 
 
           }else {
@@ -525,26 +628,49 @@ public class ProjectServlet extends LoginAbstractAzkabanServlet {
         }
       }
     } catch (ServletException e) {
-      e.printStackTrace();
+      logger.warn("Failed to deal req", e);
     }
   }
 
   private void assemblerProjectData(List<Project> projectList,
-      int total, int start, int pageSize, HashMap<String, Object> ret, User user){
+                                    int total, int start, int pageSize, HashMap<String, Object> ret, User user){
     List<Map<String, String>> projectMapList = new ArrayList<>();
     WebUtils webUtils = new WebUtils();
     boolean isAdmin = user.getRoles().contains("admin");
     for(Project project : projectList){
       Map<String, String> pmap = new HashMap<>();
       pmap.put("name",project.getName());
+      pmap.put("fromType",project.getFromType());
       pmap.put("description",project.getDescription());
       pmap.put("lastModifiedUser",project.getLastModifiedUser());
       pmap.put("lastModifiedTimestamp", webUtils.formatDateTime(project.getLastModifiedTimestamp()));
       // 页面删除按钮显示判断
-      if(isAdmin || hasPermission(project, user, Type.ADMIN)
-          || hasPermission(project, user, Type.DEPMAINTAINER)){
+      if(isAdmin || hasPermission(project, user, Permission.Type.ADMIN)
+              || hasPermission(project, user, Type.DEPMAINTAINER)){
         pmap.put("showDeleteBtn", "true");
       }
+      projectMapList.add(pmap);
+    }
+
+    ret.put("total", total);
+    ret.put("from", start);
+    ret.put("length", pageSize);
+    ret.put("projectList", projectMapList);
+
+  }
+
+  private void deleteProjectDataHandle(List<Project> projectList,
+                                       int total, int start, int pageSize, HashMap<String, Object> ret){
+    List<Map<String, Object>> projectMapList = new ArrayList<>();
+    WebUtils webUtils = new WebUtils();
+    for(Project project : projectList){
+      Map<String, Object> pmap = new HashMap<>();
+      pmap.put("id", project.getId());
+      pmap.put("name",project.getName());
+      pmap.put("description",project.getDescription());
+      pmap.put("lastModifiedUser",project.getLastModifiedUser());
+      pmap.put("lastModifiedTimestamp", webUtils.formatDateTime(project.getLastModifiedTimestamp()));
+      pmap.put("fromType", project.getFromType());
       projectMapList.add(pmap);
     }
 

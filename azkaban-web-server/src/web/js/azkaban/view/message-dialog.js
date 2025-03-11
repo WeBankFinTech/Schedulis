@@ -36,8 +36,78 @@ azkaban.MessageDialogView = Backbone.View.extend({
   }
 });
 
+var warnDialogView;
+azkaban.WarnDialogView = Backbone.View.extend({
+  events: {},
+
+  initialize: function (settings) {
+  },
+
+  show: function (title, message, buttonText1, buttonText2, callback1, callback2) {
+    $("#azkaban-warn-dialog-title").text(title);
+    $("#azkaban-warn-dialog-text").html(message);
+    $("#azkaban-warn-dialog-button1").text(buttonText1);
+    $("#azkaban-warn-dialog-button2").text(buttonText2);
+    this.callback1 = callback1;
+    this.callback2 = callback2;
+    var modalView=$(this.el);
+    $("#azkaban-warn-dialog-button1").unbind('click').bind('click',function(){
+      if(callback1){
+        callback1();
+      }
+      modalView.modal('hide');
+    });
+    $("#azkaban-warn-dialog-button2").unbind('click').bind('click',function(){
+      if(callback2){
+        callback2();
+      }
+      modalView.modal('hide');
+    });
+    modalView.modal();
+  }
+});
+
+var deleteDialogView;
+azkaban.DeleteDialogView = Backbone.View.extend({
+  events: {},
+
+  initialize: function (settings) {
+  },
+
+  show: function (title, message, buttonText1, buttonText2, callback1, callback2) {
+    $("#azkaban-delete-dialog-title").text(title);
+    $("#azkaban-delete-dialog-text").html(message);
+    $("#azkaban-delete-dialog-button1").text(buttonText1);
+    $("#azkaban-delete-dialog-button2").text(buttonText2);
+    this.callback1 = callback1;
+    this.callback2 = callback2;
+    var modalView=$(this.el);
+    $("#azkaban-delete-dialog-button1").unbind('click').bind('click',function(){
+      if(callback1){
+        callback1();
+      }
+      modalView.modal('hide');
+    });
+    $("#azkaban-delete-dialog-button2").unbind('click').bind('click',function(){
+      if(callback2){
+        callback2();
+      }
+      modalView.modal('hide');
+    });
+    modalView.modal();
+  }
+});
+
 $(function () {
   messageDialogView = new azkaban.MessageDialogView({
     el: $('#azkaban-message-dialog')
+  });
+
+  warnDialogView = new azkaban.WarnDialogView({
+    el: $('#azkaban-warn-dialog')
+  });
+
+  deleteDialogView = new azkaban.DeleteDialogView({
+    el: $('#azkaban-delete-dialog')
   });
 });

@@ -2,6 +2,7 @@ package azkaban.spi;
 
 /**
  * Enum class defining the list of supported event types.
+ * @author WTSS
  */
 public enum EventType {
   FLOW_STARTED,

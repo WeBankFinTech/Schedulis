@@ -6,6 +6,7 @@ public class ConsumedMsgInfo {
     private String sender;
     private String msg;
     private String sendTime;
+    private String sourceType;
 
     public String getMsgId() {
         return msgId;
@@ -45,5 +46,13 @@ public class ConsumedMsgInfo {
 
     public void setSendTime(String sendTime) {
         this.sendTime = sendTime;
+    }
+
+    public String getSourceType() {
+        return sourceType;
+    }
+
+    public void setSourceType(String sourceType) {
+        this.sourceType = sourceType;
     }
 }

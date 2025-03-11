@@ -17,20 +17,17 @@
 package azkaban.executor;
 
 import azkaban.alert.Alerter;
-
-import com.webank.wedatasphere.schedulis.common.executor.ExecutionCycle;
+import azkaban.sla.SlaOption;
 import java.util.Arrays;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import javax.annotation.Nullable;
-
-import azkaban.sla.SlaOption;
 import org.apache.commons.lang.BooleanUtils;
 import org.apache.commons.lang.ObjectUtils;
 import org.apache.commons.lang.exception.ExceptionUtils;
-import org.slf4j.LoggerFactory;
 import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Utils for controlling executions.
@@ -64,7 +61,7 @@ public class ExecutionControllerUtils {
         // If it's marked finished, we're good. If not, we fail everything and then mark it
         // finished.
         if (!isFinished(dsFlow)) {
-          failEverything(dsFlow);
+          failAllJobs(dsFlow);
           executorLoader.updateExecutableFlow(dsFlow);
         }
       }
@@ -80,28 +77,40 @@ public class ExecutionControllerUtils {
     }
 
     if (alertUser) {
-      alertUserOnFlowFinished(flow, alerterHolder, getFinalizeFlowReasons(reason, originalError));
+      alertUserOnFlowFinished(flow, alerterHolder, getFinalizeFlowReasons(reason, originalError), executorLoader);
     }
   }
 
   /**
    * When a flow is finished, alert the user as is configured in the execution options.
    * 通用告警和sla告警
-   * @param flow the execution
+   * @param flow1 the execution
    * @param alerterHolder the alerter holder
    * @param extraReasons the extra reasons for alerting
    */
-  public static void alertUserOnFlowFinished(final ExecutableFlow flow, final AlerterHolder
-      alerterHolder, final String[] extraReasons) {
+  public static void alertUserOnFlowFinished(final ExecutableFlow flow1, final AlerterHolder
+      alerterHolder, final String[] extraReasons, ExecutorLoader executorLoader) {
+    ExecutableFlow flow = null;
+    try {
+      flow = executorLoader.fetchExecutableFlow(flow1.getExecutionId());
+    } catch (ExecutorManagerException e) {
+      logger.error("execute flow not found", e);
+    }
+    if (flow == null) {
+      return;
+    }
     final ExecutionOptions options = flow.getExecutionOptions();
+    if ((boolean) flow.getOtherOption().getOrDefault("isFlowFinishAlerted", false)) {
+      logger.info("{} flow finish alert on another server, skipped", flow.getExecutionId());
+      return;
+    }
     Alerter mailAlerter = alerterHolder.get("email");
     if(null == mailAlerter){
       mailAlerter = alerterHolder.get("default");
     }
-    if (flow.getStatus() != Status.SUCCEEDED) {
+    if (flow.getStatus() != Status.SUCCEEDED && flow.getStatus() != Status.RUNNING) {
       if (options.getFailureEmails() != null && !options.getFailureEmails().isEmpty()) {
         try {
-          // FIXME Job stream failure alarm, relying on third-party services.
           mailAlerter.alertOnError(flow, extraReasons);
         } catch (final Exception e) {
           logger.error("Failed to alert on error for execution " + flow.getExecutionId(), e);
@@ -109,12 +118,9 @@ public class ExecutionControllerUtils {
       }
       if (options.getFlowParameters().containsKey("alert.type")) {
         final String alertType = options.getFlowParameters().get("alert.type");
-
-        final Alerter alerter = alerterHolder.get(alertType) == null? alerterHolder.get("default") : alerterHolder.get(alertType);
-
+        final Alerter alerter = alerterHolder.get(alertType);
         if (alerter != null) {
           try {
-            // FIXME Job stream failure alarm, relying on third-party services.
             alerter.alertOnError(flow, extraReasons);
           } catch (final Exception e) {
             logger.error("Failed to alert on error by " + alertType + " for execution " + flow
@@ -129,7 +135,6 @@ public class ExecutionControllerUtils {
     } else {
       if (options.getSuccessEmails() != null && !options.getSuccessEmails().isEmpty()) {
         try {
-          // FIXME The job stream runs successfully and relies on third-party services.
           mailAlerter.alertOnSuccess(flow);
         } catch (final Exception e) {
           logger.error("Failed to alert on success for execution " + flow.getExecutionId(), e);
@@ -137,12 +142,9 @@ public class ExecutionControllerUtils {
       }
       if (options.getFlowParameters().containsKey("alert.type")) {
         final String alertType = options.getFlowParameters().get("alert.type");
-
-        final Alerter alerter = alerterHolder.get(alertType) == null? alerterHolder.get("default"): alerterHolder.get(alertType);
-
+        final Alerter alerter = alerterHolder.get(alertType);
         if (alerter != null) {
           try {
-            // FIXME The job stream runs successfully and relies on third-party services.
             alerter.alertOnSuccess(flow);
           } catch (final Exception e) {
             logger.error("Failed to alert on success by " + alertType + " for execution " + flow
@@ -174,7 +176,6 @@ public class ExecutionControllerUtils {
         mailAlerter = alerterHolder.get("default");
       }
       try {
-        // FIXME Job stream failure alarm, relying on third-party services.
         mailAlerter.alertOnFirstError(flow);
       } catch (final Exception e) {
         logger.error("Failed to send first error email." + e.getMessage(), e);
@@ -182,12 +183,9 @@ public class ExecutionControllerUtils {
 
       if (options.getFlowParameters().containsKey("alert.type")) {
         final String alertType = options.getFlowParameters().get("alert.type");
-
-        final Alerter alerter = alerterHolder.get(alertType) == null? alerterHolder.get("default"): alerterHolder.get(alertType);
-
+        final Alerter alerter = alerterHolder.get(alertType);
         if (alerter != null) {
           try {
-            // FIXME Job stream failure alarm, relying on third-party services.
             alerter.alertOnFirstError(flow);
           } catch (final Exception e) {
             logger.error("Failed to alert by " + alertType, e);
@@ -220,7 +218,6 @@ public class ExecutionControllerUtils {
                 && exflow.getStatus() == Status.FAILED_FINISHING){
           logger.info("任务Flow：" + FlowName + " 执行FAILED_FINISHING 开始发送 告警");
           try {
-            // FIXME Job flow event alerts, relying on third-party services.
             mailAlerter.alertOnFinishSla(slaOption, exflow);
             alerterHolder.getFlowAlerterFlag().put(exflow.getExecutionId(),true);
           } catch (Exception e) {
@@ -229,7 +226,6 @@ public class ExecutionControllerUtils {
         } else if(flowId.equals(FlowName) && SlaOption.TYPE_FLOW_FINISH_EMAILS.equals(slaOption.getType())) {
           logger.info("任务Flow：" + FlowName + " 执行完成 开始发送 告警");
           try {
-            // FIXME Job flow event alerts, relying on third-party services.
             mailAlerter.alertOnFinishSla(slaOption, exflow);
             alerterHolder.getFlowAlerterFlag().put(exflow.getExecutionId(),true);
           } catch (Exception e) {
@@ -297,6 +293,50 @@ public class ExecutionControllerUtils {
     exFlow.setStatus(Status.FAILED);
   }
 
+  public static void changeStatus(ExecutableNode node){
+    switch (node.getStatus()) {
+      case SUCCEEDED:
+      case FAILED:
+      case KILLED:
+      case SKIPPED:
+      case DISABLED:
+      case FAILED_SKIPPED:
+      case RETRIED_SUCCEEDED:
+        break;
+      case READY:
+        node.setStatus(Status.CANCELLED);
+        break;
+      default:
+        node.setStatus(Status.FAILED);
+        break;
+    }
+    if (node.getStartTime() == -1) {
+      node.setStartTime(System.currentTimeMillis());
+    }
+    if (node.getEndTime() == -1) {
+      node.setEndTime(System.currentTimeMillis());
+    }
+  }
+
+  public static void failAllJobs(final ExecutableFlowBase exFlow) {
+    for(final ExecutableNode node : exFlow.getExecutableNodes()) {
+      if (node instanceof ExecutableFlowBase) {
+        if(!Status.isStatusFinished(node.getStatus())){
+          changeStatus(node);
+          failAllJobs((ExecutableFlowBase) node);
+        }
+      } else {
+        changeStatus(node);
+      }
+    }
+    if(exFlow instanceof ExecutableFlow){
+      if (exFlow.getEndTime() == -1) {
+        exFlow.setEndTime(System.currentTimeMillis());
+      }
+      exFlow.setStatus(Status.FAILED);
+    }
+  }
+
   /**
    * Check if the flow status is finished.
    *
@@ -335,7 +375,6 @@ public class ExecutionControllerUtils {
                 && BooleanUtils.isNotTrue(alerterHolder.getFlowAlerterFlag().get(exflow.getExecutionId()))) {
           logger.info("任务Flow：" + FlowName + " 执行失败 开始发送 告警");
           try {
-            // FIXME Job flow event alerts, relying on third-party services.
             mailAlerter.alertOnFinishSla(slaOption, exflow);
           } catch (Exception e) {
             logger.error("1、发送sla告警失败", e);
@@ -344,7 +383,6 @@ public class ExecutionControllerUtils {
                 && exflow.getStatus() == Status.SUCCEEDED ){
           logger.info("任务Flow：" + FlowName + " 执行成功 开始发送 告警");
           try {
-            // FIXME Job flow event alerts, relying on third-party services.
             mailAlerter.alertOnFinishSla(slaOption, exflow);
           } catch (Exception e) {
             logger.error("2、发送sla告警失败", e);
@@ -353,7 +391,6 @@ public class ExecutionControllerUtils {
                 && BooleanUtils.isNotTrue(alerterHolder.getFlowAlerterFlag().get(exflow.getExecutionId()))){
           logger.info("任务Flow：" + FlowName + " 执行完成 开始发送 告警");
           try {
-            // FIXME Job flow event alerts, relying on third-party services.
             mailAlerter.alertOnFinishSla(slaOption, exflow);
           } catch (Exception e) {
             logger.error("3、发送sla告警失败", e);
@@ -378,7 +415,6 @@ public class ExecutionControllerUtils {
     try {
       //设置了第一次失败才能发生暂停告警
       if (options.getNotifyOnFirstFailure() && options.getFailureEmails() != null && !options.getFailureEmails().isEmpty()) {
-        // FIXME Job stream suspension alarms, rely on third-party services.
         mailAlerter.alertOnFlowPaused(exflow, nodePath);
       } else {
         logger.info("没有设置通用告警;");
@@ -400,7 +436,6 @@ public class ExecutionControllerUtils {
         if (flowId.equals(FlowName)) {
           logger.info("任务Flow：" + FlowName + " 执行失败 任务已经暂停 开始发送 告警");
           try {
-            // FIXME The job stream pauses and executes alerts, relying on third-party services.
             mailAlerter.alertOnFlowPausedSla(slaOption, exflow, nodePath);
           } catch (Exception e) {
             logger.error("发送sla告警失败", e);
@@ -425,7 +460,6 @@ public class ExecutionControllerUtils {
       List<String> failureEmails = Arrays.asList(cycleFlowInterruptEmails.split("\\s*,\\s*|\\s*;\\s*|\\s+"));
       String alertLevel = cycleOption.getOrDefault("cycleFlowInterruptAlertLevel", "MAJOR");
       cycleFlow.setStatus(Status.FAILED);
-      // FIXME Job stream cyclic execution interruption alarm, rely on third-party services.
       mailAlerter.alertOnCycleFlowInterrupt(flow, cycleFlow, failureEmails, alertLevel, extraReasons);
     } catch (Exception e) {
       logger.error("Failed to alert on error for execution " + flow.getExecutionId(), e);

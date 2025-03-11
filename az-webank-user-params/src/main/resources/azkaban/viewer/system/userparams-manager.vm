@@ -13,16 +13,16 @@
 
         var langType = "${currentlangType}";
     </script>
-    <script type="text/javascript" src="/js/azkaban/i18n-config.js?version=1.43.0"></script>
-    <script type="text/javascript" src="/js/azkaban/util/ajax.js?version=1.43.0"></script>
-    <script type="text/javascript" src="/js/jquery/jquery.tablesorter.js?version=1.43.0"></script>
-    <script type="text/javascript" src="/js/azkaban/util/utils.js?version=1.43.0"></script>
-    <script type="text/javascript" src="/js/azkaban/util/job-status.js?version=1.43.0"></script>
-    <script type="text/javascript" src="/js/raphael.min.js?version=1.43.0"></script>
-    <script type="text/javascript" src="/js/morris.min.js?version=1.43.0"></script>
-    <script type="text/javascript" src="/userparams/js/userparams-manager.js?version=1.43.0"></script>
-    <script src="/js/select2/select2.js?version=1.43.0"></script>
-    <script src="/js/select2/i18n/zh-CN.js?version=1.43.0"></script>
+    <script type="text/javascript" src="/js/azkaban/i18n-config.js?version=1.49.0"></script>
+    <script type="text/javascript" src="/js/azkaban/util/ajax.js?version=1.49.0"></script>
+    <script type="text/javascript" src="/js/jquery/jquery.tablesorter.js?version=1.49.0"></script>
+    <script type="text/javascript" src="/js/azkaban/util/utils.js?version=1.49.0"></script>
+    <script type="text/javascript" src="/js/azkaban/util/job-status.js?version=1.49.0"></script>
+    <script type="text/javascript" src="/js/raphael.min.js?version=1.49.0"></script>
+    <script type="text/javascript" src="/js/morris.min.js?version=1.49.0"></script>
+    <script type="text/javascript" src="/userparams/js/userparams-manager.js?version=1.49.0"></script>
+    <script src="/js/select2/select2.js?version=1.49.0"></script>
+    <script src="/js/select2/i18n/zh-CN.js?version=1.49.0"></script>
     
 </head>
 <body>

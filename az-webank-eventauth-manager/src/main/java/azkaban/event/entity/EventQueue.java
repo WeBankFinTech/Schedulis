@@ -2,21 +2,23 @@ package azkaban.event.entity;
 
 public class EventQueue {
 
-    private final long msgId;
+    private  long msgId;
 
-    private final String sender;
+    private  String sender;
 
-    private final String sendTime;
+    private  String sendTime;
 
-    private final String topic;
+    private  String topic;
 
-    private final String msgName;
+    private  String msgName;
 
-    private final String msg;
+    private  String msg;
 
-    private final String sendIP;
+    private  String sendIP;
 
-    private final String wemqBizno;
+    private  String wemqBizno;
+
+
 
     public EventQueue(long msgId, String sender, String sendTime, String topic, String msgName, String msg, String sendIP,String wemqBizno) {
         this.msgId = msgId;
@@ -29,6 +31,11 @@ public class EventQueue {
         this.wemqBizno = wemqBizno;
     }
 
+    public EventQueue( String sendTime, String msg) {
+        this.sendTime = sendTime;
+        this.msg = msg;
+
+    }
     public long getMsgId() {
         return msgId;
     }

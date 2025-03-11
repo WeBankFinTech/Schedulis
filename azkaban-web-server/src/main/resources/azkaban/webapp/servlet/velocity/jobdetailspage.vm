@@ -23,7 +23,6 @@
   #parse("azkaban/webapp/servlet/velocity/style.vm")
   #parse("azkaban/webapp/servlet/velocity/javascript.vm")
   <script type="text/javascript">
-    var contextURL = "${context}";
     var currentTime = ${currentTime};
     var timezone = "${timezone}";
     var errorMessage = null;
@@ -35,14 +34,16 @@
     var jobId = "${jobid}";
     var attempt = ${attempt};
     var langType = "${currentlangType}";
+    var esStart = 1;
   </script>
-  <script type="text/javascript" src="${context}/js/azkaban/i18n-config.js?version=1.10.0"></script>
-  <script type="text/javascript" src="${context}/js/azkaban/util/ajax.js?version=1.10.0"></script>
-  <script type="text/javascript" src="${context}/js/azkaban/model/job-log.js?version=1.10.0"></script>
-  <script type="text/javascript" src="${context}/js/azkaban/view/job-details.js?version=1.10.0"></script>
-  <script type="text/javascript" src="${context}/js/azkaban/view/log-auto-refresh-dialog.js?version=1.10.0"></script>
+  <script type="text/javascript" src="/js/azkaban/i18n-config.js?version=1.49.0"></script>
+  <script type="text/javascript" src="/js/azkaban/util/ajax.js?version=1.49.0"></script>
+  <script type="text/javascript" src="/js/azkaban/util/ansi_up.js?version=1.49.0"></script>
+  <script type="text/javascript" src="/js/azkaban/model/job-log.js?version=1.49.0"></script>
+  <script type="text/javascript" src="/js/azkaban/view/job-details.js?version=1.49.0"></script>
+  <script type="text/javascript" src="/js/azkaban/view/log-auto-refresh-dialog.js?version=1.49.0"></script>
 
-  
+
   <script type="text/javascript">
     $(document).ready(function () {
       #if ($jobFailed == "true")
@@ -62,7 +63,7 @@
 
     #parse ("azkaban/webapp/servlet/velocity/jobdetailsheader.vm")
 
-    <script type="text/javascript" src="${context}/js/azkaban/view/hideHead.js?version=1.10.0"></script>
+    <script type="text/javascript" src="/js/azkaban/view/hideHead.js?version=1.49.0"></script>
 
   ## Log content.
 
@@ -74,12 +75,14 @@
             <div class="panel-heading">
               <div id="job-log-button-div" class="pull-right">
                 <!--
-                <button type="button" id="updateLogBtn" class="btn btn-xs btn-default" hidden="hidden">刷新
+                <button type="button" id="updateLogBtn" class="btn btn-xs btn-default" hidden="hidden">$refresh
                 </button>-->
                 <button type="button" id="latestLogBtn" class="btn btn-xs btn-default">$latestLog</button>
                 <button type="button" id="manuallyLogBtn" class="btn btn-xs btn-default">$handleRefresh
                 </button>
                 <button type="button" id="autoRefreshLogBtn" class="btn btn-xs btn-default">$autoRefresh
+                </button>
+                <button type="button" id="jobLogDownloadBtn" class="btn btn-xs btn-info">$downloadLog
                 </button>
               </div>
               $jobLog
@@ -92,6 +95,26 @@
       </div>
     </div>
   </div>
+
+  <div class="container-full" id="diagnosticLogView">
+    <div class="row">
+      <div class="col-xs-12 col-content">
+        <div class="log-viewer">
+          <div class="panel panel-default">
+            <div class="panel-heading">
+              <div id="diagnostic-log-button-div" class="pull-right">
+              </div>
+              $diagnosticLog
+            </div>
+            <div id="diagnostic-log-view" class="panel-body">
+              <pre id="diagnostic-log-body" style="height:600px;overflow-y:scroll;padding:10px;white-space:pre-wrap"></pre>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
 
   ## Error message message dialog.
 
@@ -114,7 +137,6 @@
   </div>
   #end
   #parse ("azkaban/webapp/servlet/velocity/log-auto-refresh-option.vm")
-
 
 </body>
 </html>

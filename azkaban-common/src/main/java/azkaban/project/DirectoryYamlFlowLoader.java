@@ -175,7 +175,7 @@ public class DirectoryYamlFlowLoader implements FlowLoader {
     return flow;
   }
 
-  private Node convertAzkabanNodeToNode(final AzkabanNode azkabanNode, final String flowName,
+  private Node convertAzkabanNodeToNode(final AbstractAzkabanNode azkabanNode, final String flowName,
       final File flowFile, final AzkabanFlow azkabanFlow) {
     final Node node = new Node(azkabanNode.getName());
     node.setType(azkabanNode.getType());
@@ -204,12 +204,12 @@ public class DirectoryYamlFlowLoader implements FlowLoader {
     final HashSet<String> recStack = new HashSet<>();
     // Nodes that have already been visited and added edges.
     final HashSet<String> visited = new HashSet<>();
-    for (final AzkabanNode node : azkabanFlow.getNodes().values()) {
+    for (final AbstractAzkabanNode node : azkabanFlow.getNodes().values()) {
       addEdges(node, azkabanFlow, flowName, recStack, visited);
     }
   }
 
-  private void addEdges(final AzkabanNode node, final AzkabanFlow azkabanFlow,
+  private void addEdges(final AbstractAzkabanNode node, final AzkabanFlow azkabanFlow,
       final String flowName, final HashSet<String> recStack, final HashSet<String> visited) {
     if (!visited.contains(node.getName())) {
       recStack.add(node.getName());
@@ -235,7 +235,7 @@ public class DirectoryYamlFlowLoader implements FlowLoader {
     }
   }
 
-  private void validateCondition(final Node node, final AzkabanNode azkabanNode,
+  private void validateCondition(final Node node, final AbstractAzkabanNode azkabanNode,
       final AzkabanFlow azkabanFlow) {
     boolean foundConditionOnJobStatus = false;
     final String condition = azkabanNode.getCondition();
@@ -251,7 +251,7 @@ public class DirectoryYamlFlowLoader implements FlowLoader {
     for (int i = 0; i < operands.length; i++) {
       final Matcher matcher = CONDITION_ON_JOB_STATUS_PATTERN.matcher(operands[i]);
       if (matcher.matches()) {
-        this.logger.info("Operand " + operands[i] + " is a condition on job" + node.getId() + " status.");
+        logger.info("Operand " + operands[i] + " is a condition on job" + node.getId() + " status.");
         if (foundConditionOnJobStatus) {
           this.errors.add("Invalid condition for " + node.getId()
               + ": cannot combine more than one conditionOnJobStatus macros.");
@@ -263,7 +263,7 @@ public class DirectoryYamlFlowLoader implements FlowLoader {
           // Remove the operator '!' from the operand.
           operands[i] = operands[i].substring(1);
         }
-        if (operands[i].equals("")) {
+        if ("".equals(operands[i])) {
           this.errors
               .add("Invalid condition for " + node.getId() + ": operand is an empty string.");
         } else if (!DIGIT_STRING_PATTERN.matcher(operands[i]).matches()) {
@@ -273,12 +273,12 @@ public class DirectoryYamlFlowLoader implements FlowLoader {
     }
   }
 
-  private void validateVariableSubstitution(final String operand, final AzkabanNode azkabanNode,
+  private void validateVariableSubstitution(final String operand, final AbstractAzkabanNode azkabanNode,
       final AzkabanFlow azkabanFlow) {
     final Matcher matcher = CONDITION_VARIABLE_REPLACEMENT_PATTERN.matcher(operand);
     if (matcher.matches()) {
       final String jobName = matcher.group(1);
-      final AzkabanNode conditionNode = azkabanFlow.getNode(jobName);
+      final AbstractAzkabanNode conditionNode = azkabanFlow.getNode(jobName);
       if (conditionNode == null) {
         this.errors.add("Invalid condition for " + azkabanNode.getName() + ": " + jobName
             + " doesn't exist in the flow.");
@@ -294,7 +294,7 @@ public class DirectoryYamlFlowLoader implements FlowLoader {
     }
   }
 
-  private boolean isDescendantNode(final AzkabanNode current, final AzkabanNode target,
+  private boolean isDescendantNode(final AbstractAzkabanNode current, final AbstractAzkabanNode target,
       final AzkabanFlow azkabanFlow) {
     // Check if the current node is a descendant of the target node.
     if (current == null || target == null) {

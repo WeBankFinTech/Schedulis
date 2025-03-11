@@ -14,6 +14,9 @@ import azkaban.scheduler.ScheduleManagerException;
 import azkaban.server.session.Session;
 import azkaban.service.BatchManager;
 import azkaban.service.impl.BatchManagerImpl;
+import azkaban.system.SystemManager;
+import azkaban.system.entity.WebankDepartment;
+import azkaban.system.entity.WtssUser;
 import azkaban.trigger.TriggerManagerException;
 import azkaban.user.User;
 import azkaban.utils.HttpUtils;
@@ -22,18 +25,23 @@ import azkaban.webapp.AzkabanWebServer;
 import azkaban.webapp.servlet.AbstractLoginAzkabanServlet;
 import azkaban.webapp.servlet.Page;
 import com.google.inject.Injector;
-import org.apache.commons.lang.StringUtils;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
+import java.io.File;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Comparator;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 import javax.servlet.ServletConfig;
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
-import java.io.File;
-import java.io.IOException;
-import java.util.*;
-import java.util.stream.Collectors;
+
+import org.apache.commons.lang.StringUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Created by zhu on 7/5/18.

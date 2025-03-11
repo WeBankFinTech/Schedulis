@@ -10,9 +10,11 @@ import javax.servlet.*;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.Set;
 
+import static azkaban.Constants.ConfigurationKeys.*;
 import static azkaban.ServiceProvider.SERVICE_PROVIDER;
 
 /**
@@ -31,6 +33,8 @@ public class WebServerExcludeRequestFilter implements Filter {
 
     private Set<String> whitelist = new HashSet<>(16);
 
+    private Set<String> balcklist = new HashSet<>(16);
+
 
 
 
@@ -41,9 +45,12 @@ public class WebServerExcludeRequestFilter implements Filter {
 
         String whitelistURLString = this.application.getServerProps().getString(WTSS_QUERY_SERVER_WHITELIST_URL, "/checkin,/executeFlow");
         if (StringUtils.isNotBlank(whitelistURLString)) {
-            for (String url : whitelistURLString.split(",")) {
-                whitelist.add(url);
-            }
+            Collections.addAll(whitelist, whitelistURLString.split(","));
+        }
+
+        String blacklistURLString = this.application.getServerProps().getString(WTSS_QUERY_SERVER_BLACKLIST_URL, "");
+        if (StringUtils.isNotBlank(blacklistURLString)) {
+            Collections.addAll(balcklist, blacklistURLString.split(","));
         }
 
         if (enableQueryServer) {
@@ -59,11 +66,22 @@ public class WebServerExcludeRequestFilter implements Filter {
         String method = req.getMethod();
         String requestURI = req.getRequestURI();
 
-        if (!enableQueryServer || "GET".equalsIgnoreCase(method) || whitelist.contains(requestURI)) {
+        if (!enableQueryServer) {
             filterChain.doFilter(servletRequest, servletResponse);
         } else {
-            logger.info("request method {} url {} will be prohibited", method, requestURI);
-            resp.sendError(HttpServletResponse.SC_UNAUTHORIZED, "The query service does not support the request");
+            String ajax = req.getParameter("ajax");
+            if (null == ajax) {
+                ajax = "";
+            }
+            boolean isBlacklisted = balcklist.contains(ajax);
+            boolean isWhitelisted = "GET".equalsIgnoreCase(method) || whitelist.contains(requestURI);
+
+            if (!isBlacklisted && isWhitelisted) {
+                filterChain.doFilter(servletRequest, servletResponse);
+            } else {
+                logger.info("request method {} url {} will be prohibited", method, requestURI);
+                resp.sendError(HttpServletResponse.SC_UNAUTHORIZED, "The query service does not support the request");
+            }
         }
     }
 

@@ -21,12 +21,19 @@
   <meta http-equiv="Cache-Control" content="no-cache, must-revalidate">
   <meta http-equiv="Expires" content="0">
   #parse("azkaban/webapp/servlet/velocity/style.vm")
+  <script type="text/javascript" src="/js/azkaban/i18n-config.js?version=1.49.0"></script>
   #parse("azkaban/webapp/servlet/velocity/javascript.vm")
 
-  <script type="text/javascript" src="${context}/js/azkaban/view/login.js?version=1.10.0"></script>
+  <script type="text/javascript" src="/js/azkaban/view/login.js?version=1.49.0"></script>
+  <script type="text/javascript" src="/js/jsencrypt.min.js?version=1.49.0"></script>
+  <link rel="stylesheet" href="/css/bootstrap.css">
+  <link rel="stylesheet" href="/css/login.css">
+  <script type="text/javascript" src="/js/bootstrap.min.js"></script>
+  <script type="text/javascript" src="/js/jquery/jquery-3.5.1.min.js"></script>
+  <script type="text/javascript" src="/js/azkaban/util/utils.js?version=1.49.0"></script>
   <script type="text/javascript">
-    var contextURL = "${context}";
     var langType = "${currentlangType}";
+    var opsLoginCheck = "${opsLoginCheck}";
     function system_time() {
       return new Date().getTime();
     }
@@ -37,16 +44,68 @@
   #set ($current_page = "all")
   #set ($navbar_disabled = 1)
   #parse ("azkaban/webapp/servlet/velocity/nav.vm")
-
+<input type="hidden" id="publicKey" value="${publicKey}">
 <div class="container-full">
   <div class="login">
     <div class="alert alert-danger" id="error-msg"></div>
     <div class="well">
       <form id="checkin-form" role="form">
         <fieldset>
-          <legend>$loginPage</legend>
-          <input type="text" class="form-control" id="username" placeholder=$userName>
-          <input type="password" class="form-control" id="userpwd" placeholder="${passwordPlaceholder}">
+          <legend>
+            $loginPage
+
+            <i class="glyphicon glyphicon-question-sign login-help-ico" id="login-ques-btn" style="
+    /* float: right; */
+    /* margin-top: 2px; */
+"></i>
+            <div class="login-help-pop fade right in" role="tooltip" id="popover">
+                <div class="arrow"></div>
+                <h3 class="popover-title">$loginQuestion</h3>
+                <div class="popover-content">
+                    $testInfo <strong>UM $staticPwd</strong>
+                    <div>$reset</div>
+                    <a href="http://127.0.0.1:8090/umapp/resetPwd/skipResetUser" target="_bank">http://127.0.0.1:8090/umapp/resetPwd/skipResetUser</a>
+                    <div>$resetTestPwd</div>
+                    <a href="http://127.0.0.1:8080/umapp/admin/#/resetPwd" target="_bank">http://127.0.0.1:8080/umapp/admin/#/resetPwd</a>
+                    <div>$productInfo<strong> PIN + TOKEN</strong></div>
+                    <div>$prodreset</div>
+                    <a href="http://127.0.0.1" target="_bank">http://127.0.0.1</a>
+                </div>
+            </div>
+          </legend>
+
+          #if (${opsLoginCheck} == "true")
+            <ul class="nav nav-tabs nav-sm" id="loginTab">
+                <li class="active"><a href="javascript:void(0);" name="userLoginTab">$normalUserTab</a></li>
+                <li><a href="javascript:void(0);" name="opsUserLoginTab">$opsUserTab</a></li>
+                <li><a href="javascript:void(0);" name="systemUserLoginTab">$sysuser</a></li>
+            </ul>
+            <div class="tab-content" id="tabContent">
+                <div class="tab-pane fade in active" id="userLoginTab">
+                  <input type="text" class="form-control" id="username" placeholder=$normalUserName>
+                  <input type="password" class="form-control bottom-radius" id="userpwd" placeholder=$normalPassword>
+                </div>
+                <div class="tab-pane fade" id="opsUserLoginTab">
+                  <input type="text" class="form-control bottom-radius" id="opsUserName"  placeholder=$opsUserName>
+                  <input type="hidden" class="form-control" id="opsPassword" placeholder=$opsPassword>
+                </div>
+
+                <div class="tab-pane fade" id="systemUserLoginTab">
+                    <ul class="system-user-box">
+                        <li>
+                            <input type="text" class="form-control" id="sysUserName" autocomplete="off" placeholder="$sysstart">
+                            <ul id="userDropdown" class="user-dropdown"></ul>
+                        </li>
+                    </ul>
+                    
+                  <input type="text" class="form-control bottom-radius" id="sysPassword" autocomplete="off" placeholder="$sysUserPassword" style="-webkit-text-security: disc;">
+                </div>
+            </div>
+          #else
+            <input type="text" class="form-control" id="allusername" placeholder=$userName>
+            <input type="password" class="form-control" id="alluserpwd" placeholder="${passwordPlaceholder}">
+          #end
+
           <button type="button" class="btn btn-primary btn-lg btn-block" id="checkin-submit">$login
           </button>
         </fieldset>

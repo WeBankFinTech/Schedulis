@@ -9,7 +9,7 @@ import java.sql.Connection;
 import java.util.ArrayList;
 import java.util.List;
 
-import com.webank.wedatasphere.schedulis.common.distributelock.DBTableDistributeLock;
+import azkaban.distributelock.DBTableDistributeLock;
 
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
@@ -18,6 +18,7 @@ import static org.mockito.Mockito.verify;
 /**
  * @author georgeqiao
  * @Title: DistributeLockTest
+ * @ProjectName WTSS
  * @date 2019/11/1520:12
  * @Description: TODO
  */
@@ -25,7 +26,7 @@ public class DistributeLockTest {
     private static final List<Integer> list = new ArrayList<>();
     private static final int index_2 = 15;
     private static int index_1 = 3;
-    private final AzkabanDataSource datasource = new AzDBTestUtility.EmbeddedMysqlDataSource();
+    private final AbstractAzkabanDataSource datasource = new AzDBTestUtility.EmbeddedMysqlDataSource();
     private final ResultSetHandler<Integer> handler = rs -> {
         if (!rs.next()) {
             return 0;
@@ -58,7 +59,7 @@ public class DistributeLockTest {
 //    @Test
     public void testValidQuery() throws Exception {
         int ss = dbOperator.query("select * from distribute_lock where lock_resource = ?", this.handler,1);
-        System.out.println("~~~~~~~~" + ss);
+       // System.out.println("~~~~~~~~" + ss);
     }
 
     //测试重复获取和重复释放

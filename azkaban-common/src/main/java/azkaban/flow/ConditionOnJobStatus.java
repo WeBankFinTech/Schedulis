@@ -15,6 +15,10 @@
 */
 package azkaban.flow;
 
+/**
+ * @author WTSS
+ */
+
 public enum ConditionOnJobStatus {
   ALL_SUCCESS("all_success"),
   ALL_FAILED("all_failed"),

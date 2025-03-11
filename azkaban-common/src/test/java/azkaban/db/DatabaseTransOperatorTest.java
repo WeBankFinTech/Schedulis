@@ -26,7 +26,7 @@ public class DatabaseTransOperatorTest {
 
   @Before
   public void setUp() throws Exception {
-    final AzkabanDataSource datasource = new AzDBTestUtility.EmbeddedH2BasicDataSource();
+    final AbstractAzkabanDataSource datasource = new AzDBTestUtility.EmbeddedH2BasicDataSource();
     final DatabaseTransOperator operator = new DatabaseTransOperator(new QueryRunner(),
         datasource.getConnection());
   }

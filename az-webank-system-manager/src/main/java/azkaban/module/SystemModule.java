@@ -1,6 +1,8 @@
 package azkaban.module;
 
+import azkaban.exceptional.user.dao.ExceptionalUserLoader;
 import azkaban.dao.SystemUserLoader;
+import azkaban.exceptional.user.impl.ExceptionalUserLoaderImpl;
 import azkaban.dao.impl.JdbcSystemUserImpl;
 import azkaban.service.UserManager;
 import azkaban.service.impl.SystemManager;

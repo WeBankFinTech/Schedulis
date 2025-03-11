@@ -24,7 +24,6 @@
   #parse("azkaban/webapp/servlet/velocity/javascript.vm")
 
   <script type="text/javascript">
-    var contextURL = "${context}";
     var currentTime = ${currentTime};
     var timezone = "${timezone}";
     var errorMessage = null;
@@ -36,10 +35,10 @@
       jobTable.tablesorter();
     });
   </script>
-  <script type="text/javascript" src="${context}/js/azkaban/i18n-config.js?version=1.10.0"></script>
-  <script type="text/javascript" src="${context}/js/azkaban/util/ajax.js?version=1.10.0"></script>
-  <script type="text/javascript" src="${context}/js/azkaban/view/executions.js?version=1.10.0"></script>
-  <script type="text/javascript" src="${context}/js/jquery/jquery.tablesorter.js?version=1.10.0"></script>
+  <script type="text/javascript" src="/js/azkaban/i18n-config.js?version=1.49.0"></script>
+  <script type="text/javascript" src="/js/azkaban/util/ajax.js?version=1.49.0"></script>
+  <script type="text/javascript" src="/js/azkaban/view/executions.js?version=1.49.0"></script>
+  <script type="text/javascript" src="/js/jquery/jquery.tablesorter.js?version=1.49.0"></script>
   
 
   <script type="text/javascript">
@@ -81,7 +80,7 @@
 
 <div class="az-page-header">
   <div class="container-full">
-    <h1><a href="${context}/flowtrigger">Scheduled Flow Triggers</a></h1>
+    <h1><a href="/flowtrigger">Scheduled Flow Triggers</a></h1>
   </div>
 </div>
 
@@ -124,10 +123,10 @@
               </td>
             #*todo chengren311: keep result of vmutils.getProjectName as a variable *#
               <td><a
-                  href="${context}/manager?project=${trigger.getProjectName()}&flow=${trigger.getFlowId()}">${trigger.getFlowId()}</a>
+                  href="javascript:void(0);" onclick="checkHrefUrlXss('/manager?project=${trigger.getProjectName()}&flow=${trigger.getFlowId()}')">${trigger.getFlowId()}</a>
               </td>
               <td>
-                <a href="${context}/manager?project=${trigger.getProjectName()}">${trigger.getProjectName()}</a>
+                <a href="javascript:void(0);" onclick="checkHrefUrlXss('/manager?project=${trigger.getProjectName()}')">${trigger.getProjectName()}</a>
               </td>
 
               <td>${trigger.getSubmitUser()}</td>

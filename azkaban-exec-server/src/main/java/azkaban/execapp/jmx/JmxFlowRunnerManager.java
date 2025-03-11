@@ -18,12 +18,28 @@ package azkaban.execapp.jmx;
 
 import azkaban.execapp.FlowRunnerManager;
 
+import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.time.ZoneOffset;
+
 public class JmxFlowRunnerManager implements JmxFlowRunnerManagerMBean {
 
   private final FlowRunnerManager manager;
 
+  private long startTime = -1;
+
   public JmxFlowRunnerManager(final FlowRunnerManager manager) {
     this.manager = manager;
+    this.startTime = LocalDateTime.now(ZoneId.systemDefault()).atZone(ZoneId.systemDefault()).toEpochSecond();
+  }
+
+  @Override
+  public int getFailedFlowNum() {
+    return manager.getFailedFlowNum();
+  }
+  @Override
+  public long getStartTime() {
+    return startTime;
   }
 
   @Override

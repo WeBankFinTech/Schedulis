@@ -23,9 +23,7 @@ azkaban_dir=$(dirname $0)/../..
 # Change if necessary
 conf=$azkaban_dir/conf
 
-hostConf=/appcom/config/schedulis-config/host.properties
-
-logFile=/appcom/logs/azkaban/executorServerLog__`date +%F+%T`.out
+logFile=/data/logs/wtss/executorServerLog__`date +%F+%T`.out
 
 
 function loadClasspath(){
@@ -34,6 +32,8 @@ function loadClasspath(){
   do
     CLASSPATH=$CLASSPATH:$file
   done
+
+  CLASSPATH=$CLASSPATH:$azkaban_dir/conf/
 
   for file in $azkaban_dir/extlib/*.jar;
   do
@@ -76,13 +76,13 @@ function javaOption(){
   fi
 
   if [[ -z "$AZKABAN_OPTS" ]]; then
-    AZKABAN_OPTS="-Xmx8G"
+    AZKABAN_OPTS="-Xmx16G  -Xms2G -Xloggc:/data/logs/wtss/exec_gc_%t.log -XX:+PrintGCDetails -XX:+PrintGCTimeStamps -XX:+PrintGCDateStamps -XX:+PrintHeapAtGC"
   fi
   # Set the log4j configuration file
-  if [ -f $conf/log4j2.xml ]; then
-    AZKABAN_OPTS="$AZKABAN_OPTS -Dlog4j.configurationFile=$conf/log4j2.xml"
+  if [ -f $conf/log4j2-exec.xml ]; then
+    AZKABAN_OPTS="$AZKABAN_OPTS -Dlog4j.configurationFile=$conf/log4j2-exec.xml"
   else
-    LOG ERROR "$conf/log4j2.xml file doesn't exist."
+    LOG ERROR "$conf/log4j2-exec.xml file doesn't exist."
     return 1
   fi
   executorport=`cat $conf/azkaban.properties | grep executor.port | awk -F '=' '{print($NF)}'`
@@ -94,7 +94,7 @@ function javaOption(){
 
 function start(){
   LOG INFO "Starting AzkabanExecutorServer on port $executorport ..."
-  java $AZKABAN_OPTS $JAVA_LIB_PATH -cp $CLASSPATH azkaban.execapp.AzkabanExecutorServer -conf $conf $@ >> $logFile 2>&1 &
+  nohup java $AZKABAN_OPTS $JAVA_LIB_PATH -cp $CLASSPATH azkaban.execapp.AzkabanExecutorServer -conf $conf $@ >> $logFile 2>&1 &
   echo $! > $azkaban_dir/currentpid
   sleep 3s
   processName=`jps|grep AzkabanExecutorServer`
@@ -107,17 +107,17 @@ function start(){
   fi
 }
 
-function genServerId(){
-  LOG INFO "setting executor id..."
-  [ -f $hostConf ] || { LOG ERROR "$hostConf doesn't exist."; return 1; }
-  [ -f $azkaban_dir/conf/azkaban.properties ] || { LOG ERROR "$azkaban_dir/conf/azkaban.properties doesn't exist."; return 1; }
-  serverName=`hostname`
-  serverId=`grep -E "^$serverName" $hostConf | awk -F '=' '{print($NF)}'`
-  [ "$serverId" == "" ] && { LOG ERROR "can not found server Id in $hostConf"; return 2; }
-  line=`grep -En "^executor.server.id" $azkaban_dir/conf/azkaban.properties | awk -F ":" '{print($1)}'`
-  [ "$line" == "" ] && { LOG ERROR "can not found executor.server.id in $azkaban_dir/conf/azkaban.properties"; return 3; }
-  sed -i --follow-symlinks "${line}c executor.server.id=$serverId" $azkaban_dir/conf/azkaban.properties
-}
+#function genServerId(){
+#  LOG INFO "setting executor id..."
+#  [ -f $hostConf ] || { LOG ERROR "$hostConf doesn't exist."; return 1; }
+#  [ -f $azkaban_dir/conf/azkaban.properties ] || { LOG ERROR "$azkaban_dir/conf/azkaban.properties doesn't exist."; return 1; }
+#  serverName=`hostname`
+#  serverId=`grep -E "^$serverName" $hostConf | awk -F '=' '{print($NF)}'`
+#  [ "$serverId" == "" ] && { LOG ERROR "can not found server Id in $hostConf"; return 2; }
+#  line=`grep -En "^executor.server.id" $azkaban_dir/conf/azkaban.properties | awk -F ":" '{print($1)}'`
+#  [ "$line" == "" ] && { LOG ERROR "can not found executor.server.id in $azkaban_dir/conf/azkaban.properties"; return 3; }
+#  sed -i --follow-symlinks "${line}c executor.server.id=$serverId" $azkaban_dir/conf/azkaban.properties
+#}
 
 function getValue(){
   sp='='
@@ -165,7 +165,7 @@ main(){
   preCheck || return 0
   loadClasspath || { LOG ERROR "load classpath , failed." ; return 1; }
   javaOption || { LOG ERROR "setting java option , failed." ; return 2; }
-  genServerId || { LOG ERROR "gen Server Id, failed." ; return 3; }
+#  genServerId || { LOG ERROR "gen Server Id, failed." ; return 3; }
   start $* || { LOG ERROR "start AzkabanExecutorServer , failed." ; return 4; }
   updataExecutorStatus || { LOG ERROR "updata Executor Status , failed." ; return 5; }
 }

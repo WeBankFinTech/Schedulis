@@ -2,6 +2,7 @@ package azkaban.execapp;
 
 import azkaban.executor.ExecutorLoader;
 import azkaban.executor.Hosts;
+import azkaban.system.SystemManager;
 import azkaban.utils.Props;
 import com.google.inject.Inject;
 import org.slf4j.Logger;

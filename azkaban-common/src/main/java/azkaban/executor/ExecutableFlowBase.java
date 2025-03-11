@@ -22,14 +22,15 @@ import azkaban.flow.Node;
 import azkaban.flow.SpecialJobTypes;
 import azkaban.project.Project;
 import azkaban.utils.TypedMapWrapper;
-import org.slf4j.LoggerFactory;
-import org.slf4j.Logger;
-
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class ExecutableFlowBase extends ExecutableNode {
 
@@ -40,14 +41,25 @@ public class ExecutableFlowBase extends ExecutableNode {
   public static final String PROPERTIES_PARAM = "properties";
   public static final String SOURCE_PARAM = "source";
   public static final String INHERITED_PARAM = "inherited";
+  public static final String ELASTIC_PARAMS_PARAM = "elasticParams";
+  public static final String IS_SPLIT_PARAM = "isSplit";
 
-  private final HashMap<String, ExecutableNode> executableNodes =
+
+  private HashMap<String, ExecutableNode> executableNodes =
       new HashMap<>();
   private final HashMap<String, FlowProps> flowProps =
       new HashMap<>();
   private ArrayList<String> startNodes;
   private ArrayList<String> endNodes;
   private String flowId;
+  private ConcurrentHashMap<String, List<String>> elasticParams;
+
+  private boolean isSplit;
+
+  /**
+   * 失败跳过的节点
+   */
+  private List<String> failSkipList;
 
   public ExecutableFlowBase(final Project project, final Node node, final Flow flow,
       final ExecutableFlowBase parent) {
@@ -57,6 +69,26 @@ public class ExecutableFlowBase extends ExecutableNode {
   }
 
   public ExecutableFlowBase() {
+  }
+
+  public void addExecutableNode(ExecutableNode node){
+    this.executableNodes.put(node.getId(), node);
+  }
+
+  public HashMap<String, ExecutableNode> getExecutableNodeMap(){
+    return this.executableNodes;
+  }
+
+  public void setExecutableNodeMap(HashMap<String, ExecutableNode> map){
+    this.executableNodes = map;
+  }
+
+  public boolean isSplit() {
+    return isSplit;
+  }
+
+  public void setSplit(boolean split) {
+    isSplit = split;
   }
 
   public int getExecutionId() {
@@ -81,6 +113,41 @@ public class ExecutableFlowBase extends ExecutableNode {
     }
 
     return null;
+  }
+
+  public int getFlowType() {
+    if (this.getParentFlow() != null) {
+      return this.getParentFlow().getFlowType();
+    }
+
+    return -1;
+  }
+
+  public Map<String, Object> getOtherOption() {
+    if (this.getParentFlow() != null) {
+      return this.getParentFlow().getOtherOption();
+    }
+
+    return new HashMap<>();
+  }
+
+  public ExecutionOptions getExecutionOptions() {
+    if (this.getParentFlow() != null) {
+      return this.getParentFlow().getExecutionOptions();
+    }
+
+    return new ExecutionOptions();
+  }
+
+  public ConcurrentHashMap<String, List<String>> getElasticParams() {
+    return elasticParams;
+  }
+
+  public void addElasticParams(String elasticParamKey, List<String> elasticParams) {
+    if(this.elasticParams == null){
+      this.elasticParams = new ConcurrentHashMap<>();
+    }
+    this.elasticParams.put(elasticParamKey, elasticParams);
   }
 
   public int getVersion() {
@@ -111,9 +178,22 @@ public class ExecutableFlowBase extends ExecutableNode {
     return this.flowProps.values();
   }
 
+  public Map<String, FlowProps> getFlowPropsWithKey(){
+    return this.flowProps;
+  }
+
+  public void setFlowProps(Map<String, FlowProps> flowProps){
+    this.flowProps.clear();
+    this.flowProps.putAll(flowProps);
+  }
+
   // job name
   public String getFlowId() {
     return this.flowId;
+  }
+
+  public void setFlowId(String flowId) {
+    this.flowId = flowId;
   }
 
   protected void setFlow(final Project project, final Flow flow) {
@@ -128,9 +208,16 @@ public class ExecutableFlowBase extends ExecutableNode {
 
         final ExecutableFlowBase embeddedFlow =
             new ExecutableFlowBase(project, node, subFlow, this);
+        embeddedFlow.setLabel(node.getLabel());
+        if(node.isElasticNode()){
+          embeddedFlow.setElasticNode(true);
+        }
+        embeddedFlow.setAutoDisabled(node.isAutoDisabled());
         this.executableNodes.put(id, embeddedFlow);
       } else {
         final ExecutableNode exNode = new ExecutableNode(node, this);
+        exNode.setLabel(node.getLabel());
+        exNode.setAutoDisabled(node.isAutoDisabled());
         this.executableNodes.put(id, exNode);
       }
     }
@@ -141,14 +228,11 @@ public class ExecutableFlowBase extends ExecutableNode {
 
       if (sourceNode == null) {
         logger.info("Source node " + edge.getSourceId() + " doesn't exist");
-      }
+      } else {
       sourceNode.addOutNode(edge.getTargetId());
+      }
       targetNode.addInNode(edge.getSourceId());
     }
-  }
-
-  public void addExecutableNode(ExecutableNode node){
-    this.executableNodes.put(node.getId(), node);
   }
 
   public List<ExecutableNode> getExecutableNodes() {
@@ -200,6 +284,13 @@ public class ExecutableFlowBase extends ExecutableNode {
     return this.startNodes;
   }
 
+  public void addStartNode(ExecutableNode node){
+    List<String> tmp = getStartNodes();
+    if(!tmp.contains(node.getId())){
+      tmp.add(node.getId());
+    }
+  }
+
   public List<String> getEndNodes() {
     if (this.endNodes == null) {
       this.endNodes = new ArrayList<>();
@@ -247,6 +338,11 @@ public class ExecutableFlowBase extends ExecutableNode {
       props.add(propObj);
     }
     flowObjMap.put(PROPERTIES_PARAM, props);
+    if(this.elasticParams != null) {
+      flowObjMap.put(ELASTIC_PARAMS_PARAM, this.elasticParams);
+    }
+
+    flowObjMap.put(IS_SPLIT_PARAM, this.isSplit);
   }
 
   @Override
@@ -289,6 +385,11 @@ public class ExecutableFlowBase extends ExecutableNode {
       final FlowProps flowProps = new FlowProps(inheritedSource, source);
       this.flowProps.put(source, flowProps);
     }
+    final Map<String, List<String>> elasticParams = flowObjMap.getMap(ELASTIC_PARAMS_PARAM);
+    if(elasticParams != null){
+      this.elasticParams = new ConcurrentHashMap<>(elasticParams);
+    }
+    this.isSplit = flowObjMap.getBool(IS_SPLIT_PARAM, false);
   }
 
   public Map<String, Object> toUpdateObject(final long lastUpdateTime) {
@@ -404,6 +505,18 @@ public class ExecutableFlowBase extends ExecutableNode {
     } else {
       return this.getParentFlow().getFlowPath() + "," + this.getId() + ":"
           + this.getFlowId();
+    }
+  }
+
+  public List<String> getFailSkipList() {
+    return failSkipList;
+  }
+
+  public void addFailSkipList(String failSkip) {
+    if (this.failSkipList == null) {
+      this.failSkipList = new ArrayList<>(Arrays.asList(failSkip));
+    } else {
+      this.failSkipList.add(failSkip);
     }
   }
 }

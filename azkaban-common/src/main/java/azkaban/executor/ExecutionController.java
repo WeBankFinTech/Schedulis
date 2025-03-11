@@ -19,24 +19,25 @@ import azkaban.Constants.ConfigurationKeys;
 import azkaban.event.EventHandler;
 import azkaban.flow.FlowUtils;
 import azkaban.history.ExecutionRecover;
-import com.webank.wedatasphere.schedulis.common.log.LogFilterEntity;
+import azkaban.log.LogFilterEntity;
 import azkaban.metrics.CommonMetrics;
 import azkaban.project.Project;
 import azkaban.project.ProjectWhitelist;
+import azkaban.system.SystemUserManagerException;
 import azkaban.user.User;
 import azkaban.utils.FileIOUtils;
 import azkaban.utils.FileIOUtils.LogData;
 import azkaban.utils.Pair;
 import azkaban.utils.Props;
-import com.webank.wedatasphere.schedulis.common.executor.ExecutionCycle;
-
 import java.io.IOException;
 import java.lang.Thread.State;
+import java.sql.SQLException;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -44,9 +45,10 @@ import java.util.Optional;
 import java.util.Set;
 import javax.inject.Inject;
 import javax.inject.Singleton;
+import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang.StringUtils;
-import org.slf4j.LoggerFactory;
 import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Controls flow executions on web server. This module implements the polling model
@@ -156,8 +158,9 @@ public class ExecutionController extends EventHandler implements ExecutorManager
       for (final Pair<ExecutionReference, ExecutableFlow> running : this.executorLoader
           .fetchActiveFlows().values()) {
         final ExecutionReference ref = running.getFirst();
-        if (ref.getExecutor().isPresent()) {
-          final Executor executor = ref.getExecutor().get();
+                Optional<Executor> refExecutor = ref.getExecutor();
+                if (refExecutor.isPresent()) {
+                    final Executor executor = refExecutor.get();
           ports.add(executor.getHost() + ":" + executor.getPort());
         }
       }
@@ -168,22 +171,20 @@ public class ExecutionController extends EventHandler implements ExecutorManager
   }
 
   /**
-   * Gets a list of all the unfinished (both dispatched and non-dispatched) executions for a
-   * given project and flow {@inheritDoc}.
+     * Gets a list of all the unfinished (both dispatched and non-dispatched) executions for a given
+     * project and flow {@inheritDoc}.
    *
-   * @see ExecutorManagerAdapter#getRunningFlows(int, String)
+     * @see azkaban.executor.ExecutorManagerAdapter#getRunningFlows(int, java.lang.String)
    */
   @Override
   public List<Integer> getRunningFlows(final int projectId, final String flowId) {
-    final List<Integer> executionIds = new ArrayList<>();
     try {
-      executionIds.addAll(getRunningFlowsHelper(projectId, flowId,
-          this.executorLoader.fetchUnfinishedFlows().values()));
+            return this.executorLoader.selectUnfinishedFlows(projectId, flowId);
     } catch (final ExecutorManagerException e) {
       logger.error("Failed to get running flows for project " + projectId + ", flow "
           + flowId, e);
     }
-    return executionIds;
+        return new ArrayList<>();
   }
 
   /* Helper method for getRunningFlows */
@@ -222,8 +223,8 @@ public class ExecutionController extends EventHandler implements ExecutorManager
   }
 
   /**
-   * Checks whether the given flow has an active (running, non-dispatched) execution from
-   * database. {@inheritDoc}
+     * Checks whether the given flow has an active (running, non-dispatched) execution from database.
+     * {@inheritDoc}
    */
   @Override
   public boolean isFlowRunning(final int projectId, final String flowId) {
@@ -266,18 +267,32 @@ public class ExecutionController extends EventHandler implements ExecutorManager
     return this.executorLoader.fetchExecutableFlowByRepeatId(repeatId);
   }
 
+    /**
+     * Gets a list of all the unfinished (both dispatched and non-dispatched) executions for a given
+     * project and flow {@inheritDoc}.
+     */
+
+    public List<Integer> getRunningFlowIds(final int projectId, final String flowId) {
+        try {
+            return this.executorLoader.selectUnfinishedFlows(projectId, flowId);
+        } catch (final ExecutorManagerException e) {
+            logger.error("Failed to get running flows for project " + projectId + ", flow "
+                    + flowId, e);
+        }
+        return new ArrayList<>();
+    }
+
   /**
    * Get all running (unfinished) flows from database. {@inheritDoc}
    */
   @Override
-  public List<ExecutableFlow> getRunningFlows() {
-    final ArrayList<ExecutableFlow> flows = new ArrayList<>();
+    public List<Integer> getRunningFlows() {
     try {
-      getFlowsHelper(flows, this.executorLoader.fetchUnfinishedFlows().values());
-    } catch (final ExecutorManagerException e) {
+            return this.executorLoader.selectUnfinishedFlows();
+        } catch (final ExecutorManagerException e) {
       logger.error("Failed to get running flows.", e);
     }
-    return flows;
+        return new ArrayList<>();
   }
 
   /**
@@ -292,13 +307,12 @@ public class ExecutionController extends EventHandler implements ExecutorManager
    * Get execution ids of all running (unfinished) flows from database.
    */
   public List<Integer> getRunningFlowIds() {
-    final List<Integer> allIds = new ArrayList<>();
     try {
-      getExecutionIdsHelper(allIds, this.executorLoader.fetchUnfinishedFlows().values());
+            return this.executorLoader.selectUnfinishedFlows();
     } catch (final ExecutorManagerException e) {
       logger.error("Failed to get running flow ids.", e);
     }
-    return allIds;
+        return new ArrayList<>();
   }
 
   /**
@@ -355,9 +369,11 @@ public class ExecutionController extends EventHandler implements ExecutorManager
   }
 
   @Override
-  public List<ExecutableFlow> getMaintainedExecutableFlows(String username, List<Integer> projectIds, int skip, int size)
+    public List<ExecutableFlow> getMaintainedExecutableFlows(String userType, String username,
+                                                             List<Integer> projectIds, int skip, int size)
           throws ExecutorManagerException {
-    return this.executorLoader.fetchMaintainedFlowHistory(username, projectIds, skip, size);
+        return this.executorLoader
+                .fetchMaintainedFlowHistory(userType, username, projectIds, skip, size);
   }
 
   @Override
@@ -379,20 +395,50 @@ public class ExecutionController extends EventHandler implements ExecutorManager
   public List<ExecutableFlow> getExecutableFlows(final String projContain, final String flowContain,
                                                  final String execIdContain, final String userContain,
                                                  final String status, final long begin, final long end,
+                                                   String runDate,
                                                  final int skip, final int size, int flowType) throws ExecutorManagerException {
     final List<ExecutableFlow> flows =
             this.executorLoader.fetchFlowHistory(projContain, flowContain, execIdContain, userContain,
-                    status, begin, end, skip, size, flowType);
+                        status, begin, end, runDate, skip, size, flowType);
 
     return flows;
   }
 
+    @Override
+    public List<CfgWebankOrganization> getAllDepartment() {
+        return null;
+    }
+
+    @Override
+    public List<ExecutableFlow> getExecutableFlows(HistoryQueryParam param, int skip, int size)
+            throws ExecutorManagerException {
+        return null;
+    }
+
   @Override
   public List<ExecutableFlow> getMaintainedExecutableFlows(String projContain, String flowContain,
-                                                    String execIdContain, String userContain, String status, long begin, long end,
-                                                    int skip, int size, int flowType, String username, List<Integer> projectIds) throws ExecutorManagerException {
+                                                             String execIdContain, String userContain, String status, long begin, long end, String runDate,
+                                                             int skip, int size, int flowType, String username, List<Integer> projectIds)
+            throws ExecutorManagerException {
+        return null;
+    }
+
+    @Override
+    public List<ExecutableFlow> getMaintainedExecutableFlows(HistoryQueryParam param, int skip,
+                                                             int size, List<Integer> projectIds)
+            throws ExecutorManagerException {
     return null;
   }
+
+    @Override
+    public List<ExecutableFlow> fetchAllExecutableFlow() throws SQLException {
+        return executorLoader.fetchAllExecutableFlow();
+    }
+
+    @Override
+    public int updateExecutableFlow(ExecutableFlow flow) throws SQLException {
+        return executorLoader.updateExecutableFlowRunDate(flow);
+    }
 
   @Override
   public List<ExecutableJobInfo> getExecutableJobs(final Project project,
@@ -402,11 +448,77 @@ public class ExecutionController extends EventHandler implements ExecutorManager
     return nodes;
   }
 
+    @Override
+    public List<ExecutableJobInfo> getDiagnosisJobs(long endTime)
+        throws ExecutorManagerException {
+        return this.executorLoader.fetchDiagnosisJob(endTime);
+    }
+
+    @Override
+    public List<ExecutableFlow> fetchExecutableFlows(final long startTime) throws SQLException {
+        return this.executorLoader.fetchExecutableFlows(startTime);
+    }
+
+    @Override
+    public List<ExecutableJobInfo> fetchExecutableJobInfo(final long startTime) throws ExecutorManagerException {
+        return this.executorLoader.fetchExecutableJobInfo(startTime);
+    }
+
+    @Override
+    public List<ExecutableJobInfo> quickSearchJobExecutions(final Project project,
+                                                            final String jobId, final String searchTerm, final int skip, final int size) throws ExecutorManagerException {
+        final List<ExecutableJobInfo> nodes =
+                this.executorLoader.fetchQuickSearchJobExecutions(project.getId(), jobId, searchTerm, skip, size);
+        return nodes;
+    }
+
+    @Override
+    public List<ExecutableJobInfo> searchJobExecutions(HistoryQueryParam historyQueryParam, final int skip, final int size) throws ExecutorManagerException {
+        final List<ExecutableJobInfo> nodes =
+                this.executorLoader.searchJobExecutions(historyQueryParam, skip, size);
+        return nodes;
+    }
+
+    @Override
+    public ExecutableJobInfo getLastFailedJob(final Project project, final String jobId)
+            throws ExecutorManagerException {
+        String[] jobIdSplit = jobId.split(":");
+        List<ExecutableJobInfo> jobs = this.executorLoader
+                .fetchJobAllHistory(project.getId(), jobIdSplit[jobIdSplit.length - 1]);
+        Collections.reverse(jobs);
+        for (ExecutableJobInfo job : jobs) {
+            String jobPath = azkaban.utils.StringUtils.fetchJobPath(job.getFlowId(), job.getJobId());
+            if (job.getStatus().equals(Status.FAILED) && jobPath.equals(jobId)) {
+                return job;
+            }
+        }
+        return null;
+    }
+
+    @Override
+    public LogData getJobLogDataByJobId(int execId, String name, int attempt)
+            throws ExecutorManagerException {
+
+        return executorLoader.fetchAllLogs(execId, name, attempt);
+    }
+
   @Override
   public int getNumberOfJobExecutions(final Project project, final String jobId)
       throws ExecutorManagerException {
     return this.executorLoader.fetchNumExecutableNodes(project.getId(), jobId);
   }
+
+    @Override
+    public int quickSearchNumberOfJobExecutions(final Project project, final String jobId, final String searchTerm)
+            throws ExecutorManagerException {
+        return this.executorLoader.quickSearchNumberOfJobExecutions(project.getId(), jobId, searchTerm);
+    }
+
+    @Override
+    public int searchNumberOfJobExecutions(final HistoryQueryParam historyQueryParam)
+            throws ExecutorManagerException {
+        return this.executorLoader.searchNumberOfJobExecutions(historyQueryParam);
+    }
 
   @Override
   public LogData getExecutableFlowLog(final ExecutableFlow exFlow, final int offset,
@@ -502,6 +614,16 @@ public class ExecutionController extends EventHandler implements ExecutorManager
   @Override
   public void cancelFlow(final ExecutableFlow exFlow, final String userId)
       throws ExecutorManagerException {
+        cancelFlow(exFlow, userId, ConnectorParams.CANCEL_ACTION);
+    }
+
+    @Override
+    public void forceCancelFlow(ExecutableFlow exFlow, String userId) throws ExecutorManagerException {
+
+    }
+
+    private void cancelFlow(final ExecutableFlow exFlow, final String userId, final String actionType)
+            throws ExecutorManagerException {
     synchronized (exFlow) {
       final Map<Integer, Pair<ExecutionReference, ExecutableFlow>> unfinishedFlows = this.executorLoader
           .fetchUnfinishedFlows();
@@ -511,7 +633,7 @@ public class ExecutionController extends EventHandler implements ExecutorManager
         if (pair.getFirst().getExecutor().isPresent()) {
           // Flow is already dispatched to an executor, so call that executor to cancel the flow.
           this.apiGateway
-              .callWithReferenceByUser(pair.getFirst(), ConnectorParams.CANCEL_ACTION, userId);
+                            .callWithReferenceByUser(pair.getFirst(), actionType, userId);
         } else {
           // Flow is still queued, need to finalize it and update the status in DB.
           ExecutionControllerUtils.finalizeFlow(this.executorLoader, this.alerterHolder, exFlow,
@@ -526,7 +648,8 @@ public class ExecutionController extends EventHandler implements ExecutorManager
   }
 
   @Override
-  public void superKillFlow(ExecutableFlow exFlow, String userId) throws ExecutorManagerException {
+    public void superKillFlow(final ExecutableFlow exFlow, final String userId)
+            throws ExecutorManagerException {
     Executor executor = executorLoader.fetchExecutorByExecutionId(exFlow.getExecutionId());
     if (executor == null) {
       throw new ExecutorManagerException("Find Executor Error!");
@@ -552,7 +675,19 @@ public class ExecutionController extends EventHandler implements ExecutorManager
   }
 
   @Override
-  public String setJobDisabled(ExecutableFlow exFlow, String userId, String request) throws Exception {
+    public String setJobDisabled(ExecutableFlow exFlow, String userId, String request)
+            throws Exception {
+        return null;
+    }
+
+    @Override
+    public String setJobFailed(ExecutableFlow exFlow, String userId,
+                               List<Pair<String, String>> paramList) throws Exception {
+        return null;
+    }
+
+    @Override
+    public String setJobOpen(ExecutableFlow exFlow, String userId, String request) throws Exception {
     return null;
   }
 
@@ -606,7 +741,7 @@ public class ExecutionController extends EventHandler implements ExecutorManager
   }
 
   @Override
-  public void pauseFlow(final ExecutableFlow exFlow, final String userId)
+    public void pauseFlow(final ExecutableFlow exFlow, final String userId, long timeoutMs)
       throws ExecutorManagerException {
     synchronized (exFlow) {
       final Pair<ExecutionReference, ExecutableFlow> pair =
@@ -616,25 +751,36 @@ public class ExecutionController extends EventHandler implements ExecutorManager
             + exFlow.getExecutionId() + " of flow " + exFlow.getFlowId()
             + " isn't running.");
       }
+
+            Pair<String, String> pauseTimeoutMs = new Pair<>("pauseTimeoutMs", timeoutMs + "");
+
       this.apiGateway
-          .callWithReferenceByUser(pair.getFirst(), ConnectorParams.PAUSE_ACTION, userId);
+                    .callWithReferenceByUser(pair.getFirst(), ConnectorParams.PAUSE_ACTION, userId,
+                            pauseTimeoutMs);
     }
   }
 
   @Override
-  public void retryFailures(final ExecutableFlow exFlow, final String userId)
+    public void retryFailures(final ExecutableFlow exFlow, final String userId,
+                              final String retryJson)
       throws ExecutorManagerException {
-    modifyExecutingJobs(exFlow, ConnectorParams.MODIFY_RETRY_FAILURES, userId);
+        modifyExecutingJobs(exFlow, ConnectorParams.MODIFY_RETRY_FAILURES, userId, retryJson, null);
   }
 
   @Override
   public void skipAllFailures(ExecutableFlow exFlow, String userId) throws ExecutorManagerException {
+        // implements
+    }
 
+    private Map<String, Object> modifyExecutingJobs(final ExecutableFlow exFlow,
+                                                    final String command, final String userId, final String... jobIds)
+            throws ExecutorManagerException {
+        return modifyExecutingJobs(exFlow, command, userId, null, jobIds);
   }
 
   @SuppressWarnings("unchecked")
   private Map<String, Object> modifyExecutingJobs(final ExecutableFlow exFlow,
-      final String command, final String userId, final String... jobIds)
+                                                    final String command, final String userId, final String retryJson, final String... jobIds)
       throws ExecutorManagerException {
     synchronized (exFlow) {
       final Pair<ExecutionReference, ExecutableFlow> pair =
@@ -669,7 +815,9 @@ public class ExecutionController extends EventHandler implements ExecutorManager
             this.apiGateway.callWithReferenceByUser(pair.getFirst(),
                 ConnectorParams.MODIFY_EXECUTION_ACTION, userId,
                 new Pair<>(
-                    ConnectorParams.MODIFY_EXECUTION_ACTION_TYPE, command));
+                                        ConnectorParams.MODIFY_EXECUTION_ACTION_TYPE, command),
+                                new Pair<>(
+                                        "retryFailedJobs", retryJson));
       }
 
       return response;
@@ -703,8 +851,30 @@ public class ExecutionController extends EventHandler implements ExecutorManager
         options = new ExecutionOptions();
       }
 
-      if (options.getDisabledJobs() != null) {
+            if (options.getDisabledJobs() != null && !options.getDisabledJobs().isEmpty()) {
         FlowUtils.applyDisabledJobs(options.getDisabledJobs(), exflow);
+            } else if (options.getEnabledJobs() != null && !options.getEnabledJobs().isEmpty()) {
+                List<Object> enabledJobs = options.getEnabledJobs();
+                for (ExecutableNode exeNode : exflow.getExecutableNodes()) {
+                    exeNode.setStatus(Status.DISABLED);
+                }
+                for (int i = 0; i < enabledJobs.size(); i++) {
+                    Object enabled = enabledJobs.get(i);
+                    if (enabled instanceof String) {
+                        final String nodeName = (String) enabled;
+                        final ExecutableNode node = exflow.getExecutableNode(nodeName);
+                        if (node != null) {
+                            node.setStatus(Status.READY);
+                            enabledJobs.remove(i);
+                            i--;
+                        }
+
+                    }
+                }
+               if(CollectionUtils.isNotEmpty(enabledJobs)){
+                   FlowUtils.applyEnabledJobs(enabledJobs, exflow);
+               }
+
       }
 
       if (!running.isEmpty()) {
@@ -751,6 +921,12 @@ public class ExecutionController extends EventHandler implements ExecutorManager
       return message;
     }
   }
+
+    @Override
+    public void submitExecutableFlow(ExecutableFlow exflow, String userId,
+                                     Map<String, Object> result) throws ExecutorManagerException, SystemUserManagerException {
+
+    }
 
   @Override
   public Map<String, Object> callExecutorStats(final int executorId, final String action,
@@ -804,6 +980,32 @@ public class ExecutionController extends EventHandler implements ExecutorManager
     return this.executorLoader.fetchNumExecutableFlows(projectId, flowId);
   }
 
+    @Override
+    public int quickSearchFlowExecutions(final int projectId, final String flowId, final int from,
+                                         final int length, final String searchTerm, final List<ExecutableFlow> outputList)
+            throws ExecutorManagerException {
+        final List<ExecutableFlow> flows =
+                this.executorLoader.quickSearchFlowExecutions(projectId, flowId, from, length, searchTerm);
+        outputList.addAll(flows);
+        return this.executorLoader.fetchQuickSearchNumExecutableFlows(projectId, flowId, searchTerm);
+    }
+
+    @Override
+    public int userQuickSearchFlowExecutions(final int projectId, final String flowId, final int from,
+                                             final int length, final String searchTerm, final List<ExecutableFlow> outputList, final String userId)
+            throws ExecutorManagerException {
+        final List<ExecutableFlow> flows =
+                this.executorLoader.userQuickSearchFlowExecutions(projectId, flowId, from, length, searchTerm, userId);
+        outputList.addAll(flows);
+        return this.executorLoader.fetchUserQuickSearchNumExecutableFlows(projectId, flowId, searchTerm, userId);
+    }
+
+    @Override
+    public List<ExecutableFlow> getExecutableFlows(final int projectId, final String flowId)
+            throws ExecutorManagerException {
+        return this.executorLoader.fetchFlowHistory(projectId, flowId);
+    }
+
   @Override
   public List<ExecutableFlow> getExecutableFlows(final int projectId, final String flowId,
       final int from, final int length, final Status status) throws ExecutorManagerException {
@@ -838,27 +1040,29 @@ public class ExecutionController extends EventHandler implements ExecutorManager
 
   @Override
   public void resumeExecutingJobs(ExecutableFlow exFlow, String userId, String... jobIds) throws ExecutorManagerException {
-
+        // implements
   }
 
   @Override
-  public void retryExecutingJobs(ExecutableFlow exFlow, String userId, String... jobIds) throws ExecutorManagerException {
+    public String retryExecutingJobs(ExecutableFlow exFlow, String userId, String... jobIds)
+            throws ExecutorManagerException {
 
+        return null;
   }
 
   @Override
   public void disableExecutingJobs(ExecutableFlow exFlow, String userId, String... jobIds) throws ExecutorManagerException {
-
+        // implements
   }
 
   @Override
   public void enableExecutingJobs(ExecutableFlow exFlow, String userId, String... jobIds) throws ExecutorManagerException {
-
+        // implements
   }
 
   @Override
   public void cancelExecutingJobs(ExecutableFlow exFlow, String userId, String... jobIds) throws ExecutorManagerException {
-
+        // implements
   }
 
   @Override
@@ -872,16 +1076,27 @@ public class ExecutionController extends EventHandler implements ExecutorManager
   }
 
   @Override
-  public List<ExecutableFlow> getUserExecutableFlowsByAdvanceFilter(String projContain, String flowContain, String execIdContain, String userContain, String status, long begin, long end, int skip, int size, int flowType) throws ExecutorManagerException {
+    public List<ExecutableFlow> getUserExecutableFlowsByAdvanceFilter(String projContain,
+                                                                      String flowContain, String execIdContain, String userContain, String status, long begin,
+                                                                      long end, String runDate, int skip, int size, int flowType) throws ExecutorManagerException {
     return null;
   }
 
   @Override
-  public List<ExecutableFlow> getUserExecutableFlowsQuickSearch(String flowIdContains, String user, int skip, int size) throws ExecutorManagerException {
+    public List<ExecutableFlow> getUserExecutableFlowsByAdvanceFilter(String projContain,
+                                                                      String flowContain, String execIdContain, String userContain,
+                                                                      String status, long begin, long end, String subsystem, String busPath, String department,
+                                                                      String runDate, int skip, int size, int flowType) throws ExecutorManagerException {
     return null;
   }
 
   @Override
+    public List<ExecutableFlow> getUserExecutableFlowsQuickSearch(String flowIdContains, String user,
+                                                                  int skip, int size) throws ExecutorManagerException {
+        return null;
+    }
+
+    @Override
   public List<ExecutableFlow> getHistoryRecoverExecutableFlows(String userNameContains) throws ExecutorManagerException {
     return null;
   }
@@ -893,7 +1108,7 @@ public class ExecutionController extends EventHandler implements ExecutorManager
 
   @Override
   public void stopHistoryRecoverExecutableFlowByRepeatId(String repeatId) throws ExecutorManagerException {
-
+        // implements
   }
 
   @Override
@@ -919,7 +1134,7 @@ public class ExecutionController extends EventHandler implements ExecutorManager
 
   @Override
   public void updateHistoryRecover(ExecutionRecover executionRecover) throws ExecutorManagerException {
-
+        // implements
   }
 
   @Override
@@ -973,12 +1188,12 @@ public class ExecutionController extends EventHandler implements ExecutorManager
   }
 
   @Override
-  public int getExecHistoryTotal(Map<String, String> filterMap) throws ExecutorManagerException {
+    public int getExecHistoryTotal(HistoryQueryParam param) throws ExecutorManagerException {
     return 0;
   }
 
   @Override
-  public int getExecHistoryTotal(String username, final Map<String, String> filterMap, List<Integer> projectIds)
+    public int getExecHistoryTotal(HistoryQueryParam param, List<Integer> projectIds)
           throws ExecutorManagerException {
     return 0;
   }
@@ -1011,7 +1226,8 @@ public class ExecutionController extends EventHandler implements ExecutorManager
   }
 
   @Override
-  public int getUserExecHistoryTotal(Map<String, String> filterMap) throws ExecutorManagerException {
+    public int getUserExecHistoryTotal(HistoryQueryParam param, String loginUser)
+            throws ExecutorManagerException {
     return 0;
   }
 
@@ -1021,7 +1237,15 @@ public class ExecutionController extends EventHandler implements ExecutorManager
   }
 
   @Override
-  public List<ExecutableFlow> getUserExecutableFlows(String loginUser, String projContain, String flowContain, String execIdContain, String userContain, String status, long begin, long end, int skip, int size, int flowType) throws ExecutorManagerException {
+    public List<ExecutableFlow> getUserExecutableFlows(String loginUser, String projContain,
+                                                       String flowContain, String execIdContain, String userContain, String status, long begin,
+                                                       long end, String runDate, int skip, int size, int flowType) throws ExecutorManagerException {
+        return null;
+    }
+
+    @Override
+    public List<ExecutableFlow> getUserExecutableFlows(String loginUser, HistoryQueryParam param,
+                                                       int skip, int size) throws ExecutorManagerException {
     return null;
   }
 
@@ -1051,7 +1275,7 @@ public class ExecutionController extends EventHandler implements ExecutorManager
   }
 
   @Override
-  public List<Map<String, String>> getExectingFlowsData() throws IOException {
+    public List<Map<String, String>> getExectingFlowsData(ExecutingQueryParam executingQueryParam) throws IOException {
     return null;
   }
 
@@ -1061,11 +1285,28 @@ public class ExecutionController extends EventHandler implements ExecutorManager
   }
 
   @Override
-  public int getExecutionCycleTotal(String username, List<Integer> projectIds) throws ExecutorManagerException {
+    public int getExecutionCycleAllTotal(String userName, String searchTerm, HashMap<String, String> queryMap) throws ExecutorManagerException {
     return 0;
   }
 
   @Override
+    public List<ExecutionCycle> getExecutionCycleAllPages(String userName, String searchTerm, int offset, int length, HashMap<String, String> queryMap) throws ExecutorManagerException {
+        return null;
+    }
+
+    @Override
+    public void deleteExecutionCycle(int projectId, String flowId, User user, Project project) throws ExecutorManagerException {
+
+    }
+
+
+    @Override
+    public int getExecutionCycleTotal(String username, List<Integer> projectIds)
+            throws ExecutorManagerException {
+        return 0;
+    }
+
+    @Override
   public List<ExecutionCycle> listExecutionCycleFlows(Optional<String> usernameOP, int offset, int length)
           throws ExecutorManagerException {
     return null;
@@ -1112,13 +1353,98 @@ public class ExecutionController extends EventHandler implements ExecutorManager
     return null;
   }
 
+    @Override
+    public List<ExecutionCycle> getRunningCycleFlows(Integer projectId, String flowId) throws ExecutorManagerException {
+        return null;
+    }
+
   @Override
   public void reloadWebData() {
+        //for ha
+    }
 
+    @Override
+    public String holdBatch(int oprType, int oprLevel, List<String> dataList, List<String> flowList,
+                            List<String> busPathList, String batchId, User user, List<String> criticalPath) {
+        return null;
+    }
+
+    @Override
+    public boolean checkExecutorStatus(int id) {
+        return false;
   }
 
   @Override
   public List<Integer> fetchPermissionsProjectId(String user) {
     return null;
   }
+
+    @Override
+    public List<ExecutableFlow> getAllFlows() throws IOException {
+        return null;
+    }
+
+    @Override
+    public void linkJobHook(String jobCode, String prefixRules, String suffixRules, User user)
+            throws SQLException {
+        this.executorLoader.linkJobHook(jobCode, prefixRules, suffixRules, user.getUserId());
+    }
+
+    @Override
+    public void resumeBatchFlow(long id) {
+
+    }
+
+    @Override
+    public void stopBatchFlow(long id) {
+
+    }
+
+    @Override
+    public List<ExecutionRecover> fetchUserHistoryRerunConfiguration(int projectName, String flowName,
+                                                                     String userId, int start, int size) {
+        return null;
+    }
+
+    @Override
+    public List<ExecutionRecover> fetchMaintainedHistoryRerunConfiguration(int id, String flow, String userId, int i, int size) {
+        return null;
+    }
+
+    @Override
+    public List<ExecutionRecover> fetchAllHistoryRerunConfiguration(int id, String flow, int start, int size) {
+        return null;
+    }
+
+    @Override
+    public int getAllExecutionRecoverTotal(int id, String flow) {
+        return 0;
+    }
+
+    @Override
+    public int getMaintainedExecutionRecoverTotal(int projectId, String flowName, String userId) {
+        return 0;
+    }
+
+    @Override
+    public int getUserExecutionRecoverTotal(int projectId, String flowName, String userId) {
+        return 0;
+    }
+
+    @Override
+    public long getExectingFlowsTotal(ExecutingQueryParam executingQueryParam) {
+        return 0;
+    }
+
+    @Override
+    public String getExecutorIdByHostname(String hostname) {
+        return null;
+    }
+
+    @Override
+    public ExecutionCycle getExecutionCycleFlowDescId(String projectId, String flowId) throws ExecutorManagerException {
+        return null;
+    }
+
+
 }

@@ -35,6 +35,11 @@ public class EventChecker {
 	public final static String EARLIEST_FINISH_TIME = "earliest.finish.time";
 	public final static String EARLIEST_FINISH_TIME_CROSS_DAY = "earliest.finish.time.cross.day";
 
+	/**
+	 * 信号从该日期起进行消费，格式 yyyy-MM-dd
+	 */
+	public static final String MSG_RECEIVE_AFTER_DATE = "msg.receive.after.date";
+
     private Properties p;
 	private String jobId;
 	private WBEventCheckerDao wbDao=null;
@@ -98,6 +103,20 @@ public class EventChecker {
 					logger.error("Error date format");
 					throw new RuntimeException(
 							"Error format of parameter " + EARLIEST_FINISH_TIME + ". Accept: HH:mm. ");
+				}
+			}
+
+			// 校验 check 起始日期格式
+			if (p.containsKey(MSG_RECEIVE_AFTER_DATE)) {
+				String receiveAfterDateStr = p.getProperty(MSG_RECEIVE_AFTER_DATE);
+				String dateFormat = "yyyy-MM-dd";
+				boolean isValid = isValidDateFormat(receiveAfterDateStr, dateFormat);
+				logger.info("Is valid date format? " + isValid);
+				if (!isValid) {
+					// 格式错误，任务直接失败
+					logger.error("Error date format");
+					throw new RuntimeException(
+							"Error format of parameter " + MSG_RECEIVE_AFTER_DATE + ". Accept: " + dateFormat);
 				}
 			}
 			success = wbDao.reciveMsg(execId, p, logger);
@@ -207,7 +226,7 @@ public class EventChecker {
 	private String getPid(){
 		// get name representing the running Java virtual machine.
 		String name = ManagementFactory.getRuntimeMXBean().getName();
-		System.out.println(name);
+		//System.out.println(name);
 		// get pid
 		String pid = name.split("@")[0];
 		logger.info("EventCheck Pid is:" + pid);
@@ -238,9 +257,9 @@ public class EventChecker {
 //		p.put("msg.body","msg.body");
 
 		p.put("msg.eventchecker.jdo.option.name","msg");
-		p.put("msg.eventchecker.jdo.option.url","jdbc:mysql://127.0.0.1:3306/wtss_qyh_test?useUnicode=true&characterEncoding=UTF-8");
-		p.put("msg.eventchecker.jdo.option.username","root");
-		p.put("msg.eventchecker.jdo.option.password","123456");
+		p.put("msg.eventchecker.jdo.option.url","");
+		p.put("msg.eventchecker.jdo.option.username","");
+		p.put("msg.eventchecker.jdo.option.password","");
 
 		EventChecker ec = new EventChecker("AA",p);
 		ec.run();

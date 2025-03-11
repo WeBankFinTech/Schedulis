@@ -16,8 +16,9 @@
 
 package azkaban.jobExecutor.utils.process;
 
-import azkaban.utils.FileIOUtils;
+import azkaban.jobid.BDPClientJobInfo;
 import azkaban.utils.LogGobbler;
+import azkaban.utils.Props;
 import com.google.common.base.Joiner;
 import java.io.File;
 import java.io.IOException;
@@ -49,11 +50,17 @@ public class AzkabanProcess {
 
   private volatile int processId;
   private volatile Process process;
+  private Props props;
 
   private boolean isExecuteAsUser = false;
   private String executeAsUserBinary = null;
   private String effectiveUser = null;
   private String jobName;
+
+  private List<String> yarnAppId;
+  private List<BDPClientJobInfo> bdpJobserverId;
+
+  private List<String> linkisTaskId;
 
   public AzkabanProcess(final List<String> cmd, final Map<String, String> env,
       final String workingDir, final Logger logger) {
@@ -89,6 +96,8 @@ public class AzkabanProcess {
     builder.environment().putAll(this.env);
     builder.redirectErrorStream(true);
     this.process = builder.start();
+    LogGobbler outputGobbler = null;
+    LogGobbler errorGobbler = null;
     try {
       this.processId = processId(this.process);
       if (this.processId == 0) {
@@ -99,14 +108,16 @@ public class AzkabanProcess {
 
       this.startupLatch.countDown();
 
-      final LogGobbler outputGobbler =
+      outputGobbler =
           new LogGobbler(
               new InputStreamReader(this.process.getInputStream(), StandardCharsets.UTF_8),
-              this.logger, "INFO", 30);
-      final LogGobbler errorGobbler =
+              this.logger, "INFO", 30, this.props, this.yarnAppId, this.bdpJobserverId,
+              this.linkisTaskId);
+      errorGobbler =
           new LogGobbler(
               new InputStreamReader(this.process.getErrorStream(), StandardCharsets.UTF_8),
-              this.logger, "ERROR", 30);
+              this.logger, "ERROR", 30, this.props, this.yarnAppId, this.bdpJobserverId,
+              this.linkisTaskId);
 
       outputGobbler.start();
       errorGobbler.start();
@@ -136,6 +147,12 @@ public class AzkabanProcess {
       IOUtils.closeQuietly(this.process.getInputStream());
       IOUtils.closeQuietly(this.process.getOutputStream());
       IOUtils.closeQuietly(this.process.getErrorStream());
+      if (outputGobbler != null) {
+        outputGobbler.setStopped();
+      }
+      if (errorGobbler != null) {
+        errorGobbler.setStopped();
+      }
     }
   }
 
@@ -219,7 +236,7 @@ public class AzkabanProcess {
         } else {
           logger.info("exec cmd: " + killCmd);
           Process p = Runtime.getRuntime().exec(killCmd);
-          p.waitFor(2500, TimeUnit.MILLISECONDS);
+          p.waitFor();
         }
       } catch (final Exception e) {
         this.logger.error("Kill attempt failed.", e);
@@ -234,7 +251,7 @@ public class AzkabanProcess {
    * @param process The process to get the id from
    * @return The id of the process
    */
-  private int processId(final Process process) {
+  private int processId(final java.lang.Process process) {
     int processId = 0;
     try {
       final Field f = process.getClass().getDeclaredField("pid");
@@ -242,7 +259,7 @@ public class AzkabanProcess {
 
       processId = f.getInt(process);
     } catch (final Throwable e) {
-      e.printStackTrace();
+      logger.warn("Failed to get pid", e);
     }
 
     return processId;
@@ -287,5 +304,37 @@ public class AzkabanProcess {
 
   public String getEffectiveUser() {
     return this.effectiveUser;
+  }
+
+  public Props getProps() {
+    return props;
+  }
+
+  public void setProps(Props props) {
+    this.props = props;
+  }
+
+  public List<String> getYarnAppId() {
+    return yarnAppId;
+  }
+
+  public void setYarnAppId(List<String> yarnAppId) {
+    this.yarnAppId = yarnAppId;
+  }
+
+  public List<BDPClientJobInfo> getBdpJobserverId() {
+    return bdpJobserverId;
+  }
+
+  public void setBdpJobserverId(List<BDPClientJobInfo> bdpJobserverId) {
+    this.bdpJobserverId = bdpJobserverId;
+  }
+
+  public List<String> getLinkisTaskId() {
+    return linkisTaskId;
+  }
+
+  public void setLinkisTaskId(List<String> linkisTaskId) {
+    this.linkisTaskId = linkisTaskId;
   }
 }

@@ -18,10 +18,15 @@ public final class PageUtils {
    * upload permissions.
    */
   public static void hideUploadButtonWhenNeeded(final Page page, final Session session,
-                                                final Boolean lockdownUploadProjects) {
+      final Boolean lockdownUploadProjects,
+      boolean uploadDisplaySwitch) {
     final User user = session.getUser();
-
-    if (lockdownUploadProjects && !UserUtils.hasPermissionforAction(user, Permission.Type.UPLOADPROJECTS)) {
+    // 管理员可以通过页面上传
+    if (user.hasRole("admin")) {
+      return;
+    }
+    if (!uploadDisplaySwitch || (lockdownUploadProjects && !UserUtils.hasPermissionforAction(user,
+        Permission.Type.UPLOADPROJECTS))) {
       page.add("hideUploadProject", true);
     }
   }

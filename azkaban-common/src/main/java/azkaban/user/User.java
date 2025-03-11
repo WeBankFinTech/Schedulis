@@ -34,6 +34,10 @@ public class User {
   private Set<String> proxyUsers = new HashSet<>();
   //用户权限集合
   private HashMap<String, Role> roleMap;
+  //普通用户（运维用户登录使用）
+  private String normalUser;
+
+
 
   public User(final String userid) {
     this.userid = userid;
@@ -134,6 +138,14 @@ public class User {
       }
     } else if (!this.userid.equals(other.userid)) {
       return false;
+    } else {
+      if (this.normalUser == null) {
+        if (other.normalUser != null) {
+          return false;
+        }
+      } else if (!this.normalUser.equals(other.normalUser)) {
+        return false;
+      }
     }
     return true;
   }
@@ -184,4 +196,11 @@ public class User {
     this.roleMap = roleMap;
   }
 
+  public String getNormalUser() {
+    return normalUser;
+  }
+
+  public void setNormalUser(String normalUser) {
+    this.normalUser = normalUser;
+  }
 }

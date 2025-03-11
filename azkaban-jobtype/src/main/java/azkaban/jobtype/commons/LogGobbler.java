@@ -17,11 +17,11 @@
 package azkaban.jobtype.commons;
 
 import com.google.common.base.Joiner;
-import org.slf4j.Logger;
 
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.Reader;
+import org.slf4j.Logger;
 
 public class LogGobbler extends Thread {
 

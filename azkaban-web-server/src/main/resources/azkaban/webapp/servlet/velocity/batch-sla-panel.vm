@@ -22,6 +22,21 @@
         <h4 class="modal-title">$batchSetSlaTitle</h4>
       </div>
       <div class="modal-body">
+        <ul class="nav nav-tabs nav-sm" id="batch-alert-tabs">
+            <li id="batch-settinh-alerter" class="active"><a href="javascript:void(0);">$modifyuser</a></li>
+            <li id="batch-setting-alert-config"><a href="javascript:void(0);">$batchSetAlarms</a></li>
+        </ul>
+        <div id="batch-settinh-alerter-box">
+            <div class="form-group">
+                <label>$modifyuserworkflow</label>
+                <div id="batchUpdateSlaFlows"></div>
+            </div>
+            <div class="form-group">
+                <label>$alertEmailAddress</label>
+                <textarea id="batchUpdateSlaEmails" placeholder="$alertUserInputTips" class="form-control"></textarea>
+            </div>
+        </div>
+        <div id="batch-setting-alert-config-box">
         <h4>$alertEmailAddress</h4>
         <fieldset>
           <div class="form-group">
@@ -33,6 +48,17 @@
               </div>
             <label>$alertEmailAddress</label>
             <textarea id="batchSlaEmails" placeholder="$alertUserInputTips" class="form-control"></textarea>
+                <div  style="margin-top:10px">
+                        <label class=" control-label">$alerterWay</label>
+                        <span class="" id="batch-aletType">
+                            <label class="radio-inline">
+                                <input type="checkbox" name="2" id="batch-emailCheckbox" value="2"> $email
+                            </label>
+                            <label class="radio-inline">
+                                <input type="checkbox" name="1" id="batch-wexinCheckbox" value="1"> $RTX
+                            </label>
+                        </span>
+                    </div>
           </div>
         </fieldset>
         <h4>$ruleTimeoutAlertSet</h4>
@@ -42,15 +68,17 @@
             <th>$flow</th>
             <th>$ruleAlert</th>
             <th>$timeout(In HH:MM eg. kill in 10 minutes is 00:10)</th>
+                <th>$timeoutAbs</th>
             <th>$alertLevel</th>
-            <th>$sendemail</th>
+                <th>$sendAlert</th>
             <th>$stopFlow</th>
+                <th>$alertFrequency</th>
             <th>$operate</th>
           </tr>
           </thead>
           <tbody>
           <tr id="addRow">
-            <td id="addRow-col" colspan="7">
+                <td id="addRow-col" colspan="9">
               <span class="addIcon"></span>
               <button type="button" class="btn btn-xs btn-success" id="batch-add-btn">$addOneLine</button>
             </td>
@@ -78,6 +106,7 @@
             </tbody>
           </table>
         </div>
+            </div>
       </div>
       <div class="modal-footer">
         <button type="button" class="btn btn-default" data-dismiss="modal">$cancel</button>

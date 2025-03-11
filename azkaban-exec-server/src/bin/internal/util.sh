@@ -57,6 +57,7 @@ function kill_process_with_retry {
 
    for try in $(seq 1 $maxattempt); do
       LOG INFO "Killing $pname. [pid: $pid], attempt: $try, sleep time: 30s"
+      sudo kill -- ${pid}
       kill -15 ${pid}
       sleep 30
       if is_process_running $pid; then

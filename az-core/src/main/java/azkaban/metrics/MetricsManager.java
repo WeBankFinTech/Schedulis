@@ -20,6 +20,7 @@ import static azkaban.Constants.ConfigurationKeys.CUSTOM_METRICS_REPORTER_CLASS_
 import static azkaban.Constants.ConfigurationKeys.METRICS_SERVER_URL;
 
 import azkaban.utils.Props;
+import com.codahale.metrics.Counter;
 import com.codahale.metrics.Gauge;
 import com.codahale.metrics.Histogram;
 import com.codahale.metrics.Meter;
@@ -28,13 +29,12 @@ import com.codahale.metrics.Timer;
 import com.codahale.metrics.jvm.GarbageCollectorMetricSet;
 import com.codahale.metrics.jvm.MemoryUsageGaugeSet;
 import com.codahale.metrics.jvm.ThreadStatesGaugeSet;
-import org.slf4j.LoggerFactory;
-import org.slf4j.Logger;
-
 import java.lang.reflect.Constructor;
 import java.util.function.Supplier;
 import javax.inject.Inject;
 import javax.inject.Singleton;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * The singleton class, MetricsManager, is the place to have MetricRegistry and ConsoleReporter in
@@ -95,6 +95,13 @@ public class MetricsManager {
   public Timer addTimer(final String name) { return this.registry.timer(name); }
 
   /**
+   * A {@link Counter} is just a gauge for an AtomicLong instance.
+   */
+  public Counter addCounter(final String name) {
+    return this.registry.counter(name);
+  }
+
+  /**
    * reporting metrics to remote metrics collector. Note: this method must be synchronized, since
    * both web server and executor will call it during initialization.
    */
@@ -103,15 +110,13 @@ public class MetricsManager {
     final String metricsServerURL = props.get(METRICS_SERVER_URL);
     if (metricsReporterClassName != null && metricsServerURL != null) {
       try {
-        log.info("metricsReporterClassName: " + metricsReporterClassName);
-        final Class metricsClass = Class.forName(metricsReporterClassName);
+        log.info("metricsReporterClassName:{} " , metricsReporterClassName);
+        final Class<?> metricsClass = Class.forName(metricsReporterClassName);
 
         final Constructor[] constructors = metricsClass.getConstructors();
         constructors[0].newInstance(reporterName, this.registry, metricsServerURL);
 
       } catch (final Exception e) {
-        log.error("Encountered error while loading and instantiating "
-            + metricsReporterClassName, e);
         throw new IllegalStateException("Encountered error while loading and instantiating "
             + metricsReporterClassName, e);
       }

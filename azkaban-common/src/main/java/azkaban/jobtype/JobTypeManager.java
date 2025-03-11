@@ -309,7 +309,7 @@ public class JobTypeManager {
     return jobTypeLoader;
   }
 
-  public Job buildJobExecutor(final String jobId, Props jobProps, final Logger logger)
+  public Job buildJobExecutor(final String jobId, Props jobProps, final org.slf4j.Logger logger)
       throws JobTypeManagerException {
     // This is final because during build phase, you should never need to swap
     // the pluginSet for safety reasons

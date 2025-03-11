@@ -14,11 +14,12 @@
 
 package azkaban.jobtype.javautils;
 
-import azkaban.utils.Props;
-import org.apache.commons.lang.StringUtils;
-
 import java.util.Arrays;
 import java.util.Objects;
+
+import org.apache.commons.lang.StringUtils;
+
+import azkaban.utils.Props;
 
 public class ValidationUtils {
 

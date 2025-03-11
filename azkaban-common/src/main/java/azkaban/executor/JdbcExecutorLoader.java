@@ -16,31 +16,38 @@
 
 package azkaban.executor;
 
+import azkaban.batch.HoldBatchAlert;
+import azkaban.batch.HoldBatchDao;
+import azkaban.batch.HoldBatchOperate;
 import azkaban.executor.ExecutorLogEvent.EventType;
+import azkaban.executor.dao.ExecutionJobDao;
+import azkaban.executor.entity.JobPredictionExecutionInfo;
 import azkaban.history.ExecutionRecover;
 import azkaban.history.ExecutionRecoverDao;
 import azkaban.history.RecoverTrigger;
-import com.webank.wedatasphere.schedulis.common.log.LogFilterDao;
-import com.webank.wedatasphere.schedulis.common.log.LogFilterEntity;
-import com.webank.wedatasphere.schedulis.common.system.entity.WtssUser;
+import azkaban.jobhook.JobHook;
+import azkaban.log.LogFilterDao;
+import azkaban.log.LogFilterEntity;
+import azkaban.system.entity.WtssUser;
 import azkaban.utils.FileIOUtils.LogData;
 import azkaban.utils.Pair;
 import azkaban.utils.Props;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import com.webank.wedatasphere.schedulis.common.executor.DepartmentGroup;
-import com.webank.wedatasphere.schedulis.common.executor.DepartmentGroupDao;
-import com.webank.wedatasphere.schedulis.common.executor.ExecutionCycle;
-import com.webank.wedatasphere.schedulis.common.executor.ExecutionCycleDao;
-import com.webank.wedatasphere.schedulis.common.executor.ExecutionLogsAdapter;
-import com.webank.wedatasphere.schedulis.common.executor.UserVariable;
-import com.webank.wedatasphere.schedulis.common.executor.UserVariableDao;
-import java.util.*;
+import java.io.File;
+import java.sql.SQLException;
+import java.time.Duration;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
+import java.util.stream.Collectors;
 import javax.inject.Inject;
 import javax.inject.Singleton;
-import java.io.File;
-import java.time.Duration;
-import java.util.stream.Collectors;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @Singleton
 public class JdbcExecutorLoader implements ExecutorLoader {
@@ -61,22 +68,23 @@ public class JdbcExecutorLoader implements ExecutorLoader {
   private final DepartmentGroupDao departmentGroupDao;
   private final UserVariableDao userVariableDao;
   private final ExecutionCycleDao executionCycleDao;
+  private final HoldBatchDao holdBatchDao;
 
   @Inject
   public JdbcExecutorLoader(final ExecutionFlowDao executionFlowDao,
-      final ExecutorDao executorDao,
-      final ExecutionJobDao executionJobDao,
-      final ExecutionLogsAdapter executionLogsDao,
-      final ExecutorEventsDao executorEventsDao,
-      final ActiveExecutingFlowsDao activeExecutingFlowsDao,
-      final FetchActiveFlowDao fetchActiveFlowDao,
-      final AssignExecutorDao assignExecutorDao,
-      final NumExecutionsDao numExecutionsDao,
-      final ExecutionRecoverDao executionRecoverDao,
-      final LogFilterDao logFilterDao,
-      final DepartmentGroupDao departmentGroupDao,
-      final UserVariableDao userVariableDao,
-      final ExecutionCycleDao executionCycleDao) {
+                            final ExecutorDao executorDao,
+                            final ExecutionJobDao executionJobDao,
+                            final ExecutionLogsAdapter executionLogsDao,
+                            final ExecutorEventsDao executorEventsDao,
+                            final ActiveExecutingFlowsDao activeExecutingFlowsDao,
+                            final FetchActiveFlowDao fetchActiveFlowDao,
+                            final AssignExecutorDao assignExecutorDao,
+                            final NumExecutionsDao numExecutionsDao,
+                            final ExecutionRecoverDao executionRecoverDao,
+                            final LogFilterDao logFilterDao,
+                            final DepartmentGroupDao departmentGroupDao,
+                            final UserVariableDao userVariableDao,
+                            final ExecutionCycleDao executionCycleDao, HoldBatchDao holdBatchDao) {
     this.executionFlowDao = executionFlowDao;
     this.executorDao = executorDao;
     this.executionJobDao = executionJobDao;
@@ -91,34 +99,41 @@ public class JdbcExecutorLoader implements ExecutorLoader {
     this.departmentGroupDao = departmentGroupDao;
     this.userVariableDao = userVariableDao;
     this.executionCycleDao = executionCycleDao;
+    this.holdBatchDao = holdBatchDao;
   }
 
   @Override
   public synchronized void uploadExecutableFlow(final ExecutableFlow flow)
-      throws ExecutorManagerException {
+          throws ExecutorManagerException {
     this.executionFlowDao.uploadExecutableFlow(flow);
   }
 
   @Override
   public void updateExecutableFlow(final ExecutableFlow flow)
-      throws ExecutorManagerException {
+          throws ExecutorManagerException {
     this.executionFlowDao.updateExecutableFlow(flow);
   }
 
   @Override
+  public int updateExecutableFlowRunDate(ExecutableFlow flow) throws SQLException {
+    return this.executionFlowDao.updateExecutableFlowRunDate(flow);
+  }
+
+  @Override
   public ExecutableFlow fetchExecutableFlow(final int id)
-      throws ExecutorManagerException {
+          throws ExecutorManagerException {
     return this.executionFlowDao.fetchExecutableFlow(id);
   }
 
   @Override
-  public List<ExecutableFlow> fetchExecutableFlowByRepeatId(int repeatId) throws ExecutorManagerException {
+  public List<ExecutableFlow> fetchExecutableFlowByRepeatId(int repeatId)
+          throws ExecutorManagerException {
     return this.executionFlowDao.fetchExecutableFlowByRepeatId(repeatId);
   }
 
   @Override
   public List<Pair<ExecutionReference, ExecutableFlow>> fetchQueuedFlows()
-      throws ExecutorManagerException {
+          throws ExecutorManagerException {
     return this.executionFlowDao.fetchQueuedFlows();
   }
 
@@ -127,19 +142,19 @@ public class JdbcExecutorLoader implements ExecutorLoader {
    */
   @Override
   public List<ExecutableFlow> fetchRecentlyFinishedFlows(final Duration maxAge)
-      throws ExecutorManagerException {
+          throws ExecutorManagerException {
     return this.executionFlowDao.fetchRecentlyFinishedFlows(maxAge);
   }
 
   @Override
   public Map<Integer, Pair<ExecutionReference, ExecutableFlow>> fetchActiveFlows()
-      throws ExecutorManagerException {
+          throws ExecutorManagerException {
     return this.fetchActiveFlowDao.fetchActiveFlows();
   }
 
   @Override
   public Map<Integer, Pair<ExecutionReference, ExecutableFlow>> fetchUnfinishedFlows()
-      throws ExecutorManagerException {
+          throws ExecutorManagerException {
     return this.fetchActiveFlowDao.fetchUnfinishedFlows();
   }
 
@@ -149,14 +164,39 @@ public class JdbcExecutorLoader implements ExecutorLoader {
   }
 
   @Override
+  public List<ExecutableFlow> fetchUnfinishedFlows(ExecutingQueryParam executingQueryParam) throws ExecutorManagerException {
+    return this.fetchActiveFlowDao.fetchUnfinishedFlows(executingQueryParam);
+  }
+
+  @Override
+  public List<Integer> selectUnfinishedFlows(int projectId, String flowId) throws ExecutorManagerException {
+    return this.executionFlowDao.selectUnfinishedFlows(projectId, flowId);
+  }
+
+  @Override
+  public List<Integer> selectUnfinishedFlows() throws ExecutorManagerException {
+    return this.executionFlowDao.selectUnfinishedFlows();
+  }
+
+  @Override
+  public long getAllUnfinishedFlows() throws ExecutorManagerException {
+    return this.fetchActiveFlowDao.getAllUnFinishFlowsTotal();
+  }
+
+  @Override
+  public long getUnfinishedFlowsTotal(ExecutingQueryParam executingQueryParam) throws ExecutorManagerException {
+    return this.fetchActiveFlowDao.getUnFinishFlowsTotal(executingQueryParam);
+  }
+
+  @Override
   public Map<Integer, Pair<ExecutionReference, ExecutableFlow>> fetchUnfinishedFlowsMetadata()
-      throws ExecutorManagerException {
+          throws ExecutorManagerException {
     return this.fetchActiveFlowDao.fetchUnfinishedFlowsMetadata();
   }
 
   @Override
   public Pair<ExecutionReference, ExecutableFlow> fetchActiveFlowByExecId(final int execId)
-      throws ExecutorManagerException {
+          throws ExecutorManagerException {
     return this.fetchActiveFlowDao.fetchActiveFlowByExecId(execId);
   }
 
@@ -167,43 +207,91 @@ public class JdbcExecutorLoader implements ExecutorLoader {
 
   @Override
   public int fetchNumExecutableFlows(final int projectId, final String flowId)
-      throws ExecutorManagerException {
+          throws ExecutorManagerException {
     return this.numExecutionsDao.fetchNumExecutableFlows(projectId, flowId);
   }
 
   @Override
   public int fetchNumExecutableNodes(final int projectId, final String jobId)
-      throws ExecutorManagerException {
+          throws ExecutorManagerException {
     return this.numExecutionsDao.fetchNumExecutableNodes(projectId, jobId);
   }
 
   @Override
-  public List<ExecutableFlow> fetchFlowHistory(final int projectId, final String flowId,
-      final int skip, final int num) throws ExecutorManagerException {
-    return this.executionFlowDao.fetchFlowHistory(projectId, flowId, skip, num);
+  public int quickSearchNumberOfJobExecutions(final int projectId, final String jobId, String searchTerm)
+          throws ExecutorManagerException {
+    return this.numExecutionsDao.fetchQuickSearchNumJobExecutions(projectId, jobId, searchTerm);
   }
 
-  public List<ExecutableFlow> fetchFlowHistory(final int projectId, final String flowId,
-      final long startTime) throws ExecutorManagerException {
-    return this.executionFlowDao.fetchFlowHistory(projectId, flowId, startTime);
+  @Override
+  public int searchNumberOfJobExecutions(HistoryQueryParam historyQueryParam)
+          throws ExecutorManagerException {
+    return this.numExecutionsDao.searchNumberOfJobExecutions(historyQueryParam);
   }
 
   @Override
   public List<ExecutableFlow> fetchFlowHistory(final int projectId, final String flowId,
-      final int skip, final int num, final Status status) throws ExecutorManagerException {
+                                               final int skip, final int num) throws ExecutorManagerException {
+    return this.executionFlowDao.fetchFlowHistory(projectId, flowId, skip, num);
+  }
+
+  @Override
+  public List<ExecutableFlow> fetchFlowHistory(final int projectId, final String flowId) throws ExecutorManagerException {
+    return this.executionFlowDao.fetchFlowHistory(projectId, flowId);
+  }
+
+  public List<ExecutableFlow> fetchFlowHistory(final int projectId, final String flowId,
+                                               final long startTime) throws ExecutorManagerException {
+    return this.executionFlowDao.fetchFlowHistory(projectId, flowId, startTime);
+  }
+
+  @Override
+  public List<ExecutableFlow> quickSearchFlowExecutions(final int projectId, final String flowId,
+                                                        final int skip, final int num, final String searchTerm)
+          throws ExecutorManagerException {
+    return this.executionFlowDao.quickSearchFlowExecutions(projectId, flowId, skip, num, searchTerm);
+  }
+
+  @Override
+  public int fetchQuickSearchNumExecutableFlows(final int projectId, final String flowId, final String searchTerm)
+          throws ExecutorManagerException{
+    return this.numExecutionsDao.fetchQuickSearchNumExecutableFlows(projectId, flowId, searchTerm);
+  }
+
+  @Override
+  public List<ExecutableFlow> userQuickSearchFlowExecutions(final int projectId, final String flowId,
+                                                            final int skip, final int num, final String searchTerm, final String userId)
+          throws ExecutorManagerException{
+    return this.executionFlowDao.userQuickSearchFlowExecutions(projectId, flowId, skip, num, searchTerm, userId);
+  }
+
+  @Override
+  public int fetchUserQuickSearchNumExecutableFlows(final int projectId,final String flowId, final String searchTerm, final String userId)
+          throws ExecutorManagerException{
+    return this.numExecutionsDao.fetchUserQuickSearchNumExecutableFlows(projectId, flowId, searchTerm, userId);
+  }
+
+  @Override
+  public List<Integer> selectQueuedFlows(Status status) throws ExecutorManagerException {
+    return this.executionFlowDao.selectQueuedFlows(status);
+  }
+
+  @Override
+  public List<ExecutableFlow> fetchFlowHistory(final int projectId, final String flowId,
+                                               final int skip, final int num, final Status status) throws ExecutorManagerException {
     return this.executionFlowDao.fetchFlowHistory(projectId, flowId, skip, num, status);
   }
 
   @Override
   public List<ExecutableFlow> fetchFlowHistory(final int skip, final int num)
-      throws ExecutorManagerException {
+          throws ExecutorManagerException {
     return this.executionFlowDao.fetchFlowHistory(skip, num);
   }
 
   @Override
-  public List<ExecutableFlow> fetchMaintainedFlowHistory(String username, List<Integer> projectIds, int skip, int size)
+  public List<ExecutableFlow> fetchMaintainedFlowHistory(String userType, String username, List<Integer> projectIds, int skip, int size)
           throws ExecutorManagerException {
-    return this.executionFlowDao.fetchMaintainedFlowHistory(username, projectIds, skip, size);
+    return this.executionFlowDao.fetchMaintainedFlowHistory(userType, username, projectIds, skip, size);
   }
 
   @Override
@@ -212,23 +300,38 @@ public class JdbcExecutorLoader implements ExecutorLoader {
                                                final String execIdContain,
                                                final String userNameContains, final String status,
                                                final long startTime,
-                                               final long endTime, final int skip, final int num, final int flowType)
-                                               throws ExecutorManagerException {
-    return this.executionFlowDao.fetchFlowHistory(projContain, flowContains,execIdContain,
-        userNameContains, status, startTime, endTime, skip, num, flowType);
+                                               final long endTime, String runDate, final int skip,
+                                               final int num, final int flowType)
+          throws ExecutorManagerException {
+    return this.executionFlowDao.fetchFlowHistory(projContain, flowContains, execIdContain,
+            userNameContains, status, startTime, endTime, runDate, skip, num, flowType);
+  }
+
+  @Override
+  public List<ExecutableFlow> fetchFlowHistory(HistoryQueryParam param, int skip, int num) throws ExecutorManagerException {
+    return this.executionFlowDao.fetchFlowHistory(param, skip, num);
   }
 
   @Override
   public List<ExecutableFlow> fetchMaintainedFlowHistory(String projContain, String flowContains,
-                                                  String execIdContain, String userNameContains, String status, long startTime,
-                                                  long endTime, int skip, int num, int flowType, String username, List<Integer> projectIds)
+                                                         String execIdContain, String userNameContains, String status, long startTime,
+                                                         long endTime, String runDate, int skip, int num, int flowType, String username,
+                                                         List<Integer> projectIds)
           throws ExecutorManagerException {
-    return this.executionFlowDao.fetchMaintainedFlowHistory(projContain, flowContains,execIdContain,
-            userNameContains, status, startTime, endTime, skip, num, flowType, username, projectIds);
+    return this.executionFlowDao.fetchMaintainedFlowHistory(projContain, flowContains,
+            execIdContain,
+            userNameContains, status, startTime, endTime, runDate, skip, num, flowType, username,
+            projectIds);
+  }
+
+  @Override
+  public List<ExecutableFlow> fetchMaintainedFlowHistory(HistoryQueryParam param, int skip, int size, List<Integer> projectIds)
+          throws ExecutorManagerException {
+    return this.executionFlowDao.fetchMaintainedFlowHistory(param, skip, size, projectIds);
   }
   @Override
   public List<ExecutableFlow> fetchFlowHistoryQuickSearch(final String searchContains,
-      final String userNameContains, final int skip, final int num) throws ExecutorManagerException {
+                                                          final String userNameContains, final int skip, final int num) throws ExecutorManagerException {
     return this.executionFlowDao.fetchFlowHistoryQuickSearch(searchContains, userNameContains, skip, num);
   }
 
@@ -237,32 +340,42 @@ public class JdbcExecutorLoader implements ExecutorLoader {
                                                           final String username,
                                                           final int skip, final int num,
                                                           List<Integer> projectIds) throws ExecutorManagerException {
-    return this.executionFlowDao.fetchFlowHistoryQuickSearch(searchContains, username, skip, num, projectIds);
+    return this.executionFlowDao.fetchFlowHistoryQuickSearch(searchContains, username, skip, num,
+            projectIds);
   }
 
   @Override
   public List<ExecutableFlow> fetchFlowAllHistory(int projectId, String flowId, String user)
-      throws ExecutorManagerException{
+          throws ExecutorManagerException {
     return this.executionFlowDao.fetchFlowAllHistory(projectId, flowId, user);
   }
 
   @Override
+  public List<ExecutableFlow> fetchAllExecutableFlow() throws SQLException {
+    return this.executionFlowDao.fetchAllExecutableFlow();
+  }
+
+  public List<ExecutableFlow> fetchExecutableFlows(final long startTime) throws SQLException {
+    return this.executionFlowDao.fetchExecutableFlows(startTime);
+  }
+
+  @Override
   public void addActiveExecutableReference(final ExecutionReference reference)
-      throws ExecutorManagerException {
+          throws ExecutorManagerException {
 
     this.activeExecutingFlowsDao.addActiveExecutableReference(reference);
   }
 
   @Override
   public void removeActiveExecutableReference(final int execid)
-      throws ExecutorManagerException {
+          throws ExecutorManagerException {
 
     this.activeExecutingFlowsDao.removeActiveExecutableReference(execid);
   }
 
   @Override
   public boolean updateExecutableReference(final int execId, final long updateTime)
-      throws ExecutorManagerException {
+          throws ExecutorManagerException {
 
     // Should be 1.
     return this.activeExecutingFlowsDao.updateExecutableReference(execId, updateTime);
@@ -270,63 +383,97 @@ public class JdbcExecutorLoader implements ExecutorLoader {
 
   @Override
   public void uploadExecutableNode(final ExecutableNode node, final Props inputProps)
-      throws ExecutorManagerException {
+          throws ExecutorManagerException {
 
     this.executionJobDao.uploadExecutableNode(node, inputProps);
   }
 
   @Override
   public void updateExecutableNode(final ExecutableNode node)
-      throws ExecutorManagerException {
+          throws ExecutorManagerException {
 
     this.executionJobDao.updateExecutableNode(node);
   }
 
   @Override
+  public void updateExecutableNodeStatus(final ExecutableNode node)
+          throws ExecutorManagerException {
+
+    this.executionJobDao.updateExecutableNodeStatus(node);
+  }
+
+  @Override
   public List<ExecutableJobInfo> fetchJobInfoAttempts(final int execId, final String jobId)
-      throws ExecutorManagerException {
+          throws ExecutorManagerException {
 
     return this.executionJobDao.fetchJobInfoAttempts(execId, jobId);
   }
 
   @Override
   public ExecutableJobInfo fetchJobInfo(final int execId, final String jobId, final int attempts)
-      throws ExecutorManagerException {
+          throws ExecutorManagerException {
 
     return this.executionJobDao.fetchJobInfo(execId, jobId, attempts);
   }
 
   @Override
   public Props fetchExecutionJobInputProps(final int execId, final String jobId)
-      throws ExecutorManagerException {
+          throws ExecutorManagerException {
     return this.executionJobDao.fetchExecutionJobInputProps(execId, jobId);
   }
 
   @Override
   public Props fetchExecutionJobOutputProps(final int execId, final String jobId)
-      throws ExecutorManagerException {
+          throws ExecutorManagerException {
     return this.executionJobDao.fetchExecutionJobOutputProps(execId, jobId);
   }
 
   @Override
   public Pair<Props, Props> fetchExecutionJobProps(final int execId, final String jobId)
-      throws ExecutorManagerException {
+          throws ExecutorManagerException {
     return this.executionJobDao.fetchExecutionJobProps(execId, jobId);
   }
 
   @Override
   public List<ExecutableJobInfo> fetchJobHistory(final int projectId, final String jobId,
-      final int skip, final int size)
-      throws ExecutorManagerException {
+                                                 final int skip, final int size)
+          throws ExecutorManagerException {
 
     return this.executionJobDao.fetchJobHistory(projectId, jobId, skip, size);
   }
 
   @Override
+  public List<ExecutableJobInfo> fetchDiagnosisJob(long endTime) throws ExecutorManagerException {
+    return this.executionJobDao.fetchDiagnosisJob(endTime);
+  }
+
+  @Override
+  public List<ExecutableJobInfo> fetchQuickSearchJobExecutions(final int projectId, final String jobId,
+                                                               final String searchTerm, final int skip, final int size)
+          throws ExecutorManagerException {
+
+    return this.executionJobDao.fetchQuickSearchJobExecutions(projectId, jobId, searchTerm, skip, size);
+  }
+
+  @Override
+  public List<ExecutableJobInfo> searchJobExecutions(HistoryQueryParam historyQueryParam, final int skip, final int size)
+          throws ExecutorManagerException {
+
+    return this.executionJobDao.searchJobExecutions(historyQueryParam, skip, size);
+  }
+
+  @Override
   public List<ExecutableJobInfo> fetchJobAllHistory(final int projectId, final String jobId)
-      throws ExecutorManagerException {
+          throws ExecutorManagerException {
 
     return this.executionJobDao.fetchJobAllHistory(projectId, jobId);
+  }
+
+  @Override
+  public List<ExecutableJobInfo> fetchExecutableJobInfo(final long startTime)
+          throws ExecutorManagerException {
+
+    return this.executionJobDao.fetchExecutableJobInfo(startTime);
   }
 
   @Override
@@ -337,29 +484,54 @@ public class JdbcExecutorLoader implements ExecutorLoader {
 
   @Override
   public LogData fetchLogs(final int execId, final String name, final int attempt,
-      final int startByte,
-      final int length) throws ExecutorManagerException {
+                           final int startByte,
+                           final int length) throws ExecutorManagerException {
 
     return this.executionLogsDao.fetchLogs(execId, name, attempt, startByte, length);
   }
 
+  /**
+   * 获取日志存放的 HDFS 路径
+   *
+   * @param execId
+   * @param name
+   * @param attempt
+   * @return
+   */
+  @Override
+  public String getHdfsLogPath(int execId, String name, int attempt)
+          throws ExecutorManagerException {
+    return this.executionLogsDao.getHdfsLogPath(execId, name, attempt);
+  }
+
+  @Override
+  public int getLogEncType(int execId, String name, int attempt) throws ExecutorManagerException {
+    return this.executionLogsDao.getLogEncType(execId, name, attempt);
+  }
+
   @Override
   public List<Object> fetchAttachments(final int execId, final String jobId, final int attempt)
-      throws ExecutorManagerException {
+          throws ExecutorManagerException {
 
     return this.executionJobDao.fetchAttachments(execId, jobId, attempt);
   }
 
   @Override
   public void uploadLogFile(final int execId, final String name, final int attempt,
-      final File... files)
-      throws ExecutorManagerException {
+                            final File... files)
+          throws ExecutorManagerException {
     this.executionLogsDao.uploadLogFile(execId, name, attempt, files);
   }
 
   @Override
+  public void uploadLogPath(final int execId, final String name, final int attempt,
+                            final String hdfsPath) throws ExecutorManagerException {
+    this.executionLogsDao.uploadLogPath(execId, name, attempt, hdfsPath);
+  }
+
+  @Override
   public void uploadAttachmentFile(final ExecutableNode node, final File file)
-      throws ExecutorManagerException {
+          throws ExecutorManagerException {
     this.executionJobDao.uploadAttachmentFile(node, file);
   }
 
@@ -375,7 +547,7 @@ public class JdbcExecutorLoader implements ExecutorLoader {
 
   @Override
   public Executor fetchExecutor(final String host, final int port)
-      throws ExecutorManagerException {
+          throws ExecutorManagerException {
     return this.executorDao.fetchExecutor(host, port);
   }
 
@@ -391,7 +563,7 @@ public class JdbcExecutorLoader implements ExecutorLoader {
 
   @Override
   public Executor addExecutor(final String host, final int port)
-      throws ExecutorManagerException {
+          throws ExecutorManagerException {
     return this.executorDao.addExecutor(host, port);
   }
 
@@ -402,32 +574,32 @@ public class JdbcExecutorLoader implements ExecutorLoader {
 
   @Override
   public void postExecutorEvent(final Executor executor, final EventType type, final String user,
-      final String message) throws ExecutorManagerException {
+                                final String message) throws ExecutorManagerException {
 
     this.executorEventsDao.postExecutorEvent(executor, type, user, message);
   }
 
   @Override
   public List<ExecutorLogEvent> getExecutorEvents(final Executor executor, final int num,
-      final int offset) throws ExecutorManagerException {
+                                                  final int offset) throws ExecutorManagerException {
     return this.executorEventsDao.getExecutorEvents(executor, num, offset);
   }
 
   @Override
   public void assignExecutor(final int executorId, final int executionId)
-      throws ExecutorManagerException {
+          throws ExecutorManagerException {
     this.assignExecutorDao.assignExecutor(executorId, executionId);
   }
 
   @Override
   public Executor fetchExecutorByExecutionId(final int executionId)
-      throws ExecutorManagerException {
+          throws ExecutorManagerException {
     return this.executorDao.fetchExecutorByExecutionId(executionId);
   }
 
   @Override
   public int removeExecutionLogsByTime(final long millis)
-      throws ExecutorManagerException {
+          throws ExecutorManagerException {
     return this.executionLogsDao.removeExecutionLogsByTime(millis);
   }
 
@@ -438,8 +610,8 @@ public class JdbcExecutorLoader implements ExecutorLoader {
 
   @Override
   public int selectAndUpdateExecution(final int executorId, final boolean isActive)
-      throws ExecutorManagerException {
-	      return this.executionFlowDao.selectAndUpdateExecution(executorId, isActive);
+          throws ExecutorManagerException {
+    return this.executionFlowDao.selectAndUpdateExecution(executorId, isActive);
   }
 
   @Override
@@ -449,39 +621,52 @@ public class JdbcExecutorLoader implements ExecutorLoader {
 
   @Override
   public List<ExecutableFlow> fetchUserFlowHistory(final int skip, final int num, final String user)
-      throws ExecutorManagerException {
+          throws ExecutorManagerException {
     return this.executionFlowDao.fetchUserFlowHistory(skip, num, user);
   }
 
   @Override
   public List<ExecutableFlow> fetchUserFlowHistoryByAdvanceFilter(final String projContain,
-      final String flowContains, final String execIdContain, final String userNameContains, final String status, final long startTime,
-      final long endTime, final int skip, final int num, final int flowType) throws ExecutorManagerException {
-    return this.executionFlowDao.fetchUserFlowHistoryByAdvanceFilter(projContain, flowContains,execIdContain,
-        userNameContains, status, startTime, endTime, skip, num, flowType);
+                                                                  final String flowContains, final String execIdContain, final String userNameContains,
+                                                                  final String status, final long startTime,
+                                                                  final long endTime, String runDate, final int skip, final int num, final int flowType)
+          throws ExecutorManagerException {
+    return this.executionFlowDao.fetchUserFlowHistoryByAdvanceFilter(projContain, flowContains,
+            execIdContain,
+            userNameContains, status, startTime, endTime, runDate, skip, num, flowType);
+  }
+
+  @Override
+  public List<ExecutableFlow> fetchUserFlowHistoryByAdvanceFilter(String projContain, String flowContains, String execIdContain, String userNameContains,
+                                                                  String status, long startTime, long endTime, String subsystem, String busPath,
+                                                                  String department, String runDate, int skip, int num, int flowType)
+          throws ExecutorManagerException {
+    return this.executionFlowDao.fetchUserFlowHistoryByAdvanceFilter(projContain, flowContains,
+            execIdContain,
+            userNameContains, status, startTime, endTime, subsystem, busPath, department, runDate, skip, num, flowType);
   }
 
   @Override
   public List<ExecutableFlow> fetchHistoryRecoverFlows(final String userNameContains)
-      throws ExecutorManagerException {
+          throws ExecutorManagerException {
     return this.executionFlowDao.fetchHistoryRecoverFlows(userNameContains);
   }
 
   @Override
   public List<ExecutableFlow> fetchHistoryRecoverFlowByRepeatId(final String repeatId)
-      throws ExecutorManagerException {
+          throws ExecutorManagerException {
     return this.executionFlowDao.fetchHistoryRecoverFlowByRepeatId(repeatId);
   }
 
   @Override
   public List<ExecutableFlow> fetchHistoryRecoverFlowByFlowId(final String flowId, final String projectId)
-      throws ExecutorManagerException {
+          throws ExecutorManagerException {
     return this.executionFlowDao.fetchHistoryRecoverFlowByFlowId(flowId, projectId);
   }
 
   @Override
   public List<ExecutionRecover> listHistoryRecoverFlows(final Map paramMap, final int skip, final int num)
-      throws ExecutorManagerException{
+          throws ExecutorManagerException{
     return this.executionRecoverDao.listHistoryRecoverFlows(paramMap, skip, num);
   }
 
@@ -493,7 +678,7 @@ public class JdbcExecutorLoader implements ExecutorLoader {
 
   @Override
   public Integer saveHistoryRecoverFlow(final ExecutionRecover executionRecover)
-      throws ExecutorManagerException{
+          throws ExecutorManagerException{
     return this.executionRecoverDao.uploadExecutableRecoverFlow(executionRecover);
   }
 
@@ -510,7 +695,7 @@ public class JdbcExecutorLoader implements ExecutorLoader {
 
   @Override
   public ExecutionRecover getHistoryRecoverFlowByPidAndFid(final String projectId, final String flowId)
-      throws ExecutorManagerException{
+          throws ExecutorManagerException{
 
     return this.executionRecoverDao.getHistoryRecoverFlowByPidAndFid(projectId, flowId);
   }
@@ -518,7 +703,7 @@ public class JdbcExecutorLoader implements ExecutorLoader {
 
   @Override
   public List<ExecutionRecover> listHistoryRecoverRunnning(final Integer loadSize)
-      throws ExecutorManagerException{
+          throws ExecutorManagerException{
 
     List<ExecutionRecover> allWaitRunning = new ArrayList<>();
 
@@ -539,6 +724,16 @@ public class JdbcExecutorLoader implements ExecutorLoader {
   @Override
   public int getExecutionCycleTotal(Optional<String> usernameOp) throws ExecutorManagerException {
     return this.executionCycleDao.getCycleFlowsTotal(usernameOp);
+  }
+
+  @Override
+  public int getExecutionCycleAllTotal(String userName, String searchTerm,HashMap<String, String> queryMap) throws ExecutorManagerException{
+    return this.executionCycleDao.getExecutionCycleAllTotal(userName,searchTerm,queryMap);
+  }
+
+  @Override
+  public List<ExecutionCycle> getExecutionCycleAllPages(String userName, String searchTerm, int offset, int length,HashMap<String, String> queryMap) throws ExecutorManagerException {
+    return executionCycleDao.getExecutionCycleAllPages(userName,searchTerm,offset,length,queryMap);
   }
 
   @Override
@@ -569,6 +764,11 @@ public class JdbcExecutorLoader implements ExecutorLoader {
   }
 
   @Override
+  public ExecutionCycle getExecutionCycleFlowDescId(String projectId, String flowId) throws ExecutorManagerException {
+    return this.executionCycleDao.getExecutionCycleFlowDescId(projectId, flowId);
+  }
+
+  @Override
   public ExecutionCycle getExecutionCycleFlow(int id) throws ExecutorManagerException {
     return this.executionCycleDao.getExecutionCycleFlow(id);
   }
@@ -595,7 +795,7 @@ public class JdbcExecutorLoader implements ExecutorLoader {
 
   @Override
   public ExecutableFlow getProjectLastExecutableFlow(int projectId, String flowId)
-      throws ExecutorManagerException{
+          throws ExecutorManagerException{
     List<ExecutableFlow> flows = this.executionFlowDao.getProjectLastExecutableFlow(projectId, flowId);
     if(flows.size() > 0){
       return flows.get(0);
@@ -630,7 +830,7 @@ public class JdbcExecutorLoader implements ExecutorLoader {
    */
   @Override
   public Executor addExecutorFixed(final int id, final String host, final int port)
-      throws ExecutorManagerException {
+          throws ExecutorManagerException {
     return this.executorDao.addExecutorFixed(id, host, port);
   }
 
@@ -647,15 +847,15 @@ public class JdbcExecutorLoader implements ExecutorLoader {
   }
 
   @Override
-  public int getExecHistoryTotal(final Map<String, String> filterMap) throws ExecutorManagerException{
+  public int getExecHistoryTotal(final HistoryQueryParam param) throws ExecutorManagerException{
 
-    return this.executionRecoverDao.getExecHistoryTotal(filterMap);
+    return this.executionRecoverDao.getExecHistoryTotal(param);
   }
 
   @Override
-  public int getExecHistoryTotal(String username, final Map<String, String> filterMap, List<Integer> projectIds) throws ExecutorManagerException{
+  public int getExecHistoryTotal(HistoryQueryParam param, List<Integer> projectIds) throws ExecutorManagerException{
 
-    return this.executionRecoverDao.getExecHistoryTotal(username, filterMap, projectIds);
+    return this.executionRecoverDao.getExecHistoryTotal(param, projectIds);
   }
 
   @Override
@@ -677,20 +877,20 @@ public class JdbcExecutorLoader implements ExecutorLoader {
 
   @Override
   public List<ExecutableFlow> fetchUserFlowHistoryByProjectIdAndFlowId(final int projectId, final String flowId,
-      final int skip, final int num, final String userName) throws ExecutorManagerException {
+                                                                       final int skip, final int num, final String userName) throws ExecutorManagerException {
     return this.executionFlowDao.fetchUserFlowHistoryByProjectIdAndFlowId(projectId, flowId, skip, num, userName);
   }
 
   @Override
   public int fetchNumUserExecutableFlowsByProjectIdAndFlowId(final int projectId, final String flowId, final String userName)
-      throws ExecutorManagerException {
+          throws ExecutorManagerException {
     return this.numExecutionsDao.fetchNumUserExecutableFlowsByProjectIdAndFlowId(projectId, flowId, userName);
   }
 
   @Override
-  public int getUserExecHistoryTotal(final Map<String, String> filterMap) throws ExecutorManagerException{
+  public int getUserExecHistoryTotal(HistoryQueryParam param, String loginUser) throws ExecutorManagerException{
 
-    return this.executionRecoverDao.getUserExecHistoryTotal(filterMap);
+    return this.executionRecoverDao.getUserExecHistoryTotal(param, loginUser);
   }
 
   @Override
@@ -701,10 +901,19 @@ public class JdbcExecutorLoader implements ExecutorLoader {
 
   @Override
   public List<ExecutableFlow> fetchUserFlowHistory(final String loginUser, final String projContain,
-      final String flowContains,final String execIdContain, final String userNameContains, final String status, final long startTime,
-      final long endTime, final int skip, final int num, final int flowType) throws ExecutorManagerException {
-    return this.executionFlowDao.fetchUserFlowHistory(loginUser, projContain, flowContains, execIdContain,
-        userNameContains, status, startTime, endTime, skip, num, flowType);
+                                                   final String flowContains, final String execIdContain, final String userNameContains,
+                                                   final String status, final long startTime,
+                                                   final long endTime, String runDate, final int skip, final int num, final int flowType)
+          throws ExecutorManagerException {
+    return this.executionFlowDao.fetchUserFlowHistory(loginUser, projContain, flowContains,
+            execIdContain,
+            userNameContains, status, startTime, endTime, runDate, skip, num, flowType);
+  }
+
+  @Override
+  public List<ExecutableFlow> fetchUserFlowHistory(String loginUser, HistoryQueryParam param,
+                                                   int skip, int size) throws ExecutorManagerException {
+    return this.executionFlowDao.fetchUserFlowHistory(loginUser, param, skip, size);
   }
 
   /**
@@ -715,7 +924,7 @@ public class JdbcExecutorLoader implements ExecutorLoader {
    */
   @Override
   public List<ExecutableFlow> getTodayExecutableFlowData(final String userName)
-      throws ExecutorManagerException{
+          throws ExecutorManagerException{
 
     return this.executionFlowDao.getTodayExecutableFlowData(userName);
   }
@@ -724,7 +933,7 @@ public class JdbcExecutorLoader implements ExecutorLoader {
 
   @Override
   public List<ExecutableFlow> getRealTimeExecFlowData(final String userName)
-      throws ExecutorManagerException{
+          throws ExecutorManagerException{
 
     return this.executionFlowDao.getRealTimeExecFlowDataDao(userName);
   }
@@ -811,7 +1020,7 @@ public class JdbcExecutorLoader implements ExecutorLoader {
   }
 
   @Override
-  public int updateUserVariable(UserVariable userVariable) throws ExecutorManagerException{
+  public int updateUserVariable(UserVariable userVariable) throws Exception {
     return this.userVariableDao.updateUserVariable(userVariable);
   }
 
@@ -853,8 +1062,282 @@ public class JdbcExecutorLoader implements ExecutorLoader {
   }
 
   @Override
+  public UserVariable findUserVariableByKey(String key) throws ExecutorManagerException {
+    return this.userVariableDao.findUserVariableByKey(key);
+  }
+
+  @Override
+  public boolean fetchGroupScheduleSwitch(String submitUser) throws ExecutorManagerException {
+    return this.departmentGroupDao.fetchGroupScheduleSwitch(submitUser);
+  }
+
+  @Override
   public List<Integer> getRunningExecByLock(Integer projectName, String flowId) {
     return this.executionFlowDao.getRunningExecByLock(projectName, flowId);
   }
 
+  @Override
+  public Set<DmsBusPath> getDmsBusPathFromDb(String jobCode) {
+    return this.executionFlowDao.getDmsBusPathFromDb(jobCode);
+  }
+
+  @Override
+  public Set<DmsBusPath> getDmsBusPathFromDb(String jobCode, String updateTime) {
+    return this.executionFlowDao.getDmsBusPathFromDb(jobCode, updateTime);
+  }
+
+  @Override
+  public void insertOrUpdate(DmsBusPath dmsBusPath) {
+    this.executionFlowDao.insertOrUpdate(dmsBusPath);
+  }
+
+  @Override
+  public String getEventType(String topic, String msgName) {
+    return this.executionJobDao.getEventType(topic,msgName);
+  }
+
+  @Override
+  public void addHoldBatchOpr(String id, int oprType, int oprLevel, String user, long createTime, String oprData)
+          throws ExecutorManagerException {
+    this.holdBatchDao.addHoldBatchOpr(id, oprType, oprLevel, user, createTime, oprData);
+  }
+
+  @Override
+  public void addHoldBatchAlert(String batchId, ExecutableFlow executableFlow, int resumeStatus) throws ExecutorManagerException {
+    this.holdBatchDao.addHoldBatchAlert(batchId, executableFlow, resumeStatus);
+  }
+
+  @Override
+  public List<HoldBatchOperate> getLocalHoldBatchOpr() throws ExecutorManagerException {
+    return this.holdBatchDao.getLocalHoldBatchOpr();
+  }
+
+  @Override
+  public List<HoldBatchAlert> queryAlertByBatch(String batchId) throws ExecutorManagerException {
+    return this.holdBatchDao.queryAlertByBatch(batchId);
+  }
+
+  @Override
+  public HoldBatchAlert queryBatchExecutableFlows(long id)
+          throws ExecutorManagerException {
+    return this.holdBatchDao.queryBatchExecutableFlows(id);
+  }
+
+  @Override
+  public HoldBatchAlert querySubmittedExecutableFlows(long id)
+          throws ExecutorManagerException {
+    return this.holdBatchDao.querySubmittedExecutableFlows(id);
+  }
+
+  @Override
+  public void updateHoldBatchResumeStatus(String projectName, String flowName)
+          throws ExecutorManagerException {
+    this.updateHoldBatchResumeStatus(projectName, flowName);
+  }
+
+  @Override
+  public void addHoldBatchResume(String batchId, String oprData, String user)
+          throws ExecutorManagerException {
+    this.holdBatchDao.addHoldBatchResume(batchId, oprData, user);
+  }
+
+  @Override
+  public void updateHoldBatchStatus(String batchId, int status) throws ExecutorManagerException {
+    this.holdBatchDao.updateHoldBatchStatus(batchId, status);
+  }
+
+  @Override
+  public String getLocalHoldBatchResume(String batchId) throws ExecutorManagerException {
+    return this.holdBatchDao.getLocalHoldBatchResume(batchId);
+  }
+
+  @Override
+  public void addHoldBatchFrequent(String batchId, ExecutableFlow executableFlow)
+          throws ExecutorManagerException {
+    this.holdBatchDao.addHoldBatchFrequent(batchId,executableFlow);
+  }
+
+  @Override
+  public List<HoldBatchAlert> queryExecByBatch(String batchId) throws ExecutorManagerException {
+    return this.holdBatchDao.queryExecByBatch(batchId);
+  }
+
+  @Override
+  public List<HoldBatchAlert> queryFrequentByBatch(String batchId)
+          throws ExecutorManagerException {
+    return this.holdBatchDao.queryFrequentByBatch(batchId);
+  }
+
+  @Override
+  public void updateHoldBatchFrequentStatus(HoldBatchAlert holdBatchAlert)
+          throws ExecutorManagerException {
+    this.holdBatchDao.updateHoldBatchFrequentStatus(holdBatchAlert);
+  }
+
+  @Override
+  public List<HoldBatchAlert> queryExecingByBatch(String batchId) throws ExecutorManagerException {
+    return this.holdBatchDao.queryExecingByBatch(batchId);
+  }
+
+  @Override
+  public void updateHoldBatchResumeStatus(HoldBatchAlert holdBatchAlert)
+          throws ExecutorManagerException {
+    this.holdBatchDao.updateHoldBatchResumeStatus(holdBatchAlert);
+  }
+
+  @Override
+  public void updateHoldBatchExpired(String batchId) throws ExecutorManagerException {
+    this.holdBatchDao.updateHoldBatchExpired(batchId);
+  }
+
+  @Override
+  public void updateHoldBatchId(String batchId) throws ExecutorManagerException {
+    this.holdBatchDao.updateHoldBatchId(batchId);
+  }
+
+  @Override
+  public List<HoldBatchOperate> getMissResumeBatch() throws ExecutorManagerException {
+    return this.holdBatchDao.getMissResumeBatch();
+  }
+
+  @Override
+  public List<Integer> queryWaitingFlow(String project, String flow) {
+    return this.holdBatchDao.queryWaitingFlow(project, flow);
+  }
+
+  @Override
+  public HoldBatchAlert getHoldBatchAlert(long id) {
+    return this.holdBatchDao.getHoldBatchAlert(id);
+  }
+
+  @Override
+  public List<HoldBatchAlert> queryWaitingAlert() {
+    return this.holdBatchDao.queryWaitingAlert();
+  }
+
+  @Override
+  public List<CfgWebankOrganization> fetchAllDepartment() throws ExecutorManagerException {
+    return this.departmentGroupDao.fetchAllDepartment();
+  }
+
+  @Override
+  public void updateHoldBatchNotResumeByExecId(int execId) {
+    this.holdBatchDao.updateHoldBatchNotResumeByExecId(execId);
+  }
+
+  @Override
+  public List<ExecutionRecover> getUserHistoryRerunConfiguration(int projectId, String flowName, String userId, int start, int size) throws ExecutorManagerException {
+    return this.executionRecoverDao.getUserHistoryRerunConfiguration(projectId, flowName, userId, start, size);
+  }
+
+  @Override
+  public List<ExecutionRecover> getMaintainedHistoryRerunConfiguration(int id, String flow, String userId, int start, int size) throws ExecutorManagerException {
+    return this.executionRecoverDao.getMaintainedHistoryRerunConfiguration(id, flow, userId, start, size);
+  }
+
+  @Override
+  public List<ExecutionRecover> getAllHistoryRerunConfiguration(int id, String flow, int start, int size) throws ExecutorManagerException {
+    return this.executionRecoverDao.getAllHistoryRerunConfiguration(id, flow, start, size);
+  }
+
+  @Override
+  public int getAllExecutionRecoverTotal(int projectId, String flowName) throws  ExecutorManagerException {
+    return this.executionRecoverDao.getAllExecutionRecoverTotal(projectId, flowName);
+  }
+
+  @Override
+  public int getMaintainedExecutionRecoverTotal(int projectId, String flowName, String userId) throws ExecutorManagerException {
+    return this.executionRecoverDao.getMaintainedExecutionRecoverTotal(projectId, flowName, userId);
+  }
+
+  @Override
+  public int getUserExecutionRecoverTotal(int projectId, String flowName, String userId) throws ExecutorManagerException {
+    return this.executionRecoverDao.getUserExecHistoryTotal(projectId, flowName, userId);
+  }
+
+  @Override
+  public long getFinalScheduleTime(long triggerInitTime) {
+    return this.executionFlowDao.getFinalScheduleTime(triggerInitTime);
+  }
+
+  @Override
+  public void updateHoldBatchAlertStatus(HoldBatchAlert holdBatchAlert)
+          throws ExecutorManagerException {
+    this.holdBatchDao.updateHoldBatchAlertStatus(holdBatchAlert);
+  }
+
+  @Override
+  public List<Pair<ExecutionReference, ExecutableFlow>> fetchFlowByStatus(Status status)
+          throws ExecutorManagerException {
+    return this.executionFlowDao.fetchFlowByStatus(status);
+  }
+
+  @Override
+  public void linkJobHook(String jobCode, String prefixRules, String suffixRules, String username)
+          throws SQLException {
+    this.executionJobDao.linkJobHook(jobCode, prefixRules, suffixRules, username);
+  }
+
+  @Override
+  public JobHook getJobHook(String jobCode) {
+    return this.executionJobDao.getJobHook(jobCode);
+  }
+
+  @Override
+  public Hosts getHostConfigByHostname(String hostname)
+          throws ExecutorManagerException {
+    return this.executorDao.getHostConfigByHostname(hostname);
+  }
+
+  @Override
+  public int insertHostsConfig(Hosts hosts)
+          throws ExecutorManagerException {
+    return this.executorDao.insertHostsConfig(hosts);
+  }
+
+  @Override
+  public int executorOffline(int executorid) throws ExecutorManagerException {
+    return departmentGroupDao.executorOffline(executorid);
+  }
+
+  @Override
+  public int executorOnline(int executorid) throws ExecutorManagerException {
+    return departmentGroupDao.executorOnline(executorid);
+  }
+
+  @Override
+  public boolean checkIsOnline(int executorid) throws ExecutorManagerException {
+    return departmentGroupDao.checkIsOnline(executorid);
+  }
+
+  @Override
+  public List<ExecutableFlow> getFlowTodayHistory(int projectId, String flowId) throws ExecutorManagerException {
+    ZoneId zoneId = ZoneId.systemDefault();
+    long milli = LocalDateTime.now(zoneId).withHour(0).withMinute(0).withSecond(0).atZone(zoneId).toInstant().toEpochMilli();
+    return executionFlowDao.fetchFlowHistory(projectId,flowId,milli);
+  }
+
+  @Override
+  public JobPredictionExecutionInfo fetchJobPredictionExecutionInfo(int projectId, String flowId, String jobId) throws ExecutorManagerException {
+    return executionJobDao.fetchJobPredictionExecutionInfo(projectId,flowId,jobId);
+  }
+
+  @Override
+  public List<JobPredictionExecutionInfo> fetchJobPredictionExecutionInfoList(int projectId, String flowId) throws ExecutorManagerException {
+    return executionJobDao.fetchJobPredictionExecutionInfoList(projectId,flowId);
+  }
+
+  @Override
+  public void deleteExecutionCycle(int projectId, String flowId) {
+    executionCycleDao.deleteExecutionCycle(projectId, flowId);
+  }
+
+
+
+
+
+  @Override
+  public List<ExecutionCycle> getRunningCycleFlows(Integer projectId, String flowId) {
+    return executionCycleDao.getRunningCycleFlows(projectId,flowId);
+  }
 }
