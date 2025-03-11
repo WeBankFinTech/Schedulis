@@ -1,20 +1,22 @@
 package azkaban.executor;
 
-import azkaban.db.DatabaseOperator;
-import azkaban.db.EncodingType;
-import azkaban.utils.GZIPUtils;
-import azkaban.utils.Pair;
 import org.apache.commons.dbutils.ResultSetHandler;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import javax.inject.Inject;
 import java.io.IOException;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+
+import javax.inject.Inject;
+
+import azkaban.db.DatabaseOperator;
+import azkaban.db.EncodingType;
+import azkaban.utils.GZIPUtils;
+import azkaban.utils.Pair;
 
 /**
  * @author georgeqiao

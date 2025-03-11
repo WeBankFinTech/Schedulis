@@ -68,7 +68,7 @@ HA 部署模式，即多个 WebServer 组合一个及以上 ExecutorServer 的�
 
 ```shell
 #连接 MySQL 服务端
-#eg: mysql -uroot -p12345，其中，username ： root, password: 12345
+
 
 mysql -uUserName -pPassword -hIP --default-character-set=utf8
 ```
@@ -201,22 +201,22 @@ azkaban.native.lib=
 #配置集群 Hive 的元数据库（密码用 Java base64 加密）
 job.datachecker.jdo.option.name="job"
 job.datachecker.jdo.option.url=jdbc:mysql://host:3306/db_name?useUnicode=true&amp;characterEncoding=UTF-8
-job.datachecker.jdo.option.username=[username]
-job.datachecker.jdo.option.password=[password]
+job.datachecker.jdo.option.username=
+job.datachecker.jdo.option.password=
 
 #配置 Schedulis 的数据库地址（密码用 Java base64 加密）
 msg.eventchecker.jdo.option.name="msg"
 msg.eventchecker.jdo.option.url=jdbc:mysql://host:3306/db_name?useUnicode=true&characterEncoding=UTF-8
 msg.eventchecker.jdo.option.username=[username]
-msg.eventchecker.jdo.option.password=[password]
+msg.eventchecker.jdo.option.password=
 
 
 #此部分依赖于第三方脱敏服务mask，暂未开源，将配置写为和job类型一样即可（密码用 Java base64 加密） 
 
-bdp.datachecker.jdo.option.name="bdp"
+bdp.datachecker.jdo.option.name=
 bdp.datachecker.jdo.option.url=jdbc:mysql://host:3306/db_name?useUnicode=true&amp;characterEncoding=UTF-8
-bdp.datachecker.jdo.option.username=[username]
-bdp.datachecker.jdo.option.password=[password]
+bdp.datachecker.jdo.option.username=
+bdp.datachecker.jdo.option.password=
 
 
 ```
@@ -538,7 +538,7 @@ pwd :
    # 用户名
    mail.user=azkaban
    # 开启 IMAP/SMTP 服务获取的授权码
-   mail.password=hadoop
+   mail.password=
    # 邮件地址
    job.failure.email=
    job.success.email=

@@ -1,0 +1,1 @@
+alter table project_permissions modify column project_id int(11);

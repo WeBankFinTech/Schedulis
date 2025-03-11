@@ -1,5 +1,8 @@
 package azkaban.utils;
 
+import java.nio.charset.Charset;
+import java.util.HashMap;
+import java.util.Map;
 import org.forgerock.opendj.ldap.Connection;
 import org.forgerock.opendj.ldap.LDAPConnectionFactory;
 import org.forgerock.opendj.ldap.LdapException;
@@ -8,12 +11,8 @@ import org.forgerock.opendj.ldap.requests.Requests;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.nio.charset.Charset;
-import java.util.HashMap;
-import java.util.Map;
-
 /**
- * Created by kirkzhou on 7/1/17.
+ * Created by johnnwang on 7/1/17.
  */
 public class LdapCheckCenter {
 

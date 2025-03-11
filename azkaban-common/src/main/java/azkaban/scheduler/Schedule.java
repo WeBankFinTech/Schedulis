@@ -18,8 +18,13 @@ package azkaban.scheduler;
 
 import azkaban.executor.ExecutionOptions;
 import azkaban.sla.SlaOption;
+import azkaban.utils.DateUtils;
 import azkaban.utils.Pair;
 import azkaban.utils.Utils;
+import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
+import com.fasterxml.jackson.databind.annotation.JsonSerialize;
+import com.fasterxml.jackson.datatype.joda.deser.DateTimeZoneDeserializer;
+import com.fasterxml.jackson.datatype.joda.ser.DateTimeZoneSerializer;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
@@ -44,8 +49,11 @@ public class Schedule {
   private final String flowName;
   private final long firstSchedTime;
   private final long endSchedTime;
+  @JsonDeserialize(using = DateTimeZoneDeserializer.class)
+  @JsonSerialize(using = DateTimeZoneSerializer.class)
   private final DateTimeZone timezone;
   private final long lastModifyTime;
+  private final long lastModifyConfiguration;
   private final ReadablePeriod period;
   private final String submitUser;
   private final String status;
@@ -56,26 +64,30 @@ public class Schedule {
   private long nextExecTime;
   private ExecutionOptions executionOptions;
   private List<SlaOption> slaOptions;
+  private String comment;
+  private long lastExecTime;
+
+  private boolean autoSubmit;
 
   // FIXME Other setting parameters are convenient for future expansion.
   private Map<String, Object> otherOption = new HashMap<>();
 
   public Schedule(final int scheduleId,
-      final int projectId,
-      final String projectName,
-      final String flowName,
-      final String status,
-      final long firstSchedTime,
-      final long endSchedTime,
-      final DateTimeZone timezone,
-      final ReadablePeriod period,
-      final long lastModifyTime,
-      final long nextExecTime,
-      final long submitTime,
-      final String submitUser,
-      final ExecutionOptions executionOptions,
-      final List<SlaOption> slaOptions,
-      final String cronExpression) {
+                  final int projectId,
+                  final String projectName,
+                  final String flowName,
+                  final String status,
+                  final long firstSchedTime,
+                  final long endSchedTime,
+                  final DateTimeZone timezone,
+                  final ReadablePeriod period,
+                  final long lastModifyTime,
+                  final long nextExecTime,
+                  final long submitTime,
+                  final String submitUser,
+                  final ExecutionOptions executionOptions,
+                  final List<SlaOption> slaOptions,
+                  final String cronExpression, long lastModifyConfiguration) {
     this.scheduleId = scheduleId;
     this.projectId = projectId;
     this.projectName = projectName;
@@ -92,26 +104,27 @@ public class Schedule {
     this.executionOptions = executionOptions;
     this.slaOptions = slaOptions;
     this.cronExpression = cronExpression;
+    this.lastModifyConfiguration = lastModifyConfiguration;
   }
 
   // FIXME Added construction method.
   public Schedule(final int scheduleId,
-      final int projectId,
-      final String projectName,
-      final String flowName,
-      final String status,
-      final long firstSchedTime,
-      final long endSchedTime,
-      final DateTimeZone timezone,
-      final ReadablePeriod period,
-      final long lastModifyTime,
-      final long nextExecTime,
-      final long submitTime,
-      final String submitUser,
-      final ExecutionOptions executionOptions,
-      final List<SlaOption> slaOptions,
-      final String cronExpression,
-      final Map<String, Object> otherOption) {
+                  final int projectId,
+                  final String projectName,
+                  final String flowName,
+                  final String status,
+                  final long firstSchedTime,
+                  final long endSchedTime,
+                  final DateTimeZone timezone,
+                  final ReadablePeriod period,
+                  final long lastModifyTime,
+                  final long nextExecTime,
+                  final long submitTime,
+                  final String submitUser,
+                  final ExecutionOptions executionOptions,
+                  final List<SlaOption> slaOptions,
+                  final String cronExpression,
+                  final Map<String, Object> otherOption, long lastModifyConfiguration) {
     this.scheduleId = scheduleId;
     this.projectId = projectId;
     this.projectName = projectName;
@@ -129,6 +142,47 @@ public class Schedule {
     this.slaOptions = slaOptions;
     this.cronExpression = cronExpression;
     this.otherOption = otherOption;
+    this.lastModifyConfiguration = lastModifyConfiguration;
+  }
+
+  public Schedule(final int scheduleId,
+                  final int projectId,
+                  final String projectName,
+                  final String flowName,
+                  final String status,
+                  final long firstSchedTime,
+                  final long endSchedTime,
+                  final DateTimeZone timezone,
+                  final ReadablePeriod period,
+                  final long lastModifyTime,
+                  final long nextExecTime,
+                  final long submitTime,
+                  final String submitUser,
+                  final ExecutionOptions executionOptions,
+                  final List<SlaOption> slaOptions,
+                  final String cronExpression,
+                  final Map<String, Object> otherOption,
+                  final String comment, boolean autoSubmit, long lastModifyConfiguration) {
+    this.scheduleId = scheduleId;
+    this.projectId = projectId;
+    this.projectName = projectName;
+    this.flowName = flowName;
+    this.firstSchedTime = firstSchedTime;
+    this.endSchedTime = endSchedTime;
+    this.timezone = timezone;
+    this.lastModifyTime = lastModifyTime;
+    this.period = period;
+    this.nextExecTime = nextExecTime;
+    this.submitUser = submitUser;
+    this.status = status;
+    this.submitTime = submitTime;
+    this.executionOptions = executionOptions;
+    this.slaOptions = slaOptions;
+    this.cronExpression = cronExpression;
+    this.otherOption = otherOption;
+    this.comment = comment;
+    this.autoSubmit = autoSubmit;
+    this.lastModifyConfiguration = lastModifyConfiguration;
   }
 
   public static ReadablePeriod parsePeriodString(final String periodStr) {
@@ -139,7 +193,7 @@ public class Schedule {
     }
 
     final int periodInt =
-        Integer.parseInt(periodStr.substring(0, periodStr.length() - 1));
+            Integer.parseInt(periodStr.substring(0, periodStr.length() - 1));
     switch (periodUnit) {
       case 'M':
         period = Months.months(periodInt);
@@ -161,7 +215,7 @@ public class Schedule {
         break;
       default:
         throw new IllegalArgumentException("Invalid schedule period unit '"
-            + periodUnit);
+                + periodUnit);
     }
 
     return period;
@@ -229,9 +283,9 @@ public class Schedule {
   public String toString() {
 
     final String underlying =
-        this.projectName + "." + this.flowName + " (" + this.projectId + ")"
-            + " to be run at (starting) " + new DateTime(
-            this.firstSchedTime).toDateTimeISO();
+            this.projectName + "." + this.flowName + " (" + this.projectId + ")"
+                    + " to be run at (starting) " + new DateTime(
+                    this.firstSchedTime).toDateTimeISO();
     if (this.period == null && this.cronExpression == null) {
       return underlying + " non-recurring";
     } else if (this.cronExpression != null) {
@@ -310,33 +364,42 @@ public class Schedule {
       return true;
     }
 
+    if (this.cronExpression == null && this.period == null) {
+      return false;
+    }
+
+    DateTime scheduleStartDate = DateUtils.parseDate(otherOption.get("scheduleStartDate"));
+    DateTime scheduleEndDate = DateUtils.parseDate(otherOption.get("scheduleEndDate"));
+
+    if (scheduleStartDate != null && scheduleStartDate.isAfter(this.nextExecTime)) {
+      this.nextExecTime = scheduleStartDate.getMillis();
+    }
+
     if (this.cronExpression != null) {
-      final DateTime nextTime = getNextCronRuntime(
-          this.nextExecTime, this.timezone, Utils.parseCronExpression(this.cronExpression,
-              this.timezone));
-      this.nextExecTime = nextTime.getMillis();
-      return true;
+      getNextCronRuntime(this.nextExecTime, this.timezone,
+              Utils.parseCronExpression(this.cronExpression, this.timezone));
     }
 
     if (this.period != null) {
-      final DateTime nextTime = getNextRuntime(this.nextExecTime, this.timezone, this.period);
-
-      this.nextExecTime = nextTime.getMillis();
-      return true;
+      getNextRuntime(this.nextExecTime, this.timezone, this.period);
     }
 
-    return false;
+    if (scheduleEndDate != null && scheduleEndDate.isBefore(this.nextExecTime)) {
+      this.nextExecTime = -1;
+    }
+
+    return true;
   }
 
-  private DateTime getNextRuntime(final long scheduleTime, final DateTimeZone timezone,
-      final ReadablePeriod period) {
+  private void getNextRuntime(final long scheduleTime, final DateTimeZone timezone,
+                              final ReadablePeriod period) {
     final DateTime now = new DateTime();
     DateTime date = new DateTime(scheduleTime).withZone(timezone);
     int count = 0;
     while (!now.isBefore(date)) {
       if (count > 100000) {
         throw new IllegalStateException(
-            "100000 increments of period did not get to present time.");
+                "100000 increments of period did not get to present time.");
       }
 
       if (period == null) {
@@ -348,7 +411,7 @@ public class Schedule {
       count += 1;
     }
 
-    return date;
+    this.nextExecTime = date.getMillis();
   }
 
   /**
@@ -357,14 +420,16 @@ public class Schedule {
    * @param timezone is always UTC (after 3.1.0)
    * @return the First Scheduled DateTime to run this flow.
    */
-  private DateTime getNextCronRuntime(final long scheduleTime, final DateTimeZone timezone,
-      final CronExpression ce) {
+  private void getNextCronRuntime(final long scheduleTime, final DateTimeZone timezone,
+                                  final CronExpression ce) {
 
     Date date = new DateTime(scheduleTime).withZone(timezone).toDate();
     if (ce != null) {
       date = ce.getNextValidTimeAfter(date);
     }
-    return new DateTime(date);
+    if (null != date) {
+      this.nextExecTime = date.getTime();
+    }
   }
 
   public Map<String, Object> optionsToObject() {
@@ -392,17 +457,17 @@ public class Schedule {
     final HashMap<String, Object> schedObj = (HashMap<String, Object>) obj;
     if (schedObj.containsKey("executionOptions")) {
       final ExecutionOptions execOptions =
-          ExecutionOptions.createFromObject(schedObj.get("executionOptions"));
+              ExecutionOptions.createFromObject(schedObj.get("executionOptions"));
       this.executionOptions = execOptions;
     } else if (schedObj.containsKey("flowOptions")) {
       final ExecutionOptions execOptions =
-          ExecutionOptions.createFromObject(schedObj.get("flowOptions"));
+              ExecutionOptions.createFromObject(schedObj.get("flowOptions"));
       this.executionOptions = execOptions;
       execOptions.setConcurrentOption(ExecutionOptions.CONCURRENT_OPTION_SKIP);
     } else {
       this.executionOptions = new ExecutionOptions();
       this.executionOptions
-          .setConcurrentOption(ExecutionOptions.CONCURRENT_OPTION_SKIP);
+              .setConcurrentOption(ExecutionOptions.CONCURRENT_OPTION_SKIP);
     }
 
     if (schedObj.containsKey("slaOptions")) {
@@ -426,5 +491,33 @@ public class Schedule {
 
   public long getEndSchedTime() {
     return this.endSchedTime;
+  }
+
+  public String getComment() {
+    return comment;
+  }
+
+  public void setComment(String comment) {
+    this.comment = comment;
+  }
+
+  public long getLastExecTime() {
+    return lastExecTime;
+  }
+
+  public void setLastExecTime(long lastExecTime) {
+    this.lastExecTime = lastExecTime;
+  }
+
+  public boolean isAutoSubmit() {
+    return autoSubmit;
+  }
+
+  public void setAutoSubmit(boolean autoSubmit) {
+    this.autoSubmit = autoSubmit;
+  }
+
+  public long getLastModifyConfiguration() {
+    return lastModifyConfiguration;
   }
 }

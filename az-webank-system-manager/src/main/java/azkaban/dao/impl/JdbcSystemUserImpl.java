@@ -3,23 +3,33 @@ package azkaban.dao.impl;
 import azkaban.Constants;
 import azkaban.dao.SystemUserLoader;
 import azkaban.db.DatabaseOperator;
-import azkaban.entity.*;
+import azkaban.entity.DepartmentMaintainer;
+import azkaban.entity.WebankDepartment;
+import azkaban.entity.WebankUser;
+import azkaban.entity.WtssPermissions;
+import azkaban.entity.WtssRole;
+import azkaban.entity.WtssUser;
 import azkaban.exception.SystemUserManagerException;
 import azkaban.executor.DepartmentGroup;
 import azkaban.utils.MD5Utils;
 import azkaban.utils.Props;
+
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
+import javax.inject.Inject;
+import javax.inject.Singleton;
+
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.dbutils.ResultSetHandler;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import javax.inject.Inject;
-import javax.inject.Singleton;
-import java.sql.ResultSet;
-import java.sql.SQLException;
-import java.util.*;
-import java.util.stream.Collectors;
 
 /**
  * Created by zhu on 7/6/18.
@@ -1353,6 +1363,7 @@ public class JdbcSystemUserImpl implements SystemUserLoader {
     /**
      * 过滤垃圾数据, 例如:
      * 将 ",,, ,,ab,,bf,er,,,ghc,d,,der,,," 变成  "ab,bf,er,ghc,d,der"
+     *
      * @param originStr
      * @return
      */

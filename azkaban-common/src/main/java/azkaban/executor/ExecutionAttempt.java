@@ -17,10 +17,12 @@
 package azkaban.executor;
 
 import azkaban.utils.TypedMapWrapper;
+
+import java.io.Serializable;
 import java.util.HashMap;
 import java.util.Map;
 
-public class ExecutionAttempt {
+public class ExecutionAttempt implements Serializable {
 
   public static final String ATTEMPT_PARAM = "attempt";
   public static final String STATUS_PARAM = "status";

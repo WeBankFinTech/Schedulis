@@ -17,14 +17,16 @@
 
 package azkaban.storage;
 
+import azkaban.project.Project;
 import azkaban.project.ProjectFileHandler;
 import azkaban.project.ProjectLoader;
 import azkaban.spi.Storage;
 import azkaban.spi.StorageMetadata;
-import javax.inject.Singleton;
 import java.io.File;
 import java.io.InputStream;
+import java.util.List;
 import javax.inject.Inject;
+import javax.inject.Singleton;
 
 
 /**
@@ -51,6 +53,10 @@ public class DatabaseStorage implements Storage {
 
   public ProjectFileHandler get(final int projectId, final int version) {
     return this.projectLoader.getUploadedFile(projectId, version);
+  }
+
+  public File get(List<Project> projectList) {
+    return this.projectLoader.getProjectFiles(projectList);
   }
 
   @Override

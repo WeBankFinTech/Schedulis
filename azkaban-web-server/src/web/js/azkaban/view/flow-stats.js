@@ -38,8 +38,8 @@ azkaban.FlowStatsView = Backbone.View.extend({
   },
 
   fetchJobs: function (execId) {
-    var requestURL = contextURL + "/executor";
-    var requestData = {"execid": execId, "ajax": "fetchexecflow"};
+    var requestURL = "/executor";
+    var requestData = { "execid": execId, "ajax": "fetchexecflow" };
     var jobs = [];
     var successHandler = function (data) {
       data.nodes.sort(function (a, b) {
@@ -58,7 +58,7 @@ azkaban.FlowStatsView = Backbone.View.extend({
   },
 
   fetchJobStats: function (jobId, execId) {
-    var requestURL = contextURL + "/executor";
+    var requestURL = "/executor";
     var requestData = {
       "execid": execId,
       "flowid": flowId,
@@ -214,7 +214,7 @@ azkaban.FlowStatsView = Backbone.View.extend({
   analyzeExecution: function (execId) {
     var jobs = this.fetchJobs(execId);
     if (jobs == null) {
-      this.model.set({'data': null});
+      this.model.set({ 'data': null });
       this.model.trigger('render');
       return;
     }
@@ -311,7 +311,7 @@ azkaban.FlowStatsView = Backbone.View.extend({
       this.finalizeStats(data);
     }
 
-    this.model.set({'data': data});
+    this.model.set({ 'data': data });
     this.model.trigger('render');
   },
 
@@ -319,7 +319,7 @@ azkaban.FlowStatsView = Backbone.View.extend({
     var view = this;
     var data = this.model.get('data');
     if (data == null) {
-      var msg = {message: "Error retrieving flow stats."};
+      var msg = { message: "Error retrieving flow stats." };
       dust.render("flowstats-no-data", msg, function (err, out) {
         view.display(out);
       });
@@ -353,6 +353,6 @@ azkaban.FlowStatsView = Backbone.View.extend({
   },
 
   display: function (out) {
-    $('#flow-stats-container').html(out);
+    $('#flow-stats-container').html(filterXSS(out));
   },
 });

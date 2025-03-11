@@ -1,9 +1,8 @@
 package azkaban.batch;
 
-import org.apache.commons.lang.StringUtils;
-
-import javax.inject.Singleton;
 import java.util.concurrent.ConcurrentHashMap;
+import javax.inject.Singleton;
+import org.apache.commons.lang.StringUtils;
 
 /**
  * @author v_wbxgchen

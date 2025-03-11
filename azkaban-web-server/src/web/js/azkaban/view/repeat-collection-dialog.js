@@ -23,7 +23,7 @@ azkaban.RepeatCollectionDialogView = Backbone.View.extend({
     "click #filter-btn": "handleExecuteFlow"
   },
 
-  initialize: function(settings) {
+  initialize: function (settings) {
     var date = new Date();
     $('#datetimebegin').datetimepicker({
       format: 'YYYY/MM/DD HH:mm',
@@ -33,54 +33,62 @@ azkaban.RepeatCollectionDialogView = Backbone.View.extend({
       format: 'YYYY/MM/DD HH:mm',
       maxDate: new Date()
     });
-    $('#datetimebegin').on('change.dp', function(e) {
+    $('#executeTimeBegin').datetimepicker({
+      format: 'HH:mm'
+    });
+    $('#executeTimeEnd').datetimepicker({
+      format: 'HH:mm'
+    });
+    $('#datetimebegin').on('change.dp', function (e) {
       $('#datetimeend').data('DateTimePicker').setStartDate(e.date);
     });
-    $('#datetimeend').on('change.dp', function(e) {
+    $('#datetimeend').on('change.dp', function (e) {
       $('#datetimebegin').data('DateTimePicker').setEndDate(e.date);
     });
     $('#repeat-collection-error-msg').hide();
   },
 
-  render: function() {
+  render: function () {
   },
 
-  getExecutionOptionData: function() {
+  getExecutionOptionData: function () {
 
     var projectName = $('#projcontain').val();
-    var flowId      = $('#flowcontain').val();
-    var beginTime   = $('#datetimebegin').val();
-    var endTime     = $('#datetimeend').val();
-    var monthNum   = $('#repeat-month').val();
-    var dayNum     = $('#repeat-day').val();
-    var hourNum    = $('#repeat-hour').val();
-    var minNum     = $('#repeat-min').val();
-    var state      = true;
+    var flowId = $('#flowcontain').val();
+    var beginTime = $('#datetimebegin').val();
+    var endTime = $('#datetimeend').val();
+    var executeTimeBegin = $('#executeTimeBegin').val();
+    var executeTimeEnd = $('#executeTimeEnd').val();
+    var monthNum = $('#repeat-month').val();
+    var dayNum = $('#repeat-day').val();
+    var hourNum = $('#repeat-hour').val();
+    var minNum = $('#repeat-min').val();
+    var state = true;
 
-    if(beginTime == ''){
+    if (beginTime == '') {
       alert(wtssI18n.view.startTimeReq);
       state = false;
       return;
     }
-    if(endTime == ''){
+    if (endTime == '') {
       alert(wtssI18n.view.endTimeReq);
       state = false;
       return;
     }
 
-    if(beginTime > endTime){
+    if (beginTime > endTime) {
       alert(wtssI18n.view.timeFormat);
       state = false;
       return;
     }
 
-    if(monthNum == 0 && dayNum == 0){
+    if (monthNum == 0 && dayNum == 0) {
       alert(wtssI18n.view.executionIntervaPro);
       state = false;
       return;
     }
 
-    if(monthNum == "" || dayNum == ""){
+    if (monthNum == "" || dayNum == "") {
       alert(wtssI18n.view.executionIntervalFormat);
       state = false;
       return;
@@ -95,7 +103,7 @@ azkaban.RepeatCollectionDialogView = Backbone.View.extend({
     start.setMinutes(start.getMinutes() + parseInt(minNum));
 
 
-    if(start > end){
+    if (start > end) {
       alert(wtssI18n.view.timeIntervalFormat);
       state = false;
       return;
@@ -109,6 +117,8 @@ azkaban.RepeatCollectionDialogView = Backbone.View.extend({
       job: this.jobId,
       begin: beginTime,
       end: endTime,
+      executeTimeBegin: executeTimeBegin,
+      executeTimeEnd: executeTimeEnd,
       month: monthNum,
       day: dayNum,
       hour: hourNum,
@@ -120,7 +130,7 @@ azkaban.RepeatCollectionDialogView = Backbone.View.extend({
     return executingData;
   },
   //数据展示入口
-  show: function(data) {
+  show: function (data) {
     var projectName = data.project;
     var flowId = data.flow;
     var jobId = data.job;
@@ -138,29 +148,29 @@ azkaban.RepeatCollectionDialogView = Backbone.View.extend({
 
   },
 
-  showRepeatOptionPanel: function(data) {
+  showRepeatOptionPanel: function (data) {
     $('#repeat-collection-panel').modal();
     $("#projcontain").val(data.project);
     $("#flowcontain").val(data.flow);
-//    $("#jobcontain").val(data.job);
+    //    $("#jobcontain").val(data.job);
   },
 
-  hideRepeatOptionPanel: function() {
+  hideRepeatOptionPanel: function () {
     $('#repeat-collection-panel').modal("hide");
   },
 
-  handleExecuteFlow: function(evt) {
+  handleExecuteFlow: function (evt) {
     console.log("click schedule button.");
-    var executeURL = contextURL + "/executor";
+    var executeURL = "/executor";
     var executingData = this.getExecutionOptionData();
-    if(executingData){
+    if (executingData) {
       //this.repeatFlow(executingData);
       this.checkRecoverParam(executingData, this.repeatFlow(executingData));
     }
   },
 
-  repeatFlow: function(executingData) {
-    executeURL = contextURL + "/executor?ajax=repeatCollection";
+  repeatFlow: function (executingData) {
+    executeURL = "/executor?ajax=repeatCollection";
     repeatCollectionDialogView.hideRepeatOptionPanel();
 
     $.ajax({
@@ -176,20 +186,20 @@ azkaban.RepeatCollectionDialogView = Backbone.View.extend({
     });
   },
 
-  checkRecoverParam: function(executingData, repeatFun) {
-    executeURL = contextURL + "/executor?ajax=recoverParamVerify";
+  checkRecoverParam: function (executingData, repeatFun) {
+    executeURL = "/executor?ajax=recoverParamVerify";
     repeatCollectionDialogView.hideRepeatOptionPanel();
 
-    var successHandler = function(data) {
+    var successHandler = function (data) {
       if (data.error) {
         messageDialogView.show(wtssI18n.view.historyRerunsFail, data.error);
         return false;
       } else {
         messageDialogView.show(wtssI18n.view.historicalRerun, wtssI18n.view.rerunSubmitSuccess,
-            function() {
-              window.location.href = contextURL + "/recover";
-              repeatFun(executingData);
-            }
+          function () {
+            window.location.href = "/recover";
+            repeatFun(executingData);
+          }
         );
 
       }
@@ -211,7 +221,7 @@ azkaban.RepeatCollectionDialogView = Backbone.View.extend({
 
 });
 
-$(function() {
+$(function () {
 
   repeatCollectionDialogView = new azkaban.RepeatCollectionDialogView({
     el: $('#repeat-collection-panel')
@@ -220,8 +230,8 @@ $(function() {
 });
 
 
-function repeatFlow(executingData) {
-  executeURL = contextURL + "/executor?ajax=repeatCollection";
+function repeatFlow (executingData) {
+  executeURL = "/executor?ajax=repeatCollection";
   repeatCollectionDialogView.hideRepeatOptionPanel();
 
   $.ajax({
@@ -237,20 +247,20 @@ function repeatFlow(executingData) {
   });
 }
 
-function checkRecoverParam(executingData, repeatFun) {
-  executeURL = contextURL + "/executor?ajax=recoverParamVerify";
+function checkRecoverParam (executingData, repeatFun) {
+  executeURL = "/executor?ajax=recoverParamVerify";
   repeatCollectionDialogView.hideRepeatOptionPanel();
 
-  var successHandler = function(data) {
+  var successHandler = function (data) {
     if (data.error) {
       messageDialogView.show(wtssI18n.view.historyRerunsFail, data.error);
       return false;
     } else {
       messageDialogView.show(wtssI18n.view.historicalRerun, wtssI18n.view.rerunSubmitSuccess,
-          function() {
-            window.location.href = contextURL + "/recover";
-            repeatFun(executingData);
-          }
+        function () {
+          window.location.href = "/recover";
+          repeatFun(executingData);
+        }
       );
 
     }

@@ -1,37 +1,76 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <configuration status="info" monitorInterval="60">
+    <properties>
+        <property name="logDir">/data/logs/wtss</property>
+        <property name="pattern">
+            %d{yyyy-MM-dd HH:mm:ss.SSS} [%-5level] [%-40t] %c{1.} (%L) [%M] - %msg%xEx%n
+        </property>
+    </properties>
     <appenders>
-        <Console name="Console" target="SYSTEM_OUT">
-            <ThresholdFilter level="trace" onMatch="ACCEPT" onMismatch="DENY"/>
-            <PatternLayout pattern="%d{yyyy-MM-dd HH:mm:ss.SSS} %-5level [%t] %logger{36} %L %M - %msg%xEx%n"/>
+        <RollingFile name="fixedTimeFileAppender" fileName="${logDir}/wtss-webserver.log"
+                     filePattern="${logDir}/$${date:yyyy-MM}/server/wtss-webserver-log-%d{yyyy-MM-dd}-%i.log">
+            <PatternLayout
+                    pattern="${pattern}"/>
+            <Policies>
+                <TimeBasedTriggeringPolicy/>
+                <SizeBasedTriggeringPolicy size="1GB"/>
+            </Policies>
+            <!--<DefaultRolloverStrategy max="24"/>-->
+        </RollingFile>
+        <RollingFile name="loginTimeFileAppender" fileName="${logDir}/wtss-access.log"
+                     filePattern="${logDir}/$${date:yyyy-MM}/audit/wtss-acces-log-%d{yyyy-MM-dd}-%i.log">
+            <PatternLayout
+                    pattern="${pattern}"/>
+            <Policies>
+                <TimeBasedTriggeringPolicy/>
+                <SizeBasedTriggeringPolicy size="1GB"/>
+            </Policies>
+            <!--<DefaultRolloverStrategy max="24"/>-->
+        </RollingFile>
+        <RollingFile name="missedScheduleFileAppender" fileName="${logDir}/wtss-missed-schedule.log"
+                     filePattern="${logDir}/$${date:yyyy-MM}/server/wtss-missed-schedule-log-%d{yyyy-MM-dd}-%i.log">
+            <PatternLayout
+                    pattern="%d{yyyy-MM-dd HH:mm:ss.SSS} %-5level [%t] %logger{36} %L %M - %msg%xEx%n"/>
+            <Policies>
+                <TimeBasedTriggeringPolicy/>
+                <SizeBasedTriggeringPolicy size="1GB"/>
+            </Policies>
+            <!--<DefaultRolloverStrategy max="24"/>-->
+        </RollingFile>
+        <RollingFile name="missedAlertFileAppender"
+                     fileName="${logDir}/wtss-missed-alert.log"
+                     filePattern="${logDir}/$${date:yyyy-MM}/server/wtss-missed-alert-log-%d{yyyy-MM-dd}-%i.log">
+            <PatternLayout
+                    pattern="%d{yyyy-MM-dd HH:mm:ss.SSS} %-5level [%t] %logger{36} %L %M - %msg%xEx%n"/>
+            <Policies>
+                <TimeBasedTriggeringPolicy/>
+                <SizeBasedTriggeringPolicy size="1GB"/>
+            </Policies>
+            <!--<DefaultRolloverStrategy max="24"/>-->
+        </RollingFile>
+
+        <Console name="console" target="SYSTEM_OUT">
+            <PatternLayout pattern="${pattern}"/>
         </Console>
-        <RollingFile name="fixedTimeFileAppender" fileName="/appcom/logs/azkaban/schedulis-webserver.log"
-                     filePattern="${date:yyyy-MM}/schedulis-webserver-log-%d{yyyy-MM-dd}-%i.log.gz">
-            <PatternLayout pattern="%d{yyyy-MM-dd HH:mm:ss.SSS} %-5level [%t] %logger{36} %L %M - %msg%xEx%n"/>
-            <Policies>
-                <TimeBasedTriggeringPolicy />
-                <SizeBasedTriggeringPolicy size="1GB"/>
-            </Policies>
-            <DefaultRolloverStrategy max="24"/>
-        </RollingFile>
-        <RollingFile name="loginTimeFileAppender" fileName="/appcom/logs/azkaban/schedulis-access.log"
-                     filePattern="${date:yyyy-MM}/schedulis-acces-log-%d{yyyy-MM-dd}-%i.log.gz">
-            <PatternLayout pattern="%d{yyyy-MM-dd HH:mm:ss.SSS} %-5level [%t] %logger{36} %L %M - %msg%xEx%n"/>
-            <Policies>
-                <TimeBasedTriggeringPolicy />
-                <SizeBasedTriggeringPolicy size="1GB"/>
-            </Policies>
-            <DefaultRolloverStrategy max="24"/>
-        </RollingFile>
     </appenders>
+
     <loggers>
-        <root level="INFO" includeLocation="true">
-            <AppenderRef ref="Console" />
+        <AsyncRoot level="info" includeLocation="true">
             <AppenderRef ref="fixedTimeFileAppender" />
-        </root>
-        <Logger name="LoginAccessLogger" additivity="false" level="DEBUG">
-            <AppenderRef ref="loginTimeFileAppender" />
-        </Logger>
+        </AsyncRoot>
+        <AsyncLogger name="LoginAccessLogger" additivity="false" level="DEBUG">
+            <AppenderRef ref="loginTimeFileAppender"/>
+        </AsyncLogger>
+        <AsyncLogger name="MissedScheduleLogger" additivity="false" level="INFO">
+            <AppenderRef ref="missedScheduleFileAppender"/>
+        </AsyncLogger>
+        <AsyncLogger name="MissedAlertLogger" additivity="false" level="INFO">
+            <AppenderRef ref="missedAlertFileAppender"/>
+        </AsyncLogger>
+
+        <AsyncLogger name="test" level="info" additivity="false" includeLocation="true">
+            <AppenderRef ref="console"/>
+        </AsyncLogger>
     </loggers>
 </configuration>
 

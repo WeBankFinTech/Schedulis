@@ -12,10 +12,10 @@
             eventQueueTable.tablesorter();
         });
     </script>
-    <script type="text/javascript" src="/js/azkaban/i18n-config.js?version=1.43.0"></script>
-    <script type="text/javascript" src="/js/jquery/jquery.tablesorter.js?version=1.43.0"></script>
-    <script type="text/javascript" src="/js/azkaban/util/utils.js?version=1.43.0"></script>
-    <script type="text/javascript" src="/event/js/eventqueue-manager.js?version=1.43.0"></script>
+    <script type="text/javascript" src="/js/azkaban/i18n-config.js?version=1.49.0"></script>
+    <script type="text/javascript" src="/js/jquery/jquery.tablesorter.js?version=1.49.0"></script>
+    <script type="text/javascript" src="/js/azkaban/util/utils.js?version=1.49.0"></script>
+    <script type="text/javascript" src="/event/js/eventqueue-manager.js?version=1.49.0"></script>
     
 </head>
 <body>
@@ -28,7 +28,7 @@
                 <h1><a href="javascript:void(0);" onclick="checkHrefUrlXss('/event/queue?topic=${topic}&msgName=${msgName}')">$eventQueuePage</a></h1>
             </div>
             <div class="header-control">
-                <form id="quickSearchForm" method="get" class="form-inline header-form" role="form">
+                <div id="quickSearchForm"  class="form-inline header-form" >
                     <div class="form-group">
                         <div class="input-group">
                             <input type="text" name="topic" value="${topic}" style="display:none">
@@ -40,7 +40,7 @@
                             </span>
                         </div>
                     </div>
-                </form>
+                </div>
             </div>
         </div>
     </div>
@@ -57,7 +57,7 @@
                     <th>#</th>
                     <th class="sortable">id</th>
                     <th class="sortable">$messageSender</th>
-                    <th class="sortable">$rmbnum</th>
+                    <th id="rmbNumber" class="sortable">$rmbnum</th>
                     <th class="sortable">$messageTopic</th>
                     <th class="sortable">$messageName</th>
                     <th class="sortable">$messageSendTime</th>

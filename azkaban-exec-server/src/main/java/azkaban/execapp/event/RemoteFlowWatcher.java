@@ -24,7 +24,7 @@ import azkaban.executor.Status;
 import java.util.ArrayList;
 import java.util.Map;
 
-public class RemoteFlowWatcher extends FlowWatcher {
+public class RemoteFlowWatcher extends AbstractFlowWatcher {
 
   private final static long CHECK_INTERVAL_MS = 60 * 1000;
 

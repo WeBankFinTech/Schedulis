@@ -1,21 +1,24 @@
 package azkaban.scheduler;
 
+import static java.util.Objects.requireNonNull;
+
 import azkaban.executor.ExecutionOptions;
 import azkaban.sla.SlaOption;
 import azkaban.trigger.TriggerStatus;
 import azkaban.utils.HttpUtils;
 import azkaban.utils.Pair;
 import azkaban.utils.Props;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import javax.inject.Inject;
+import javax.inject.Singleton;
 import org.joda.time.format.DateTimeFormat;
 import org.joda.time.format.DateTimeFormatter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import javax.inject.Inject;
-import javax.inject.Singleton;
-import java.util.*;
-
-import static java.util.Objects.requireNonNull;
 
 /**
  * @author lebronwang
@@ -43,26 +46,6 @@ public class EventScheduleServiceImpl implements EventScheduleServiceAdapter {
     this.eventScheduleDao = requireNonNull(eventScheduleDao);
     azkProps = requireNonNull(props);
     updateLocal();
-  }
-
-  public EventSchedule eventScheduleFlow(final int scheduleId, final int projectId,
-      final String projectName, final String flowName, final String status,
-      final long lastModifyTime, final long submitTime, final String submitUser,
-      final String sender,
-      final String topic, final String msgName, final String saveKey,
-      final ExecutionOptions executionOptions, List<SlaOption> slaOptions,
-      final Map<String, Object> otherOption
-  ) throws ScheduleManagerException {
-
-    final EventSchedule eventSchedule = new EventSchedule(scheduleId, projectId, projectName, flowName,
-        status, lastModifyTime,
-        submitTime, submitUser, sender, topic, msgName, saveKey, executionOptions, slaOptions,
-        otherOption);
-    logger.info(
-        "Scheduling flow " + eventSchedule.getFlowName() + " with topic " + eventSchedule.getTopic());
-
-    addEventSchedule(eventSchedule);
-    return eventSchedule;
   }
 
   public EventSchedule eventScheduleFlow(final int scheduleId, final int projectId,

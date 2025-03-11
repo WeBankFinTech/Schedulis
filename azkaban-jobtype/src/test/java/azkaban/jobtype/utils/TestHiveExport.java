@@ -1,9 +1,16 @@
 package azkaban.jobtype.utils;
 
+import azkaban.jobtype.util.HiveExport;
+import org.apache.commons.lang3.StringUtils;
+import org.junit.Assert;
+import org.junit.Before;
 import org.junit.Test;
 
 import java.util.Properties;
 
+/**
+ * Created by v_wbkefan on 2018/12/20.
+ */
 public class TestHiveExport {
 
     @Test

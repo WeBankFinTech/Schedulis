@@ -24,7 +24,6 @@
   #parse ("azkaban/webapp/servlet/velocity/javascript.vm")
 
   <script type="text/javascript">
-    var contextURL = "${context}";
     var currentTime = ${currentTime};
     var timezone = "${timezone}";
     var errorMessage = null;
@@ -47,7 +46,7 @@
   <div class="az-page-header page-header-bare">
     <div class="container-full">
       <h1><a
-              href="${context}/manager?project=${project.name}&flow=${flowid}&job=${jobid}&prop=${property}">$paramPage
+              href="javascript:void(0);" onclick="checkHrefUrlXss('/manager?project=${project.name}&flow=${flowid}&job=${jobid}&prop=${property}')">$paramPage
         <small>$property</small>
       </a></h1>
     </div>
@@ -56,20 +55,20 @@
     <div class="container-full" style="word-break:break-all;">
       <ol class="breadcrumb">
         <li><a
-                href="${context}/manager?project=${project.name}"><strong>$program</strong> $project.name
+                href="javascript:void(0);" onclick="checkHrefUrlXss('/manager?project=${project.name}')"><strong>$program</strong> $project.name
         </a></li>
         <li><a
-                href="${context}/manager?project=${project.name}&flow=${flowid}"><strong>$flow</strong> $flowid
+                href="javascript:void(0);" onclick="checkHrefUrlXss('/manager?project=${project.name}&flow=${flowid}')"><strong>$flow</strong> $flowid
         </a></li>
         <li><a
-                href="${context}/manager?project=${project.name}&flow=${flowid}&job=${jobid}"><strong>$job</strong> $jobid
+                href="javascript:void(0);" onclick="checkHrefUrlXss('/manager?project=${project.name}&flow=${flowid}&job=${jobid}')"><strong>$job</strong> $jobid
         </a></li>
         <li class="active"><strong>$program</strong> $property</li>
       </ol>
     </div>
   </div>
 
-  <script type="text/javascript" src="${context}/js/azkaban/view/hideHead.js?version=1.10.0"></script>
+  <script type="text/javascript" src="/js/azkaban/view/hideHead.js?version=1.49.0"></script>
 
   <div class="container-full">
 
@@ -83,7 +82,7 @@
         <div class="panel panel-default">
           <div class="panel-heading">$property</div>
 
-          <table class="table table-striped table-bordered properties-table">
+          <table class="table table-striped table-bordered properties-table job-param-table">
             <thead>
             <tr>
               <th class="tb-pname">$paramName</th>
@@ -115,7 +114,7 @@
             #if ($inheritedproperties)
               #foreach ($inheritedproperty in $inheritedproperties)
                 <li class="list-group-item"><a
-                        href="${context}/manager?project=${project.name}&flow=${flowid}&job=${jobid}&prop=$inheritedproperty">$inheritedproperty</a>
+                        href="javascript:void(0);" onclick="checkHrefUrlXss('/manager?project=${project.name}&flow=${flowid}&job=${jobid}&prop=$inheritedproperty')">$inheritedproperty</a>
                 </li>
               #end
             #else
@@ -130,7 +129,7 @@
             #if ($dependingproperties)
               #foreach ($dependingproperty in $dependingproperties)
                 <li class="list-group-item"><a
-                        href="${context}/manager?project=${project.name}&flow=${flowid}&job=${jobid}&prop=$dependingproperty">$dependingproperty</a>
+                        href="javascript:void(0);" onclick="checkHrefUrlXss('/manager?project=${project.name}&flow=${flowid}&job=${jobid}&prop=$dependingproperty')">$dependingproperty</a>
                 </li>
               #end
             #else

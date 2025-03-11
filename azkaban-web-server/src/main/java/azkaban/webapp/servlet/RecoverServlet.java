@@ -19,9 +19,12 @@ package azkaban.webapp.servlet;
 import azkaban.history.ExecutionRecover;
 import azkaban.executor.ExecutorManagerAdapter;
 import azkaban.executor.ExecutorManagerException;
+import azkaban.i18n.utils.LoadJsonUtils;
 import azkaban.project.Project;
 import azkaban.project.ProjectManager;
 import azkaban.server.session.Session;
+import azkaban.system.SystemManager;
+import azkaban.system.common.TransitionService;
 import azkaban.user.User;
 import azkaban.webapp.AzkabanWebServer;
 import java.io.IOException;
@@ -36,13 +39,11 @@ import javax.servlet.ServletConfig;
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
-
-import com.webank.wedatasphere.schedulis.common.i18nutils.LoadJsonUtils;
-import com.webank.wedatasphere.schedulis.common.system.SystemManager;
-import com.webank.wedatasphere.schedulis.common.system.common.TransitionService;
 import org.joda.time.LocalDateTime;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-public class RecoverServlet extends LoginAbstractAzkabanServlet {
+public class RecoverServlet extends AbstractLoginAzkabanServlet {
 
   private static final String FILTER_BY_DATE_PATTERN = "MM/dd/yyyy hh:mm aa";
   private static final long serialVersionUID = 1L;
@@ -51,6 +52,8 @@ public class RecoverServlet extends LoginAbstractAzkabanServlet {
   private ExecutorVMHelper vmHelper;
   private TransitionService transitionService;
   private SystemManager systemManager;
+
+  private static final Logger logger = LoggerFactory.getLogger(RecoverServlet.class);
 
   @Override
   public void init(final ServletConfig config) throws ServletException {
@@ -65,7 +68,7 @@ public class RecoverServlet extends LoginAbstractAzkabanServlet {
 
   @Override
   protected void handleGet(final HttpServletRequest req, final HttpServletResponse resp,
-      final Session session) throws ServletException, IOException {
+                           final Session session) throws ServletException, IOException {
 
     if (hasParam(req, "ajax")) {
       handleAJAXAction(req, resp, session);
@@ -75,18 +78,18 @@ public class RecoverServlet extends LoginAbstractAzkabanServlet {
   }
 
   private void handleAJAXAction(final HttpServletRequest req,
-      final HttpServletResponse resp, final Session session) throws ServletException,
-      IOException {
+                                final HttpServletResponse resp, final Session session) throws ServletException,
+          IOException {
     final HashMap<String, Object> ret = new HashMap<>();
     final String ajaxName = getParam(req, "ajax");
 
-    if (ajaxName.equals("fetch")) {
+    if ("fetch".equals(ajaxName)) {
       fetchHistoryData(req, resp, ret);
-    } else if (ajaxName.equals("user_role")) {
+    } else if ("user_role".equals(ajaxName)) {
       ajaxGetUserRole(req, resp, session, ret);
-    } else if (ajaxName.equals("getRecoverTotal")){
+    } else if ("getRecoverTotal".equals(ajaxName)){
       ajaxGetRecoverTotal(req, resp, session, ret);
-    } else if (ajaxName.equals("fetchRecoverHistory")){
+    } else if ("fetchRecoverHistory".equals(ajaxName)){
       ajaxFetchRecoverHistory(req, resp, session, ret);
     }
 
@@ -96,27 +99,27 @@ public class RecoverServlet extends LoginAbstractAzkabanServlet {
   }
 
   private void fetchHistoryData(final HttpServletRequest req,
-      final HttpServletResponse resp, final HashMap<String, Object> ret)
-      throws ServletException {
+                                final HttpServletResponse resp, final HashMap<String, Object> ret)
+          throws ServletException {
   }
 
   //返回当前用户的角色列表
   private void ajaxGetUserRole(final HttpServletRequest req,
-      final HttpServletResponse resp, final Session session, final HashMap<String, Object> ret) {
+                               final HttpServletResponse resp, final Session session, final HashMap<String, Object> ret) {
     final String[] userRoles = session.getUser().getRoles().toArray(new String[0]);
     ret.put("userRoles", userRoles);
   }
 
   //返回当前历史补采总数
   private void ajaxGetRecoverTotal(final HttpServletRequest req,
-      final HttpServletResponse resp, final Session session, final HashMap<String, Object> ret) {
+                                   final HttpServletResponse resp, final Session session, final HashMap<String, Object> ret) {
 
     final int recoverTotal;
     try {
       recoverTotal = this.executorManager.getHistoryRecoverTotal();
       ret.put("recoverTotal", recoverTotal);
     } catch (ExecutorManagerException e) {
-      e.printStackTrace();
+      logger.warn("Failed to get history data", e);
     }
 
   }
@@ -129,28 +132,28 @@ public class RecoverServlet extends LoginAbstractAzkabanServlet {
    * @throws ServletException
    */
   private void ajaxHistoryRecoverPage(final HttpServletRequest req, final HttpServletResponse resp, final Session session)
-      throws ServletException {
+          throws ServletException {
     final Page page = newPage(req, resp, session, "azkaban/webapp/servlet/velocity/history-recover-page.vm");
 
     String languageType = LoadJsonUtils.getLanguageType();
     Map<String, String> historyRecoverPageMap;
     Map<String, String> subPageMap1;
     Map<String, String> subPageMap2;
-    if (languageType.equalsIgnoreCase("zh_CN")) {
+    if ("zh_CN".equalsIgnoreCase(languageType)) {
       // 添加国际化标签
-      historyRecoverPageMap = LoadJsonUtils.transJson("/com.webank.wedatasphere.schedulis.i18n.conf/azkaban-web-server-zh_CN.json",
-          "azkaban.webapp.servlet.velocity.history-recover-page.vm");
-      subPageMap1 = LoadJsonUtils.transJson("/com.webank.wedatasphere.schedulis.i18n.conf/azkaban-web-server-zh_CN.json",
-          "azkaban.webapp.servlet.velocity.nav.vm");
-      subPageMap2 = LoadJsonUtils.transJson("/com.webank.wedatasphere.schedulis.i18n.conf/azkaban-web-server-zh_CN.json",
-          "azkaban.webapp.servlet.velocity.messagedialog.vm");
+      historyRecoverPageMap = LoadJsonUtils.transJson("/conf/azkaban-web-server-zh_CN.json",
+              "azkaban.webapp.servlet.velocity.history-recover-page.vm");
+      subPageMap1 = LoadJsonUtils.transJson("/conf/azkaban-web-server-zh_CN.json",
+              "azkaban.webapp.servlet.velocity.nav.vm");
+      subPageMap2 = LoadJsonUtils.transJson("/conf/azkaban-web-server-zh_CN.json",
+              "azkaban.webapp.servlet.velocity.messagedialog.vm");
     }else {
-      historyRecoverPageMap = LoadJsonUtils.transJson("/com.webank.wedatasphere.schedulis.i18n.conf/az-webank-homepage-en_US.json",
-          "azkaban.webapp.servlet.velocity.history-recover-page.vm");
-      subPageMap1 = LoadJsonUtils.transJson("/com.webank.wedatasphere.schedulis.i18n.conf/az-webank-homepage-en_US.json",
-          "azkaban.webapp.servlet.velocity.nav.vm");
-      subPageMap2 = LoadJsonUtils.transJson("/com.webank.wedatasphere.schedulis.i18n.conf/az-webank-homepage-en_US.json",
-          "azkaban.webapp.servlet.velocity.messagedialog.vm");
+      historyRecoverPageMap = LoadJsonUtils.transJson("/conf/azkaban-web-server-en_US.json",
+              "azkaban.webapp.servlet.velocity.history-recover-page.vm");
+      subPageMap1 = LoadJsonUtils.transJson("/conf/azkaban-web-server-en_US.json",
+              "azkaban.webapp.servlet.velocity.nav.vm");
+      subPageMap2 = LoadJsonUtils.transJson("/conf/azkaban-web-server-en_US.json",
+              "azkaban.webapp.servlet.velocity.messagedialog.vm");
     }
     historyRecoverPageMap.forEach(page::add);
     subPageMap1.forEach(page::add);
@@ -186,16 +189,16 @@ public class RecoverServlet extends LoginAbstractAzkabanServlet {
         if (userRoleSet.contains("admin")) {
           //查询数据补采全部记录
           historyRecover =
-              this.executorManager.listHistoryRecoverFlows(paramMap, (pageNum - 1) * pageSize,
-                  pageSize);
+                  this.executorManager.listHistoryRecoverFlows(paramMap, (pageNum - 1) * pageSize,
+                          pageSize);
 
         } else {
 
           paramMap.put("userName", user.getUserId());
 
           historyRecover =
-              this.executorManager
-                  .listHistoryRecoverFlows(paramMap, (pageNum - 1) * pageSize, pageSize);
+                  this.executorManager
+                          .listHistoryRecoverFlows(paramMap, (pageNum - 1) * pageSize, pageSize);
 
         }
       } catch (final ExecutorManagerException e) {
@@ -210,15 +213,15 @@ public class RecoverServlet extends LoginAbstractAzkabanServlet {
         if (userRoleSet.contains("admin")) {
           //查询数据补采全部记录
           historyRecover =
-              this.executorManager.listHistoryRecoverFlows(paramMap, (pageNum - 1) * pageSize,
-                  pageSize);
+                  this.executorManager.listHistoryRecoverFlows(paramMap, (pageNum - 1) * pageSize,
+                          pageSize);
         } else {
 
           paramMap.put("userName", user.getUserId());
 
           historyRecover =
-              this.executorManager
-                  .listHistoryRecoverFlows(paramMap, (pageNum - 1) * pageSize, pageSize);
+                  this.executorManager
+                          .listHistoryRecoverFlows(paramMap, (pageNum - 1) * pageSize, pageSize);
 
         }
       } catch (final ExecutorManagerException e) {
@@ -230,19 +233,19 @@ public class RecoverServlet extends LoginAbstractAzkabanServlet {
         if (userRoleSet.contains("admin")) {
           //查询数据补采全部记录
           historyRecover =
-              this.executorManager.listHistoryRecoverFlows(new HashMap(), (pageNum - 1) * pageSize,
-                  pageSize);
+                  this.executorManager.listHistoryRecoverFlows(new HashMap(), (pageNum - 1) * pageSize,
+                          pageSize);
         } else {
           Map paramMap = new HashMap();
 
           paramMap.put("userName", user.getUserId());
 
           historyRecover =
-              this.executorManager
-                  .listHistoryRecoverFlows(paramMap, (pageNum - 1) * pageSize, pageSize);
+                  this.executorManager
+                          .listHistoryRecoverFlows(paramMap, (pageNum - 1) * pageSize, pageSize);
         }
       } catch (ExecutorManagerException e) {
-        e.printStackTrace();
+        logger.warn("Failed to listHistoryRecoverFlows userName {}", user.getUserId(), e);
       }
     }
 
@@ -268,7 +271,7 @@ public class RecoverServlet extends LoginAbstractAzkabanServlet {
     page.add("page", pageNum);
 
     // keep the search terms so that we can navigate to later pages
-    if (hasParam(req, "searchterm") && !getParam(req, "searchterm").equals("")) {
+    if (hasParam(req, "searchterm") && !"".equals(getParam(req, "searchterm"))) {
       page.add("search", "true");
       page.add("search_term", getParam(req, "searchterm"));
     }
@@ -285,7 +288,7 @@ public class RecoverServlet extends LoginAbstractAzkabanServlet {
       page.add("previous", new HistoryServlet.PageSelection(1, pageSize, true, false));
     } else {
       page.add("previous", new HistoryServlet.PageSelection(pageNum - 1, pageSize, false,
-          false));
+              false));
     }
     page.add("next", new HistoryServlet.PageSelection(pageNum + 1, pageSize, false, false));
     // Now for the 5 other values.
@@ -295,19 +298,19 @@ public class RecoverServlet extends LoginAbstractAzkabanServlet {
     }
 
     page.add("page1", new HistoryServlet.PageSelection(pageStartValue, pageSize, false,
-        pageStartValue == pageNum));
+            pageStartValue == pageNum));
     pageStartValue++;
     page.add("page2", new HistoryServlet.PageSelection(pageStartValue, pageSize, false,
-        pageStartValue == pageNum));
+            pageStartValue == pageNum));
     pageStartValue++;
     page.add("page3", new HistoryServlet.PageSelection(pageStartValue, pageSize, false,
-        pageStartValue == pageNum));
+            pageStartValue == pageNum));
     pageStartValue++;
     page.add("page4", new HistoryServlet.PageSelection(pageStartValue, pageSize, false,
-        pageStartValue == pageNum));
+            pageStartValue == pageNum));
     pageStartValue++;
     page.add("page5", new HistoryServlet.PageSelection(pageStartValue, pageSize, false,
-        pageStartValue == pageNum));
+            pageStartValue == pageNum));
     pageStartValue++;
 
 
@@ -316,16 +319,16 @@ public class RecoverServlet extends LoginAbstractAzkabanServlet {
   }
 
   private void handleHistoryTimelinePage(final HttpServletRequest req,
-      final HttpServletResponse resp, final Session session) {
+                                         final HttpServletResponse resp, final Session session) {
   }
 
   private void handleHistoryDayPage(final HttpServletRequest req,
-      final HttpServletResponse resp, final Session session) {
+                                    final HttpServletResponse resp, final Session session) {
   }
 
   @Override
   protected void handlePost(final HttpServletRequest req, final HttpServletResponse resp,
-      final Session session) throws ServletException, IOException {
+                            final Session session) throws ServletException, IOException {
   }
 
   public static class PageSelection {
@@ -336,7 +339,7 @@ public class RecoverServlet extends LoginAbstractAzkabanServlet {
     private boolean selected;
 
     public PageSelection(final int page, final int size, final boolean disabled,
-        final boolean selected) {
+                         final boolean selected) {
       this.page = page;
       this.size = size;
       this.disabled = disabled;
@@ -377,8 +380,8 @@ public class RecoverServlet extends LoginAbstractAzkabanServlet {
   }
 
   private void ajaxFetchRecoverHistory(final HttpServletRequest req,
-      final HttpServletResponse resp, final Session session, final HashMap<String, Object> ret)
-      throws ServletException {
+                                       final HttpServletResponse resp, final Session session, final HashMap<String, Object> ret)
+          throws ServletException {
     final int start = Integer.valueOf(getParam(req, "start"));
     final int pageSize = Integer.valueOf(getParam(req, "length"));
 
@@ -395,8 +398,8 @@ public class RecoverServlet extends LoginAbstractAzkabanServlet {
       if (userRoleSet.contains("admin")) {
         //查询数据补采全部记录
         final List<ExecutionRecover> historyRecover =
-            this.executorManager.listHistoryRecoverFlows(new HashMap(), start * pageSize,
-                pageSize);
+                this.executorManager.listHistoryRecoverFlows(new HashMap(), start * pageSize,
+                        pageSize);
 
         total = this.executorManager.getHistoryRecoverTotal();
 
@@ -404,7 +407,7 @@ public class RecoverServlet extends LoginAbstractAzkabanServlet {
 
         //运维管理员可以查看自己运维部门下所有人提交的工作流
       } else if (systemManager.isDepartmentMaintainer(user)) {
-        List<Integer> maintainedProjectIds = systemManager.getMaintainedProjects(user);
+        List<Integer> maintainedProjectIds = systemManager.getMaintainedProjects(user, 1);
         List<ExecutionRecover> historyRecover =
                 this.executorManager.listMaintainedHistoryRecoverFlows(user.getUserId(), maintainedProjectIds, start * pageSize, pageSize);
         total = this.executorManager.getMaintainedHistoryRecoverTotal(user.getUserId(), maintainedProjectIds);
@@ -415,8 +418,8 @@ public class RecoverServlet extends LoginAbstractAzkabanServlet {
         paramMap.put("userName", user.getUserId());
 
         final List<ExecutionRecover> historyRecover =
-            this.executorManager
-                .listHistoryRecoverFlows(paramMap, start * pageSize, pageSize);
+                this.executorManager
+                        .listHistoryRecoverFlows(paramMap, start * pageSize, pageSize);
 
         total = this.executorManager.getUserHistoryRecoverTotal(user.getUserId());
 

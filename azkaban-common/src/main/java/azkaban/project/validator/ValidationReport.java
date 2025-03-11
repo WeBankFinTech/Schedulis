@@ -12,16 +12,16 @@ import java.util.Set;
  */
 public class ValidationReport {
 
-  protected ValidationStatus _status;
-  protected Set<String> _infoMsgs;
-  protected Set<String> _warningMsgs;
-  protected Set<String> _errorMsgs;
+  protected ValidationStatus status;
+  protected Set<String> infoMsgs;
+  protected Set<String> warningMsgs;
+  protected Set<String> errorMsgs;
 
   public ValidationReport() {
-    this._status = ValidationStatus.PASS;
-    this._infoMsgs = new HashSet<>();
-    this._warningMsgs = new HashSet<>();
-    this._errorMsgs = new HashSet<>();
+    this.status = ValidationStatus.PASS;
+    this.infoMsgs = new HashSet<>();
+    this.warningMsgs = new HashSet<>();
+    this.errorMsgs = new HashSet<>();
   }
 
   /**
@@ -55,7 +55,7 @@ public class ValidationReport {
    */
   public void addWarnLevelInfoMsg(final String msg) {
     if (msg != null) {
-      this._infoMsgs.add("WARN" + msg);
+      this.infoMsgs.add("WARN" + msg);
     }
   }
 
@@ -64,7 +64,7 @@ public class ValidationReport {
    */
   public void addErrorLevelInfoMsg(final String msg) {
     if (msg != null) {
-      this._infoMsgs.add("ERROR" + msg);
+      this.infoMsgs.add("ERROR" + msg);
     }
   }
 
@@ -73,9 +73,9 @@ public class ValidationReport {
    */
   public void addWarningMsgs(final Set<String> msgs) {
     if (msgs != null) {
-      this._warningMsgs.addAll(msgs);
-      if (!msgs.isEmpty() && this._errorMsgs.isEmpty()) {
-        this._status = ValidationStatus.WARN;
+      this.warningMsgs.addAll(msgs);
+      if (!msgs.isEmpty() && this.errorMsgs.isEmpty()) {
+        this.status = ValidationStatus.WARN;
       }
     }
   }
@@ -85,9 +85,9 @@ public class ValidationReport {
    */
   public void addErrorMsgs(final Set<String> msgs) {
     if (msgs != null) {
-      this._errorMsgs.addAll(msgs);
+      this.errorMsgs.addAll(msgs);
       if (!msgs.isEmpty()) {
-        this._status = ValidationStatus.ERROR;
+        this.status = ValidationStatus.ERROR;
       }
     }
   }
@@ -96,27 +96,27 @@ public class ValidationReport {
    * Retrieve the status of the report.
    */
   public ValidationStatus getStatus() {
-    return this._status;
+    return this.status;
   }
 
   /**
    * Retrieve the list of information messages.
    */
   public Set<String> getInfoMsgs() {
-    return this._infoMsgs;
+    return this.infoMsgs;
   }
 
   /**
    * Retrieve the messages associated with status level {@link ValidationStatus#WARN}
    */
   public Set<String> getWarningMsgs() {
-    return this._warningMsgs;
+    return this.warningMsgs;
   }
 
   /**
    * Retrieve the messages associated with status level {@link ValidationStatus#ERROR}
    */
   public Set<String> getErrorMsgs() {
-    return this._errorMsgs;
+    return this.errorMsgs;
   }
 }

@@ -3,17 +3,18 @@ package azkaban.eventcheck;
 import azkaban.jobtype.util.EventChecker;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.lang.time.DateFormatUtils;
+import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 
-import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
-import java.sql.SQLException;
+import java.sql.*;
+import java.time.LocalDate;
 import java.util.Date;
 import java.util.Map;
 import java.util.Properties;
+
+import static azkaban.jobtype.util.EventChecker.MSG_RECEIVE_AFTER_DATE;
 /**
- * @author georgeqiao
+ * @author johnnwang
  * @Title: EventcheckReceiver
  * @ProjectName WTSS
  * @date 2019/9/1822:17
@@ -39,11 +40,20 @@ public class AbstractEventCheckReceiver extends AbstractEventCheck{
                 } else {
                     props.put(EventChecker.MSG, vMsg);
                 }
-                log.info("Received message : messageID: " + vNewMsgID + ", messageName: " + vMsgName + ", receiver: " + vSender
+                if (props.containsKey(MSG_RECEIVE_AFTER_DATE)) {
+                    log.info(
+                        "handle message : messageID: " + vNewMsgID + ", messageName: " + vMsgName
+                            + ", sender: " + vSender
+                            + ", messageBody: " + vMsg);
+                } else {
+                    log.info(
+                        "Received message : messageID: " + vNewMsgID + ", messageName: " + vMsgName
+                            + ", sender: " + vSender
                         + ", messageBody: " + vMsg);
+                }
             }
         }catch (Exception e) {
-            log.error("Error set consumed message failed {} setConsumedMsg failed", e);
+            log.error("Error set consumed message ", e);
             return vNewMsgID;
         }
         return vNewMsgID;
@@ -51,13 +61,17 @@ public class AbstractEventCheckReceiver extends AbstractEventCheck{
 
     /**
      * Update consumption status
+     *
      * @param jobId
      * @param props
      * @param log
      * @param consumedMsgInfo
      * @return
      */
-    boolean updateMsgOffset(int jobId, Properties props, Logger log, ConsumedMsgInfo consumedMsgInfo,String lastMsgId){
+    boolean updateMsgOffset(int jobId, Properties props, Logger log,
+        ConsumedMsgInfo consumedMsgInfo, String lastMsgId, boolean isMsgAfterDate,
+        LocalDate receiveAfterDate, LocalDate msgDate) {
+
         boolean result = false;
         String vNewMsgID = "-1";
         PreparedStatement updatePstmt = null;
@@ -78,36 +92,72 @@ public class AbstractEventCheckReceiver extends AbstractEventCheck{
                 pstmtForGetID.setString(2, topic);
                 pstmtForGetID.setString(3, msgName);
                 rs = pstmtForGetID.executeQuery();
-                String nowLastMsgId = rs.last()==true ? rs.getString("msg_id"):"0";
-                log.info("receive message successfully , Now check to see if the latest offset has changed ,nowLastMsgId is {} " + nowLastMsgId);
-                if("0".equals(nowLastMsgId) || nowLastMsgId.equals(lastMsgId)){
+                String nowLastMsgId = rs.last() ? rs.getString("msg_id") : "0";
+                if (isMsgAfterDate) {
+                    log.info(
+                        "get message successfully, now check to see if the latest offset has changed, nowLastMsgId is {} ",
+                        nowLastMsgId);
+                } else {
+                    log.info(
+                        "Received message successfully, now check to see if the latest offset has changed, nowLastMsgId is {} ",
+                        nowLastMsgId);
+                }
+                if (("0".equals(nowLastMsgId) || nowLastMsgId.equals(lastMsgId))
+                    || isMsgAfterDate) {
                     int vProcessID = jobId;
-                    String vReceiveTime = DateFormatUtils.format(new Date(), "yyyy-MM-dd HH:mm:ss");;
-                    String sqlForUpdateMsg = "INSERT INTO event_status(receiver,topic,msg_name,receive_time,msg_id) VALUES(?,?,?,?,?) ON DUPLICATE KEY UPDATE receive_time=VALUES(receive_time),msg_id= CASE WHEN msg_id= " + lastMsgId + " THEN VALUES(msg_id) ELSE msg_id END";
+                    String vReceiveTime = DateFormatUtils.format(new Date(), "yyyy-MM-dd HH:mm:ss");
+                    String sqlForUpdateMsg = getSqlForUpdateMsg(props, lastMsgId);
                     updatePstmt = msgConn.prepareCall(sqlForUpdateMsg);
                     updatePstmt.setString(1, receiver);
                     updatePstmt.setString(2, topic);
                     updatePstmt.setString(3, msgName);
                     updatePstmt.setString(4, vReceiveTime);
                     updatePstmt.setString(5, vNewMsgID);
+                    log.info("paramsForUpdateMsg: vReceiveTime: {}; vNewMsgID: {}", vReceiveTime,
+                        vNewMsgID);
+                    if (StringUtils.isNotBlank(consumedMsgInfo.getSourceType())) {
+                        updatePstmt.setString(6, consumedMsgInfo.getSourceType());
+                    } else {
+                        updatePstmt.setNull(6, Types.VARCHAR);
+                    }
                     int updaters = updatePstmt.executeUpdate();
-                    log.info("updateMsgOffset successfully {} update result is:" + updaters);
+                    log.info("updateMsgOffset successfully, update result is: " + updaters);
                     if(updaters != 0){
-                        log.info("Received message successfully , update message status succeeded, consumed flow execution ID: " + vProcessID);
+                        if (isMsgAfterDate) {
+
+                            if (receiveAfterDate != null && msgDate != null) {
+                                if (msgDate.isBefore(receiveAfterDate)) {
+                                    log.info(
+                                        "move message offset successfully, update message status successfully");
+                                } else {
+                                    log.info(
+                                        "Received message successfully , update message status succeeded, consumed flow execution ID: "
+                                            + vProcessID);
+                                    //return true after update success
+                                    result = true;
+                                }
+                            } else {
+                                log.warn("null value for receiveAfterDate {} or msgDate {} ",
+                                    receiveAfterDate, msgDate);
+                            }
+                        } else {
+                            log.info(
+                                "Received message successfully , update message status succeeded, consumed flow execution ID: "
+                                    + vProcessID);
                         //return true after update success
                         result = true;
+                        }
                     }else{
                         log.info("Received message successfully , update message status failed, consumed flow execution ID: " + vProcessID);
-                        result = false;
+                        // result = false;
                     }
                 }else{
                     log.info("the latest offset has changed , Keep waiting for the signal");
-                    result = false;
+                    // result = false;
                 }
                 msgConn.commit();
-            }else{
-                result = false;
-            }
+            }// result = false;
+
         }catch (SQLException e){
             log.error("Error update Msg Offset", e);
             try {
@@ -123,6 +173,20 @@ public class AbstractEventCheckReceiver extends AbstractEventCheck{
             closeQueryRef(rs, log);
         }
         return result;
+    }
+
+    @NotNull
+    private static String getSqlForUpdateMsg(Properties props, String lastMsgId) {
+        String sqlForUpdateMsg;
+        if (props.containsKey(MSG_RECEIVE_AFTER_DATE)) {
+            sqlForUpdateMsg =
+                "INSERT INTO event_status(receiver,topic,msg_name,receive_time,msg_id,source_type) VALUES(?,?,?,?,?,?) ON DUPLICATE KEY UPDATE receive_time=VALUES(receive_time),source_type=VALUES(source_type),msg_id=VALUES(msg_id) ";
+        } else {
+            sqlForUpdateMsg =
+                "INSERT INTO event_status(receiver,topic,msg_name,receive_time,msg_id,source_type) VALUES(?,?,?,?,?,?) ON DUPLICATE KEY UPDATE receive_time=VALUES(receive_time),source_type=VALUES(source_type),msg_id= CASE WHEN msg_id= "
+                    + lastMsgId + " THEN VALUES(msg_id) ELSE msg_id END";
+        }
+        return sqlForUpdateMsg;
     }
 
     /**
@@ -146,7 +210,7 @@ public class AbstractEventCheckReceiver extends AbstractEventCheck{
             pstmtForGetID.setString(2, topic);
             pstmtForGetID.setString(3, msgName);
             rs = pstmtForGetID.executeQuery();
-            lastMsgId = rs.last()==true ? rs.getString("msg_id"):"0";
+            lastMsgId = rs.last() ? rs.getString("msg_id") : "0";
         } catch (SQLException e) {
             throw new RuntimeException("get Offset failed ", e);
         }finally {
@@ -154,7 +218,6 @@ public class AbstractEventCheckReceiver extends AbstractEventCheck{
             closeConnection(msgConn,log);
             closeQueryRef(rs,log);
         }
-        log.debug("The last record id is {} " + lastMsgId);
         return lastMsgId;
     }
 
@@ -180,7 +243,7 @@ public class AbstractEventCheckReceiver extends AbstractEventCheck{
             pstmt.setString(3, params[0]);
             pstmt.setString(4, params[1]);
             pstmt.setString(5, params[2]);
-            log.info("reveiving ... param {} StartTime: " + params[0] + ", EndTime: " + params[1]
+            log.info("receiving ... param: StartTime: " + params[0] + ", EndTime: " + params[1]
                     + ", Topic: " + topic + ", MessageName: " + msgName + ", LastMessageID: " + params[2]);
             rs = pstmt.executeQuery();
 
@@ -191,6 +254,7 @@ public class AbstractEventCheckReceiver extends AbstractEventCheck{
                 consumedMsgInfo.setSender(rs.getString("sender"));
                 consumedMsgInfo.setMsg(rs.getString("msg"));
                 consumedMsgInfo.setSendTime(rs.getString("send_time"));
+                consumedMsgInfo.setSourceType(rs.getString("source_type"));
             }
         } catch (SQLException e) {
             throw new RuntimeException("EventChecker failed to receive message", e);
@@ -204,11 +268,23 @@ public class AbstractEventCheckReceiver extends AbstractEventCheck{
 
     void setBacklogUser(Map<String,String> consumeInfo, Properties props, Logger log) throws SQLException {
         String eaSql = "SELECT backlog_alarm_user, alert_level FROM event_auth where topic=? AND sender=? AND msg_name=? LIMIT 1";
+        String euaSql = "SELECT backlog_alarm_user, alert_level FROM wtss_event_unauth where topic=? AND sender=? AND msg_name=? LIMIT 1";
         PreparedStatement eaPstmt = null;
+        PreparedStatement euaPstmt = null;
         Connection msgConn = null;
         ResultSet ears = null;
+        ResultSet euars = null;
         try {
             msgConn = getEventCheckerConnection(props,log);
+            euaPstmt = msgConn.prepareCall(euaSql);
+            euaPstmt.setString(1, consumeInfo.get("topic"));
+            euaPstmt.setString(2, consumeInfo.get("sender"));
+            euaPstmt.setString(3, consumeInfo.get("msg_name"));
+            euars = euaPstmt.executeQuery();
+            if (euars.last()) {
+                consumeInfo.put("backlog_alarm_user", euars.getString("backlog_alarm_user"));
+                consumeInfo.put("alert_level", euars.getString("alert_level"));
+                if (StringUtils.isEmpty(euars.getString("backlog_alarm_user")) ) {
             eaPstmt = msgConn.prepareCall(eaSql);
             eaPstmt.setString(1, consumeInfo.get("topic"));
             eaPstmt.setString(2, consumeInfo.get("sender"));
@@ -217,13 +293,17 @@ public class AbstractEventCheckReceiver extends AbstractEventCheck{
             if (ears.last()) {
                 consumeInfo.put("backlog_alarm_user", ears.getString("backlog_alarm_user"));
                 consumeInfo.put("alert_level", ears.getString("alert_level"));
+                    }
+                }
             }
         } catch (SQLException e) {
             throw new SQLException("set backlog user failed ", e);
         } finally {
+            closeQueryRef(euars,log);
+            closeQueryRef(ears,log);
+            closeQueryStmt(euaPstmt,log);
             closeQueryStmt(eaPstmt,log);
             closeConnection(msgConn,log);
-            closeQueryRef(ears,log);
         }
     }
 

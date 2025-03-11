@@ -21,6 +21,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 
 public class Edge {
 
@@ -157,4 +158,24 @@ public class Edge {
     return obj;
   }
 
+  @Override
+  public boolean equals(Object o) {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    Edge edge = (Edge) o;
+    return Objects.equals(sourceId, edge.sourceId) && Objects
+        .equals(targetId, edge.targetId) && Objects.equals(source, edge.source)
+        && Objects.equals(target, edge.target) && Objects
+        .equals(error, edge.error) && Objects.equals(guideType, edge.guideType)
+        && Objects.equals(guideValues, edge.guideValues);
+  }
+
+  @Override
+  public int hashCode() {
+    return Objects.hash(sourceId, targetId, source, target, error, guideType, guideValues);
+  }
 }

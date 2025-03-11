@@ -36,7 +36,7 @@ import java.util.Map;
 @Deprecated
 public class KillExecutionAction implements TriggerAction {
 
-  public static final String type = "KillExecutionAction";
+  public static final String TYPE = "KillExecutionAction";
 
   private static final Logger logger = LoggerFactory.getLogger(KillExecutionAction.class);
   private static ExecutorManagerAdapter executorManagerAdapter;
@@ -60,8 +60,8 @@ public class KillExecutionAction implements TriggerAction {
   public static KillExecutionAction createFromJson(final HashMap<String, Object> obj) {
     final Map<String, Object> jsonObj = (HashMap<String, Object>) obj;
     final String objType = (String) jsonObj.get("type");
-    if (!objType.equals(type)) {
-      throw new RuntimeException("Cannot create action of " + type + " from "
+    if (!objType.equals(TYPE)) {
+      throw new RuntimeException("Cannot create action of " + TYPE + " from "
           + objType);
     }
     final String actionId = (String) jsonObj.get("actionId");
@@ -76,7 +76,7 @@ public class KillExecutionAction implements TriggerAction {
 
   @Override
   public String getType() {
-    return type;
+    return TYPE;
   }
 
   @Override
@@ -88,7 +88,7 @@ public class KillExecutionAction implements TriggerAction {
   public Object toJson() {
     final Map<String, Object> jsonObj = new HashMap<>();
     jsonObj.put("actionId", this.actionId);
-    jsonObj.put("type", type);
+    jsonObj.put("type", TYPE);
     jsonObj.put("execId", String.valueOf(this.execId));
     return jsonObj;
   }
@@ -109,7 +109,7 @@ public class KillExecutionAction implements TriggerAction {
 
   @Override
   public String getDescription() {
-    return type + " for " + this.execId;
+    return TYPE + " for " + this.execId;
   }
 
 }

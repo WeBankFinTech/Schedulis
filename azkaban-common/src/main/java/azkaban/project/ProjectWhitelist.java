@@ -1,6 +1,6 @@
 package azkaban.project;
 
-import com.webank.wedatasphere.schedulis.common.utils.XmlResolveUtils;
+import azkaban.utils.XmlResolveUtils;
 import azkaban.utils.Props;
 import java.io.File;
 import java.io.IOException;
@@ -9,6 +9,7 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicReference;
+import javax.xml.XMLConstants;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.ParserConfigurationException;
@@ -38,7 +39,7 @@ public class ProjectWhitelist {
   private static final String PROJECT_TAG = "project";
   private static final String PROJECTID_ATTR = "projectid";
 
-  private static final AtomicReference<Map<WhitelistType, Set<Integer>>> projectsWhitelisted =
+  private static final AtomicReference<Map<WhitelistType, Set<Integer>>> PROJECTS_WHITE_LISTED =
       new AtomicReference<>();
 
   static void load(final Props props) {
@@ -60,7 +61,8 @@ public class ProjectWhitelist {
 
       // FIXME Prevent XML External Entity (XXE) attacks.
       XmlResolveUtils.avoidXEE(docBuilderFactory);
-
+      docBuilderFactory.setAttribute(XMLConstants.ACCESS_EXTERNAL_DTD, "");
+      docBuilderFactory.setAttribute(XMLConstants.ACCESS_EXTERNAL_SCHEMA, "");
       builder = docBuilderFactory.newDocumentBuilder();
     } catch (final ParserConfigurationException e) {
       throw new IllegalArgumentException(
@@ -104,7 +106,7 @@ public class ProjectWhitelist {
       }
       projsWhitelisted.put(WhitelistType.valueOf(whitelistType), projs);
     }
-    projectsWhitelisted.set(projsWhitelisted);
+    PROJECTS_WHITE_LISTED.set(projsWhitelisted);
   }
 
   private static void parseProjectTag(final Node node, final Set<Integer> projects) {
@@ -120,7 +122,7 @@ public class ProjectWhitelist {
   }
 
   public static boolean isProjectWhitelisted(final int project, final WhitelistType whitelistType) {
-    final Map<WhitelistType, Set<Integer>> projsWhitelisted = projectsWhitelisted.get();
+    final Map<WhitelistType, Set<Integer>> projsWhitelisted = PROJECTS_WHITE_LISTED.get();
     if (projsWhitelisted != null) {
       final Set<Integer> projs = projsWhitelisted.get(whitelistType);
       if (projs != null) {

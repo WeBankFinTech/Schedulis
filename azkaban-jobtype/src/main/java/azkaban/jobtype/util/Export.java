@@ -1,5 +1,8 @@
 package azkaban.jobtype.util;
 
+import java.io.IOException;
+import java.lang.management.ManagementFactory;
+import java.util.Properties;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
@@ -7,12 +10,8 @@ import org.apache.hadoop.fs.Path;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.IOException;
-import java.lang.management.ManagementFactory;
-import java.util.Properties;
-
 /**
- * Created by kirkzhou on 9/10/18.
+ * Created by johnnwang on 9/10/18.
  */
 public class Export {
 

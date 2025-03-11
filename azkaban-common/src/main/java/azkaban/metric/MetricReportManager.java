@@ -217,7 +217,7 @@ public class MetricReportManager {
   /**
    * Shutdown execution service {@inheritDoc}
    *
-   * @see Object#finalize()
+   * @see java.lang.Object#finalize()
    */
   @Override
   protected void finalize() {

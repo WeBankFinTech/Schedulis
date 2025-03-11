@@ -29,16 +29,16 @@ import org.apache.commons.fileupload.servlet.ServletFileUpload;
 
 public class MultipartParser {
 
-  private final DiskFileItemFactory _uploadItemFactory;
+  private final DiskFileItemFactory uploadItemFactory;
 
   public MultipartParser(final int spillToDiskSize) {
-    this._uploadItemFactory = new DiskFileItemFactory();
-    this._uploadItemFactory.setSizeThreshold(spillToDiskSize);
+    this.uploadItemFactory = new DiskFileItemFactory();
+    this.uploadItemFactory.setSizeThreshold(spillToDiskSize);
   }
 
   public Map<String, Object> parseMultipart(final HttpServletRequest request)
       throws IOException, ServletException {
-    final ServletFileUpload upload = new ServletFileUpload(this._uploadItemFactory);
+    final ServletFileUpload upload = new ServletFileUpload(this.uploadItemFactory);
     List<FileItem> items = null;
     try {
       items = upload.parseRequest(request);

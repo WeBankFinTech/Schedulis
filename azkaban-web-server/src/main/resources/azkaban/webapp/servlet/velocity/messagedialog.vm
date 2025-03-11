@@ -15,7 +15,7 @@
 *#
 
 <script type="text/javascript"
-        src="${context}/js/azkaban/view/message-dialog.js?version=1.10.0"></script>
+        src="/js/azkaban/view/message-dialog.js?version=1.49.0"></script>
 
 <div class="modal" id="azkaban-message-dialog">
   <div class="modal-dialog">
@@ -29,6 +29,42 @@
       </div>
       <div class="modal-footer">
         <button type="button" class="btn btn-primary" data-dismiss="modal">$continue</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal" id="azkaban-warn-dialog">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+        <h4 class="modal-title" id="azkaban-warn-dialog-title"></h4>
+      </div><!-- /modal-header -->
+      <div class="modal-body">
+        <p id="azkaban-warn-dialog-text" style="word-break:break-all;"></p>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-primary" id="azkaban-warn-dialog-button1"></button>
+        <button type="button" class="btn btn-primary" id="azkaban-warn-dialog-button2"></button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal" id="azkaban-delete-dialog">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+        <h4 class="modal-title" id="azkaban-delete-dialog-title"></h4>
+      </div><!-- /modal-header -->
+      <div class="modal-body">
+        <p id="azkaban-delete-dialog-text" style="word-break:break-all;"></p>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-default" id="azkaban-delete-dialog-button1"></button>
+        <button type="button" class="btn btn-danger" id="azkaban-delete-dialog-button2"></button>
       </div>
     </div>
   </div>

@@ -31,12 +31,12 @@ import java.io.PrintStream;
 public class StdOutErrRedirect {
 
   private static final Logger logger = LoggerFactory.getLogger(StdOutErrRedirect.class);
-  private static final PrintStream infoStream = createStream(System.out, "INFO");
-  private static final PrintStream errorStream = createStream(System.out, "ERROR");
+  private static final PrintStream INFO_STREAM = createStream(System.out, "INFO");
+  private static final PrintStream ERROR_STREAM = createStream(System.out, "ERROR");
 
   public static void redirectOutAndErrToLog() {
-    System.setOut(infoStream);
-    System.setErr(errorStream);
+    System.setOut(INFO_STREAM);
+    System.setErr(ERROR_STREAM);
   }
 
   private static PrintStream createStream(final PrintStream stream, final String level) {

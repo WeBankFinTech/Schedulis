@@ -29,7 +29,7 @@ import java.util.Set;
  * De-normalized version of the CandidateComparator, which also contains the implementation of the
  * factor comparators.
  */
-public class ExecutorComparator extends CandidateComparator<Executor> {
+public class ExecutorComparator extends AbstractCandidateComparator<Executor> {
 
   // factor comparator names
   private static final String NUMOFASSIGNEDFLOW_COMPARATOR_NAME = "NumberOfAssignedFlowComparator";

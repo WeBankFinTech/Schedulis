@@ -16,35 +16,43 @@
  */
 package azkaban;
 
-import azkaban.db.AzkabanDataSource;
+import azkaban.db.AbstractAzkabanDataSource;
 import azkaban.db.H2FileDataSource;
 import azkaban.db.MySQLDataSource;
-import azkaban.executor.*;
+import azkaban.exceptional.user.dao.ExceptionalUserLoader;
+import azkaban.exceptional.user.impl.ExceptionalUserLoaderImpl;
+import azkaban.executor.ExecutionLogsAdapter;
+import azkaban.executor.ExecutionLogsDao;
+import azkaban.executor.ExecutorLoader;
+import azkaban.executor.ExecutorQueueLoader;
+import azkaban.executor.JdbcExecutorLoader;
+import azkaban.executor.JdbcExecutorQueueLoader;
 import azkaban.jobid.relation.JobIdRelationDao;
 import azkaban.jobid.relation.JobIdRelationDaoImpl;
 import azkaban.jobid.relation.JobIdRelationService;
 import azkaban.jobid.relation.JobIdRelationServiceImpl;
 import azkaban.project.JdbcProjectImpl;
 import azkaban.project.ProjectLoader;
+import azkaban.sla.dao.AlertMessageTimeDao;
+import azkaban.sla.dao.impl.AlertMessageTimeDaoImpl;
 import azkaban.spi.Storage;
 import azkaban.spi.StorageException;
 import azkaban.storage.StorageImplementationType;
-import com.webank.wedatasphere.schedulis.common.system.JdbcSystemUserImpl;
-import com.webank.wedatasphere.schedulis.common.system.SystemUserLoader;
-import com.webank.wedatasphere.schedulis.common.system.common.TransitionService;
+import azkaban.system.JdbcSystemUserImpl;
+import azkaban.system.SystemUserLoader;
+import azkaban.system.common.TransitionService;
+import azkaban.system.credential.CredentialDao;
+import azkaban.system.credential.CredentialDaoImpl;
 import azkaban.trigger.JdbcTriggerImpl;
 import azkaban.trigger.TriggerLoader;
-import com.webank.wedatasphere.schedulis.common.user.SystemUserManager;
+import azkaban.user.SystemUserManager;
 import azkaban.user.UserManager;
 import azkaban.utils.Props;
 import com.google.inject.AbstractModule;
 import com.google.inject.Provides;
-import com.webank.wedatasphere.schedulis.common.executor.ExecutionLogsAdapter;
-import com.webank.wedatasphere.schedulis.common.executor.ExecutorQueueLoader;
-import com.webank.wedatasphere.schedulis.common.executor.JdbcExecutorQueueLoader;
 import org.apache.commons.dbutils.QueryRunner;
-import org.slf4j.LoggerFactory;
 import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 
 /**
@@ -64,11 +72,14 @@ public class AzkabanCommonModule extends AbstractModule {
     this.config = new AzkabanCommonModuleConfig(props);
   }
 
+  /**
+   * 请不要在此处随意添加 bind，如需添加必须经过评审！！！
+   */
   @Override
   protected void configure() {
     install(new AzkabanCoreModule(this.props));
     bind(Storage.class).to(resolveStorageClassType());
-    bind(AzkabanDataSource.class).to(resolveDataSourceType());
+    bind(AbstractAzkabanDataSource.class).to(resolveDataSourceType());
     bind(TriggerLoader.class).to(JdbcTriggerImpl.class);
     bind(ProjectLoader.class).to(JdbcProjectImpl.class);
     bind(ExecutorLoader.class).to(JdbcExecutorLoader.class);
@@ -79,6 +90,9 @@ public class AzkabanCommonModule extends AbstractModule {
     bind(UserManager.class).to(SystemUserManager.class);
     bind(JobIdRelationDao.class).to(JobIdRelationDaoImpl.class);
     bind(JobIdRelationService.class).to(JobIdRelationServiceImpl.class);
+    bind(ExceptionalUserLoader.class).to(ExceptionalUserLoaderImpl.class);
+    bind(CredentialDao.class).to(CredentialDaoImpl.class);
+    bind(AlertMessageTimeDao.class).to(AlertMessageTimeDaoImpl.class);
   }
 
   public Class<? extends Storage> resolveStorageClassType() {
@@ -102,10 +116,10 @@ public class AzkabanCommonModule extends AbstractModule {
     }
   }
 
-  private Class<? extends AzkabanDataSource> resolveDataSourceType() {
+  private Class<? extends AbstractAzkabanDataSource> resolveDataSourceType() {
 
     final String databaseType = this.props.getString("database.type");
-    if (databaseType.equals("h2")) {
+    if ("h2".equals(databaseType)) {
       return H2FileDataSource.class;
     } else {
       return MySQLDataSource.class;
@@ -117,7 +131,7 @@ public class AzkabanCommonModule extends AbstractModule {
   }
 
   @Provides
-  public QueryRunner createQueryRunner(final AzkabanDataSource dataSource) {
+  public QueryRunner createQueryRunner(final AbstractAzkabanDataSource dataSource) {
     return new QueryRunner(dataSource);
   }
 }

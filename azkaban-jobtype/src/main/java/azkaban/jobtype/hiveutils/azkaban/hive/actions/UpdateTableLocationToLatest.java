@@ -16,16 +16,17 @@
 
 package azkaban.jobtype.hiveutils.azkaban.hive.actions;
 
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileSystem;
+import org.slf4j.LoggerFactory;
+import org.slf4j.Logger;
+
 import azkaban.jobtype.hiveutils.HiveQueryExecutionException;
 import azkaban.jobtype.hiveutils.HiveQueryExecutor;
 import azkaban.jobtype.hiveutils.azkaban.HiveAction;
 import azkaban.jobtype.hiveutils.azkaban.HiveViaAzkabanException;
 import azkaban.jobtype.hiveutils.util.AzkHiveAction;
 import azkaban.jobtype.hiveutils.util.AzkabanJobPropertyDescription;
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FileSystem;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -102,7 +103,7 @@ public class UpdateTableLocationToLatest implements HiveAction {
       query.append(q.toHQL()).append("\n");
     }
 
-    System.out.println("Query to execute:\n" + query.toString());
+    logger.info("Query to execute:\n" + query.toString());
     try {
       hqe.executeQuery(query.toString());
     } catch (HiveQueryExecutionException e) {

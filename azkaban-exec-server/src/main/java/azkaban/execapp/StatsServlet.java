@@ -20,7 +20,7 @@ import azkaban.executor.ConnectorParams;
 import azkaban.metric.IMetric;
 import azkaban.metric.IMetricEmitter;
 import azkaban.metric.MetricReportManager;
-import azkaban.metric.TimeBasedReportingMetric;
+import azkaban.metric.AbstractTimeBasedReportingMetric;
 import azkaban.metric.inmemoryemitter.InMemoryHistoryNode;
 import azkaban.metric.inmemoryemitter.InMemoryMetricEmitter;
 import azkaban.server.HttpRequestUtils;
@@ -132,7 +132,7 @@ public class StatsServlet extends HttpServlet implements ConnectorParams {
         ret.put(RESPONSE_ERROR, "MetricManager is not available");
       }
     } catch (final Exception e) {
-      logger.error("", e);
+      logger.error("Failed to handleChangeManagerStatusRequest", e);
       ret.put(RESPONSE_ERROR, e.getMessage());
     }
   }
@@ -154,7 +154,7 @@ public class StatsServlet extends HttpServlet implements ConnectorParams {
         ret.put(RESPONSE_ERROR, "MetricManager is not available");
       }
     } catch (final Exception e) {
-      logger.error("", e);
+      logger.error("Failed to handleChangeEmitterPoints", e);
       ret.put(RESPONSE_ERROR, e.getMessage());
     }
   }
@@ -176,7 +176,7 @@ public class StatsServlet extends HttpServlet implements ConnectorParams {
         ret.put(RESPONSE_ERROR, "MetricManager is not available");
       }
     } catch (final Exception e) {
-      logger.error("", e);
+      logger.error("Failed to handleChangeCleaningInterval", e);
       ret.put(RESPONSE_ERROR, e.getMessage());
     }
   }
@@ -265,8 +265,8 @@ public class StatsServlet extends HttpServlet implements ConnectorParams {
       final long newInterval = getLongParam(req, STATS_MAP_REPORTINGINTERVAL);
       if (MetricReportManager.isAvailable()) {
         final MetricReportManager metricManager = MetricReportManager.getInstance();
-        final TimeBasedReportingMetric<?> metric =
-            (TimeBasedReportingMetric<?>) metricManager
+        final AbstractTimeBasedReportingMetric<?> metric =
+            (AbstractTimeBasedReportingMetric<?>) metricManager
                 .getMetricFromName(metricName);
         metric.updateInterval(newInterval);
         ret.put(STATUS_PARAM, RESPONSE_SUCCESS);
@@ -274,7 +274,7 @@ public class StatsServlet extends HttpServlet implements ConnectorParams {
         ret.put(RESPONSE_ERROR, "MetricManager is not available");
       }
     } catch (final Exception e) {
-      logger.error("", e);
+      logger.error("Failed to handleChangeMetricInterval", e);
       ret.put(RESPONSE_ERROR, e.getMessage());
     }
   }

@@ -37,6 +37,7 @@ import java.nio.file.attribute.FileTime;
 import java.util.Optional;
 import java.util.zip.ZipFile;
 import org.apache.commons.io.FileUtils;
+import org.apache.commons.io.IOUtils;
 import org.slf4j.LoggerFactory;
 import org.slf4j.Logger;
 
@@ -80,7 +81,7 @@ class FlowPreparer {
   }
 
   FlowPreparer(final StorageManager storageManager, final File executionsDir,
-      final File projectsDir, final ProjectCacheCleaner cleaner) {
+               final File projectsDir, final ProjectCacheCleaner cleaner) {
     Preconditions.checkNotNull(storageManager);
     Preconditions.checkNotNull(executionsDir);
     Preconditions.checkNotNull(projectsDir);
@@ -127,8 +128,8 @@ class FlowPreparer {
     File tempDir = null;
     try {
       final ProjectDirectoryMetadata project = new ProjectDirectoryMetadata(
-          flow.getProjectId(),
-          flow.getVersion());
+              flow.getProjectId(),
+              flow.getVersion());
 
       final long flowPrepStartTime = System.currentTimeMillis();
 
@@ -138,8 +139,8 @@ class FlowPreparer {
       tempDir = downloadProjectIfNotExists(project, flow.getExecutionId());
 
       log.info("Downloading zip file for project {} when preparing execution [execid {}] "
-              + "completed in {} second(s)", project, flow.getExecutionId(),
-          (System.currentTimeMillis() - start) / 1000);
+                      + "completed in {} second(s)", project, flow.getExecutionId(),
+              (System.currentTimeMillis() - start) / 1000);
 
       // With synchronization, only one thread is allowed to proceed to avoid complicated race
       // conditions which could arise when multiple threads are downloading/deleting/hard-linking
@@ -156,7 +157,7 @@ class FlowPreparer {
           // perform clean-up if size of all project dirs exceeds the cache size.
           if (this.projectCacheCleaner.isPresent()) {
             this.projectCacheCleaner.get()
-                .deleteProjectDirsIfNecessary(project.getDirSizeInByte());
+                    .deleteProjectDirsIfNecessary(project.getDirSizeInByte());
           }
           // Rename temp dir to a proper project directory name.
           Files.move(tempDir.toPath(), project.getInstalledDir().toPath());
@@ -166,10 +167,10 @@ class FlowPreparer {
 
       final long flowPrepCompletionTime = System.currentTimeMillis();
       log.info("Flow preparation completed in {} sec(s), out ot which {} sec(s) was spent inside "
-              + "critical section. [execid: {}, path: {}]",
-          (flowPrepCompletionTime - flowPrepStartTime) / 1000,
-          (flowPrepCompletionTime - criticalSectionStartTime) / 1000,
-          flow.getExecutionId(), execDir.getPath());
+                      + "critical section. [execid: {}, path: {}]",
+              (flowPrepCompletionTime - flowPrepStartTime) / 1000,
+              (flowPrepCompletionTime - criticalSectionStartTime) / 1000,
+              flow.getExecutionId(), execDir.getPath());
     } catch (final Exception ex) {
       FileIOUtils.deleteDirectorySilently(tempDir);
       log.error("Error in preparing flow execution {}", flow.getExecutionId(), ex);
@@ -181,17 +182,29 @@ class FlowPreparer {
     }
   }
 
+  /**
+   * 如果开启了缓存，则采用硬链接的模式，并且需要在自定义变量替换的时候对存在自定义变量的问题进行重新生成
+   * 如果没有开启缓存则走文件拷贝模式
+   * @param installedDir
+   * @param flow
+   * @return
+   * @throws ExecutorManagerException
+   */
   private File setupExecutionDir(final File installedDir, final ExecutableFlow flow)
-      throws IOException {
+          throws ExecutorManagerException {
     File execDir = null;
     try {
       execDir = createExecDir(flow);
-      // FIXME Cancel the soft connection, copy files directly from the projects directory to the execution directory, the purpose is to achieve the parameter replacement of the run_date variable.
-      FileUtils.copyDirectory(installedDir, execDir);
+      if (flow.getExecutionOptions().isEnabledCacheProjectFiles()) {
+        log.info("Flow {} will use cache file {}", flow.getExecutionId(), installedDir);
+        FileIOUtils.createDeepHardlink(installedDir, execDir);
+      } else {
+        FileUtils.copyDirectory(installedDir, execDir);
+      }
       return execDir;
     } catch (final Exception ex) {
       FileIOUtils.deleteDirectorySilently(execDir);
-      throw ex;
+      throw new ExecutorManagerException(ex);
     }
   }
 
@@ -219,22 +232,24 @@ class FlowPreparer {
   private File createTempDir(final ProjectDirectoryMetadata proj) {
     final String projectDir = generateProjectDirName(proj);
     final File tempDir = new File(this.projectCacheDir,
-        "_temp." + projectDir + "." + System.currentTimeMillis());
+            "_temp." + projectDir + "." + System.currentTimeMillis());
     tempDir.mkdirs();
     return tempDir;
   }
 
   private void downloadAndUnzipProject(final ProjectDirectoryMetadata proj, final File dest)
-      throws IOException {
+          throws IOException {
     final ProjectFileHandler projectFileHandler = requireNonNull(this.storageManager
-        .getProjectFile(proj.getProjectId(), proj.getVersion()));
+            .getProjectFile(proj.getProjectId(), proj.getVersion()));
+    ZipFile zip = null;
     try {
       checkState("zip".equals(projectFileHandler.getFileType()));
       final File zipFile = requireNonNull(projectFileHandler.getLocalFile());
-      final ZipFile zip = new ZipFile(zipFile);
+      zip = new ZipFile(zipFile);
       Utils.unzip(zip, dest);
       proj.setDirSizeInByte(calculateDirSizeAndSave(dest));
     } finally {
+      IOUtils.closeQuietly(zip);
       projectFileHandler.deleteLocalFile();
     }
   }
@@ -248,7 +263,7 @@ class FlowPreparer {
    */
   @VisibleForTesting
   File downloadProjectIfNotExists(final ProjectDirectoryMetadata proj, int execId)
-      throws IOException {
+          throws IOException {
     final String projectDir = generateProjectDirName(proj);
     if (proj.getInstalledDir() == null) {
       proj.setInstalledDir(new File(this.projectCacheDir, projectDir));
@@ -256,14 +271,14 @@ class FlowPreparer {
 
     // If directory exists, assume it's prepared and skip.
     if (proj.getInstalledDir().exists()) {
-	log.info("Project {} already cached. Skipping download. ExecId: {}", proj, execId);
+      log.info("Project {} already cached. Skipping download. ExecId: {}", proj, execId);
       // Hit the local cache.
       this.cacheMetrics.incrementCacheHit();
       // Update last modified time of the file keeping project dir size when the project is
       // accessed. This last modified time will be used to determined least recently used
       // projects when performing project directory clean-up.
       updateLastModifiedTime(
-          Paths.get(proj.getInstalledDir().getPath(), PROJECT_DIR_SIZE_FILE_NAME));
+              Paths.get(proj.getInstalledDir().getPath(), PROJECT_DIR_SIZE_FILE_NAME));
       return null;
     }
 

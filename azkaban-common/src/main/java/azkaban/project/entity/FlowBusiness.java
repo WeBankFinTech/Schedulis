@@ -166,6 +166,30 @@ public class FlowBusiness {
 
   private String subsystemDesc;
 
+  /**
+   * 开发科室
+   */
+  private String devDeptDesc;
+
+  /**
+   * 运维科室
+   */
+  private String opsDeptDesc;
+
+  /**
+   * ITSM 服务请求单号
+   */
+  private String itsmNo;
+
+  /**
+   * 扫描分区数量
+   */
+  private int scanPartitionNum;
+  /**
+   * 扫描数据大小，单位 GB
+   */
+  private int scanDataSize;
+
   public Integer getProjectId() {
     return projectId;
   }
@@ -476,5 +500,45 @@ public class FlowBusiness {
 
   public void setSubsystemDesc(String subsystemDesc) {
     this.subsystemDesc = subsystemDesc;
+  }
+
+  public String getDevDeptDesc() {
+    return devDeptDesc;
+  }
+
+  public void setDevDeptDesc(String devDeptDesc) {
+    this.devDeptDesc = devDeptDesc;
+  }
+
+  public String getOpsDeptDesc() {
+    return opsDeptDesc;
+  }
+
+  public void setOpsDeptDesc(String opsDeptDesc) {
+    this.opsDeptDesc = opsDeptDesc;
+  }
+
+  public String getItsmNo() {
+    return itsmNo;
+  }
+
+  public void setItsmNo(String itsmNo) {
+    this.itsmNo = itsmNo;
+  }
+
+  public int getScanPartitionNum() {
+    return scanPartitionNum;
+  }
+
+  public void setScanPartitionNum(int scanPartitionNum) {
+    this.scanPartitionNum = scanPartitionNum;
+  }
+
+  public int getScanDataSize() {
+    return scanDataSize;
+  }
+
+  public void setScanDataSize(int scanDataSize) {
+    this.scanDataSize = scanDataSize;
   }
 }

@@ -21,6 +21,7 @@ import azkaban.utils.FileIOUtils;
 import azkaban.utils.Props;
 import azkaban.utils.PropsUtils;
 import azkaban.utils.Utils;
+import java.io.IOException;
 import org.slf4j.LoggerFactory;
 import org.slf4j.Logger;
 
@@ -155,6 +156,11 @@ public class PluginCheckerAndActionsLoader {
         continue;
       }
 
+      try {
+        urlClassLoader.close();
+      } catch (IOException e) {
+        log.error("Error when closing URLClassLoader,caused by " + e.getMessage());
+      }
     }
   }
 

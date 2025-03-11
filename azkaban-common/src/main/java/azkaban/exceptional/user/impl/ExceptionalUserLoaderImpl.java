@@ -1,7 +1,7 @@
 package azkaban.exceptional.user.impl;
 
-import azkaban.db.DatabaseOperator;
 import azkaban.exceptional.user.dao.ExceptionalUserLoader;
+import azkaban.db.DatabaseOperator;
 import azkaban.exceptional.user.entity.ExceptionalUser;
 import org.apache.commons.dbutils.ResultSetHandler;
 import org.apache.commons.lang3.StringUtils;

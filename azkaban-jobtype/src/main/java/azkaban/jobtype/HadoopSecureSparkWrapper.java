@@ -16,7 +16,20 @@
 
 package azkaban.jobtype;
 
+import static azkaban.flow.CommonJobProperties.ATTEMPT_LINK;
+import static azkaban.flow.CommonJobProperties.EXECUTION_LINK;
+import static azkaban.flow.CommonJobProperties.JOB_LINK;
+import static azkaban.flow.CommonJobProperties.WORKFLOW_LINK;
+import static org.apache.hadoop.security.UserGroupInformation.HADOOP_TOKEN_FILE_LOCATION;
+
 import azkaban.utils.Props;
+import java.security.PrivilegedExceptionAction;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Properties;
 import org.apache.commons.lang.math.NumberUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -27,24 +40,18 @@ import org.apache.spark.util.Utils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.security.PrivilegedExceptionAction;
-import java.util.*;
-
-import static azkaban.flow.CommonJobProperties.*;
-import static org.apache.hadoop.security.UserGroupInformation.HADOOP_TOKEN_FILE_LOCATION;
-
 /**
  * <pre>
  * A Spark wrapper (more specifically a spark-submit wrapper) that works with Azkaban.
  * This class will be running on a separate process with JVM/ENV properties, classpath and main args
- *  built from {@link HadoopSparkJob}.
- * This class's main() will receive input args built from {@link HadoopSparkJob},
+ *  built from {@link azkaban.jobtype.HadoopSparkJob}.
+ * This class's main() will receive input args built from {@link azkaban.jobtype.HadoopSparkJob},
  *  and pass it on to spark-submit to launch spark job.
  * This process will be the client of the spark job.
  *
  * </pre>
  *
- * @see HadoopSecureSparkWrapper
+ * @see azkaban.jobtype.HadoopSecureSparkWrapper
  */
 public class HadoopSecureSparkWrapper {
 

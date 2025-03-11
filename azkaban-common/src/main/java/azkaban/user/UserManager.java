@@ -16,6 +16,8 @@
 
 package azkaban.user;
 
+import java.io.IOException;
+
 /**
  * Interface for the UserManager. Implementors will have to handle the retrieval of the User object
  * given the username and password.
@@ -49,4 +51,24 @@ public interface UserManager {
   public Role getRole(String roleName);
 
   public boolean validateProxyUser(String proxyUser, User realUser);
+
+  /**
+   * 校验运维用户-普通用户
+   * @param username 运维用户名
+   * @param password 运维用户密码
+   * @param normalUserName 普通用户名
+   * @param normalPassword 普通用户密码
+   * @param type
+   * @return
+   * @throws UserManagerException
+   */
+  public User validateNonRealNameUser(String username, String password, String normalUserName, String normalPassword, UserType type) throws UserManagerException, IOException;
+
+  /**
+   * 校验实名用户是否为运维人员，并且与运维用户同部门
+   * @param username 运维用户名
+   * @param normalUserName 实名用户
+   * @throws UserManagerException
+   */
+  void validDepartmentOpsUser(String username, String normalUserName) throws UserManagerException;
 }

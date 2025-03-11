@@ -17,23 +17,17 @@
 package azkaban.scheduler;
 
 import azkaban.Constants;
-import azkaban.trigger.Condition;
-import azkaban.trigger.ConditionChecker;
-import azkaban.trigger.Trigger;
-import azkaban.trigger.TriggerAction;
-import azkaban.trigger.TriggerLoaderException;
-import azkaban.trigger.TriggerManager;
-import azkaban.trigger.TriggerManagerAdapter;
-import azkaban.trigger.TriggerManagerException;
+import azkaban.trigger.*;
 import azkaban.trigger.builtin.BasicTimeChecker;
 import azkaban.trigger.builtin.ExecuteFlowAction;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import javax.inject.Inject;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import org.slf4j.LoggerFactory;
-import org.slf4j.Logger;
 
 public class TriggerBasedScheduleLoader implements ScheduleLoader {
 
@@ -57,10 +51,12 @@ public class TriggerBasedScheduleLoader implements ScheduleLoader {
     final List<TriggerAction> actions = createActions(s);
 
     final Trigger t = new Trigger.TriggerBuilder(s.getSubmitUser(),
-         this.triggerSource, triggerCondition, expireCondition, actions)
+        this.triggerSource, triggerCondition, expireCondition, actions, s.getComment(),
+        s.isAutoSubmit(), (Boolean) s.getOtherOption().getOrDefault("alertOnceOnMiss", true))
         .setSubmitTime(s.getSubmitTime())
         .setLastModifyTime(s.getLastModifyTime())
         .setId(s.getScheduleId())
+        .setLastModifyConfiguration(s.getLastModifyConfiguration())
         .build();
 
     if (s.isRecurring()) {
@@ -74,6 +70,9 @@ public class TriggerBasedScheduleLoader implements ScheduleLoader {
   private List<TriggerAction> createActions(final Schedule s) {
     final List<TriggerAction> actions = new ArrayList<>();
 	// FIXME The ExecuteFlowAction constructor is overloaded, adding some parameters, such as failure retry, failure skip.
+    if (s.getOtherOption() != null) {
+      s.getOtherOption().put(Constants.EXECUTE_FLOW_TRIGGER_ID, s.getScheduleId());
+    }
     final ExecuteFlowAction executeAct =
         new ExecuteFlowAction("executeFlowAction", s.getProjectId(),
             s.getProjectName(), s.getFlowName(), s.getSubmitUser(),
@@ -85,10 +84,11 @@ public class TriggerBasedScheduleLoader implements ScheduleLoader {
 
   private Condition createTriggerCondition(final Schedule s) {
     final Map<String, ConditionChecker> checkers = new HashMap<>();
-    final ConditionChecker checker =
+    final BasicTimeChecker checker =
         new BasicTimeChecker("BasicTimeChecker_1", s.getFirstSchedTime(),
             s.getTimezone(), s.isRecurring(), s.skipPastOccurrences(),
-            s.getPeriod(), s.getCronExpression());
+            s.getPeriod(), s.getCronExpression(), s.getOtherOption());
+    checker.setLastExecTime(s.getLastExecTime());
     checkers.put(checker.getId(), checker);
     final String expr = checker.getId() + ".eval()";
     final Condition cond = new Condition(checkers, expr);
@@ -134,13 +134,13 @@ public class TriggerBasedScheduleLoader implements ScheduleLoader {
     final List<TriggerAction> actions = t.getActions();
     ExecuteFlowAction act = null;
     for (final TriggerAction action : actions) {
-      if (action.getType().equals(ExecuteFlowAction.type)) {
+      if (action.getType().equals(ExecuteFlowAction.TYPE)) {
         act = (ExecuteFlowAction) action;
         break;
       }
     }
     if (triggerTimeChecker != null && act != null) {
-      return new Schedule(t.getTriggerId(),
+      Schedule schedule = new Schedule(t.getTriggerId(),
           act.getProjectId(),
           act.getProjectName(),
           act.getFlowName(),
@@ -156,7 +156,11 @@ public class TriggerBasedScheduleLoader implements ScheduleLoader {
           act.getExecutionOptions(),
           act.getSlaOptions(),
           triggerTimeChecker.getCronExpression(),
-          act.getOtherOption());
+          act.getOtherOption(),
+          t.getComment(),
+          t.isBackExecuteOnceOnMiss(),t.getLastModifyConfiguration());
+      schedule.setLastExecTime(triggerTimeChecker.getLastExecTime());
+      return schedule;
     } else {
       logger.error("Failed to parse schedule from trigger!");
       throw new ScheduleManagerException("Failed to parse schedule from trigger!");
@@ -166,7 +170,7 @@ public class TriggerBasedScheduleLoader implements ScheduleLoader {
   // expirecheckers or triggerCheckers only have BasicTimeChecker today. This should be refactored in future.
   private BasicTimeChecker getBasicTimeChecker(final Map<String, ConditionChecker> checkers) {
     for (final ConditionChecker checker : checkers.values()) {
-      if (checker.getType().equals(BasicTimeChecker.type)) {
+      if (checker.getType().equals(BasicTimeChecker.TYPE)) {
         return (BasicTimeChecker) checker;
       }
     }
@@ -186,7 +190,7 @@ public class TriggerBasedScheduleLoader implements ScheduleLoader {
     try {
       this.triggerManager.removeTrigger(s.getScheduleId(), s.getSubmitUser());
     } catch (final TriggerManagerException e) {
-      throw new ScheduleManagerException(e.getMessage());
+      throw new ScheduleManagerException(e.getMessage(), e);
     }
 
   }
@@ -215,9 +219,37 @@ public class TriggerBasedScheduleLoader implements ScheduleLoader {
       }
       final Schedule s = triggerToSchedule(t);
       schedules.add(s);
-      logger.info("loaded schedule for " + s.getProjectName() + " (project_ID: " + s.getProjectId() + ")");
+      logger.debug(
+          "loaded schedule for " + s.getProjectName() + " (project_ID: " + s.getProjectId() + ")");
     }
     return schedules;
   }
+
+  @Override
+  public long getTriggerInitTime() {
+    return this.triggerManager.getTriggerInitTime();
+  }
+
+  /**
+   * Loading all triggers from triggerManager and converted into Schedule.
+   */
+  @Override
+  public List<Schedule> loadAllSchedules() throws ScheduleManagerException {
+    List<Trigger> triggers = this.triggerManager.getTriggers();
+    List<Schedule> schedules = new ArrayList<>();
+    for (Trigger trigger : triggers) {
+      Schedule schedule = triggerToSchedule(trigger);
+      schedules.add(schedule);
+      logger.debug("loaded schedule for {} (project_id: {}, flow_id: {})",
+          schedule.getScheduleId(), schedule.getProjectName(), schedule.getFlowName());
+    }
+    return schedules;
+  }
+
+  @Override
+  public List<Integer> loadRemovedTriggers() {
+    return this.triggerManager.getRemovedTriggerIds();
+  }
+
 
 }

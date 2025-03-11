@@ -38,7 +38,7 @@ public abstract class AbstractProcessJob extends AbstractJob {
   public static final String ENV_PREFIX = "env.";
   public static final String ENV_PREFIX_UCASE = "ENV.";
   public static final String WORKING_DIR = "working.dir";
-  public static final String Flow_DIR = "flow.dir";
+  public static final String FLOW_DIR = "flow.dir";
   public static final String JOB_PROP_ENV = "JOB_PROP_FILE";
   public static final String JOB_OVERALL_PROP_ENV = "JOB_OVERALL_PROP_ENV";
   public static final String JOB_NAME_ENV = "JOB_NAME";
@@ -46,12 +46,12 @@ public abstract class AbstractProcessJob extends AbstractJob {
   private static final String SENSITIVE_JOB_PROP_NAME_SUFFIX = "_X";
   private static final String SENSITIVE_JOB_PROP_VALUE_PLACEHOLDER = "[MASKED]";
   private static final String JOB_DUMP_PROPERTIES_IN_LOG = "job.dump.properties";
-  protected final String _jobPath;
+  protected final String jobPath;
   private final Logger log;
   protected volatile Props jobProps;
   protected volatile Props sysProps;
 
-  protected String _cwd;
+  protected String cwd;
 
   private volatile Props generatedProperties;
 
@@ -61,8 +61,8 @@ public abstract class AbstractProcessJob extends AbstractJob {
 
     this.jobProps = jobProps;
     this.sysProps = sysProps;
-    this._cwd = getWorkingDirectory();
-    this._jobPath = this._cwd;
+    this.cwd = getWorkingDirectory();
+    this.jobPath = this.cwd;
 
     this.log = log;
   }
@@ -91,7 +91,7 @@ public abstract class AbstractProcessJob extends AbstractJob {
   }
 
   public String getJobPath() {
-    return this._jobPath;
+    return this.jobPath;
   }
 
   protected void resolveProps() {
@@ -136,12 +136,12 @@ public abstract class AbstractProcessJob extends AbstractJob {
   public File[] initPropsFiles() {
     // Create properties file with additionally all input generated properties.
     final File[] files = new File[2];
-    files[0] = createFlattenedPropsFile(this._cwd);
+    files[0] = createFlattenedPropsFile(this.cwd);
 
     this.jobProps.put(ENV_PREFIX + JOB_PROP_ENV, files[0].getAbsolutePath());
     this.jobProps.put(ENV_PREFIX + JOB_NAME_ENV, getId());
 
-    files[1] = this.createOutputPropsFile(getId(), this._cwd);
+    files[1] = this.createOutputPropsFile(getId(), this.cwd);
     this.jobProps.put(ENV_PREFIX + JOB_OUTPUT_PROP_FILE, files[1].getAbsolutePath());
     return files;
   }
@@ -154,7 +154,7 @@ public abstract class AbstractProcessJob extends AbstractJob {
   }
 
   public String getCwd() {
-    return this._cwd;
+    return this.cwd;
   }
 
   public Map<String, String> getEnvironmentVariables() {
@@ -165,7 +165,7 @@ public abstract class AbstractProcessJob extends AbstractJob {
   }
 
   public String getWorkingDirectory() {
-    final String workingDir = getJobProps().getString(WORKING_DIR, this._jobPath);
+    final String workingDir = getJobProps().getString(WORKING_DIR, this.jobPath);
     if (workingDir == null) {
       return "";
     }
@@ -173,7 +173,7 @@ public abstract class AbstractProcessJob extends AbstractJob {
   }
 
   public String getFlowDirectory() {
-    final String flowDir = getJobProps().getString(Flow_DIR, this._jobPath);
+    final String flowDir = getJobProps().getString(FLOW_DIR, this.jobPath);
     if (flowDir == null) {
       return "";
     }

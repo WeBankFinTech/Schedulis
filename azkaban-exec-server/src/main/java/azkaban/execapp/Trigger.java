@@ -27,7 +27,7 @@ import org.slf4j.Logger;
 
 public class Trigger implements Runnable {
 
-  private static final Logger logger = LoggerFactory.getLogger(Trigger.class);
+  private static final Logger logger = LoggerFactory.getLogger(azkaban.execapp.Trigger.class);
   private final int execId;
 //  private final ExecutorLoader executorLoader ;
 
@@ -57,12 +57,15 @@ public class Trigger implements Runnable {
    */
   @Override
   public void run() {
+    logger.info("Running trigger for " + this);
     if (isTriggerExpired()) {
       logger.info(this + " expired");
       return;
     }
 
+    logger.info("Check if trigger condition met for " + this);
     final boolean isTriggerConditionMet = this.triggerCondition.isMet();
+    logger.info("Trigger condition for execId = " + this.execId + " met? = " + isTriggerConditionMet);
     if (isTriggerConditionMet) {
       logger.info("Condition " + this.triggerCondition.getExpression() + " met");
       for (final TriggerAction action : this.actions) {
@@ -75,9 +78,11 @@ public class Trigger implements Runnable {
           }
         } catch (final Exception e) {
           logger.error("Failed to do action " + action.getDescription()
-              + " for execution " + Trigger.this.execId, e);
+              + " for execution " + azkaban.execapp.Trigger.this.execId, e);
         }
       }
+    } else {
+      logger.info("Condition " + this.triggerCondition.getExpression() + " does not met");
     }
   }
 

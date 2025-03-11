@@ -1,8 +1,8 @@
 package azkaban.executor;
 
-import java.io.File;
-
 import static azkaban.utils.FileIOUtils.LogData;
+
+import java.io.File;
 
 public interface ExecutionLogsAdapter {
 

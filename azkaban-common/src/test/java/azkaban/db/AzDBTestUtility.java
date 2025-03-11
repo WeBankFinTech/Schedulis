@@ -16,14 +16,13 @@
  */
 package azkaban.db;
 
-import org.apache.commons.dbutils.QueryRunner;
-
 import java.io.File;
+import org.apache.commons.dbutils.QueryRunner;
 
 public class AzDBTestUtility {
 
   public static DatabaseOperator initQuartzDB() throws Exception {
-    final AzkabanDataSource dataSource = new EmbeddedMysqlDataSource();
+    final AbstractAzkabanDataSource dataSource = new EmbeddedMysqlDataSource();
 
     final String sqlScriptsDir = new File("../azkaban-web-server/src/test/resources/")
         .getCanonicalPath();
@@ -33,7 +32,7 @@ public class AzDBTestUtility {
     return new DatabaseOperator(new QueryRunner(dataSource));
   }
 
-  public static class EmbeddedH2BasicDataSource extends AzkabanDataSource {
+  public static class EmbeddedH2BasicDataSource extends AbstractAzkabanDataSource {
 
     public EmbeddedH2BasicDataSource() {
       super();
@@ -53,7 +52,7 @@ public class AzDBTestUtility {
     }
   }
 
-  public static class EmbeddedMysqlDataSource extends AzkabanDataSource {
+  public static class EmbeddedMysqlDataSource extends AbstractAzkabanDataSource {
 
     public EmbeddedMysqlDataSource() {
       super();

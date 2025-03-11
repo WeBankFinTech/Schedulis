@@ -16,14 +16,14 @@
 
 package azkaban.jobtype;
 
+import java.io.IOException;
+import java.util.HashMap;
+import java.util.Map;
+
 import org.apache.hadoop.mapred.Counters;
 import org.apache.hadoop.mapred.RunningJob;
 import org.apache.hadoop.mapred.TIPStatus;
 import org.apache.hadoop.mapred.TaskReport;
-
-import java.io.IOException;
-import java.util.HashMap;
-import java.util.Map;
 
 /**
  * Container that holds state of a MapReduce job

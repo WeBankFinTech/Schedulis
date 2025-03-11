@@ -85,6 +85,7 @@ public class TrackingThreadPool extends ThreadPoolExecutor {
       // to ensure the listener doesn't cause any issues
       logger.warn("Listener threw exception", e);
     }
+    startTime.remove();
   }
 
   public Set<Runnable> getInProgressTasks() {

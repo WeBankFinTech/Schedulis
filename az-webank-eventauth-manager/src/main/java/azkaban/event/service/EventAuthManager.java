@@ -1,5 +1,8 @@
 package azkaban.event.service;
 
+
+import static java.util.Objects.requireNonNull;
+
 import azkaban.event.dao.EventLoader;
 import azkaban.event.entity.EventAuth;
 import azkaban.function.CheckedSupplier;
@@ -8,12 +11,6 @@ import com.jcraft.jsch.ChannelExec;
 import com.jcraft.jsch.JSch;
 import com.jcraft.jsch.JSchException;
 import com.jcraft.jsch.Session;
-import org.apache.commons.lang.StringEscapeUtils;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import javax.inject.Inject;
-import javax.inject.Singleton;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
@@ -21,11 +18,18 @@ import java.sql.SQLException;
 import java.text.DateFormat;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Comparator;
+import java.util.Date;
+import java.util.List;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
-
-import static java.util.Objects.requireNonNull;
+import javax.inject.Inject;
+import javax.inject.Singleton;
+import org.apache.commons.lang.StringEscapeUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @Singleton
 public class EventAuthManager {
@@ -183,7 +187,7 @@ public class EventAuthManager {
 
     public List<EventAuth> getEventAuth(String topic, String sender, String msgName) {
         return exceptionHandler(new ArrayList<>(),
-                () -> eventAuthLoader.getEventAuth(topic, sender, msgName));
+                () -> eventAuthLoader.getEvent(topic, sender, msgName));
     }
 
     public Integer setBacklogAlarmUser(EventAuth eventAuth) {

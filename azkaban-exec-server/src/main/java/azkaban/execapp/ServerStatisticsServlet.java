@@ -35,14 +35,14 @@ import org.slf4j.Logger;
 public class ServerStatisticsServlet extends HttpServlet {
 
   private static final long serialVersionUID = 1L;
-  private static final int cacheTimeInMilliseconds = 1000;
+  private static final int CACHE_TIME_IN_MILLISECONDS = 1000;
   private static final Logger logger = LoggerFactory.getLogger(ServerStatisticsServlet.class);
-  private static final String noCacheParamName = "nocache";
-  private static final boolean exists_Bash = new File("/bin/bash").exists();
-  private static final boolean exists_Cat = new File("/bin/cat").exists();
-  private static final boolean exists_Grep = new File("/bin/grep").exists();
-  private static final boolean exists_Meminfo = new File("/proc/meminfo").exists();
-  private static final boolean exists_LoadAvg = new File("/proc/loadavg").exists();
+  private static final String NO_CACHE_PARAM_NAME = "nocache";
+  private static final boolean EXISTS_BASH = new File("/bin/bash").exists();
+  private static final boolean EXISTS_CAT = new File("/bin/cat").exists();
+  private static final boolean EXISTS_GREP = new File("/bin/grep").exists();
+  private static final boolean EXISTS_MEM_INFO = new File("/proc/meminfo").exists();
+  private static final boolean EXISTS_LOAD_AVG = new File("/proc/loadavg").exists();
 
   protected static long lastRefreshedTime = 0;
   protected static ExecutorInfo cachedstats = null;
@@ -64,9 +64,9 @@ public class ServerStatisticsServlet extends HttpServlet {
   protected void doPost(final HttpServletRequest req, final HttpServletResponse resp)
       throws ServletException, IOException {
 
-    final boolean noCache = null != req && Boolean.valueOf(req.getParameter(noCacheParamName));
+    final boolean noCache = null != req && Boolean.valueOf(req.getParameter(NO_CACHE_PARAM_NAME));
 
-    if (noCache || System.currentTimeMillis() - lastRefreshedTime > cacheTimeInMilliseconds) {
+    if (noCache || System.currentTimeMillis() - lastRefreshedTime > CACHE_TIME_IN_MILLISECONDS) {
       this.populateStatistics(noCache);
     }
 
@@ -83,9 +83,9 @@ public class ServerStatisticsServlet extends HttpServlet {
    * means 55.6%
    */
   protected void fillRemainingMemoryPercent(final ExecutorInfo stats) {
-    if (exists_Bash && exists_Cat && exists_Grep && exists_Meminfo) {
-      final ProcessBuilder processBuilder =
-          new ProcessBuilder("/bin/bash", "-c",
+    if (EXISTS_BASH && EXISTS_CAT && EXISTS_GREP && EXISTS_MEM_INFO) {
+      final java.lang.ProcessBuilder processBuilder =
+          new java.lang.ProcessBuilder("/bin/bash", "-c",
               "/bin/cat /proc/meminfo | grep -E \"^MemTotal:|^MemFree:|^Buffers:|^Cached:|^SwapCached:\"");
       try {
         final ArrayList<String> output = new ArrayList<>();
@@ -196,7 +196,7 @@ public class ServerStatisticsServlet extends HttpServlet {
    */
   protected synchronized void populateStatistics(final boolean noCache) {
     //check again before starting the work.
-    if (noCache || System.currentTimeMillis() - lastRefreshedTime > cacheTimeInMilliseconds) {
+    if (noCache || System.currentTimeMillis() - lastRefreshedTime > CACHE_TIME_IN_MILLISECONDS) {
       final ExecutorInfo stats = new ExecutorInfo();
 
       fillRemainingMemoryPercent(stats);
@@ -241,9 +241,9 @@ public class ServerStatisticsServlet extends HttpServlet {
    * method will only work on the property "cpuUsage".
    */
   protected void fillCpuUsage(final ExecutorInfo stats) {
-    if (exists_Bash && exists_Cat && exists_LoadAvg) {
-      final ProcessBuilder processBuilder =
-          new ProcessBuilder("/bin/bash", "-c", "/bin/cat /proc/loadavg");
+    if (EXISTS_BASH && EXISTS_CAT && EXISTS_LOAD_AVG) {
+      final java.lang.ProcessBuilder processBuilder =
+          new java.lang.ProcessBuilder("/bin/bash", "-c", "/bin/cat /proc/loadavg");
       try {
         final ArrayList<String> output = new ArrayList<>();
         final Process process = processBuilder.start();

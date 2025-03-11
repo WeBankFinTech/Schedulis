@@ -48,8 +48,8 @@ import java.util.TreeMap;
  */
 public class Props {
 
-  private final Map<String, String> _current;
-  private Props _parent;
+  private final Map<String, String> current;
+  private Props parent;
   private String source = null;
 
   /**
@@ -63,8 +63,8 @@ public class Props {
    * Constructor for empty Props with parent override.
    */
   public Props(final Props parent) {
-    this._current = new HashMap<>();
-    this._parent = parent;
+    this.current = new HashMap<>();
+    this.parent = parent;
   }
 
   /**
@@ -81,13 +81,10 @@ public class Props {
     this(parent);
     setSource(file.getPath());
 
-    final InputStream input = new BufferedInputStream(new FileInputStream(file));
-    try {
+    try (final InputStream input = new BufferedInputStream(new FileInputStream(file))) {
       loadFrom(input);
     } catch (final IOException e) {
       throw e;
-    } finally {
-      input.close();
     }
   }
 
@@ -143,7 +140,7 @@ public class Props {
   public static Props of(final Props parent, final String... args) {
     if (args.length % 2 != 0) {
       throw new IllegalArgumentException(
-          "Must have an equal number of keys and values.");
+              "Must have an equal number of keys and values.");
     }
 
     final Map<String, String> vals = new HashMap<>(args.length / 2);
@@ -194,11 +191,11 @@ public class Props {
   }
 
   public Props getEarliestAncestor() {
-    if (this._parent == null) {
+    if (this.parent == null) {
       return this;
     }
 
-    return this._parent.getEarliestAncestor();
+    return this.parent.getEarliestAncestor();
   }
 
   public void setEarliestAncestor(final Props parent) {
@@ -210,33 +207,33 @@ public class Props {
    * Clear the current Props, but leaves the parent untouched.
    */
   public void clearLocal() {
-    this._current.clear();
+    this.current.clear();
   }
 
   /**
    * Check key in current Props then search in parent
    */
   public boolean containsKey(final Object k) {
-    return this._current.containsKey(k)
-        || (this._parent != null && this._parent.containsKey(k));
+    return this.current.containsKey(k)
+            || (this.parent != null && this.parent.containsKey(k));
   }
 
   /**
    * Check value in current Props then search in parent
    */
   public boolean containsValue(final Object value) {
-    return this._current.containsValue(value)
-        || (this._parent != null && this._parent.containsValue(value));
+    return this.current.containsValue(value)
+            || (this.parent != null && this.parent.containsValue(value));
   }
 
   /**
    * Return value if available in current Props otherwise return from parent
    */
   public String get(final Object key) {
-    if (this._current.containsKey(key)) {
-      return this._current.get(key);
-    } else if (this._parent != null) {
-      return this._parent.get(key);
+    if (this.current.containsKey(key)) {
+      return this.current.get(key);
+    } else if (this.parent != null) {
+      return this.parent.get(key);
     } else {
       return null;
     }
@@ -246,18 +243,18 @@ public class Props {
    * Get the key set from the current Props
    */
   public Set<String> localKeySet() {
-    return this._current.keySet();
+    return this.current.keySet();
   }
 
   /**
    * Get parent Props
    */
   public Props getParent() {
-    return this._parent;
+    return this.parent;
   }
 
   public void setParent(final Props prop) {
-    this._parent = prop;
+    this.parent = prop;
   }
 
   /**
@@ -270,7 +267,7 @@ public class Props {
    * this Props.
    */
   public String put(final String key, final String value) {
-    return this._current.put(key, value);
+    return this.current.put(key, value);
   }
 
   /**
@@ -284,7 +281,7 @@ public class Props {
    */
   public void put(final Properties properties) {
     for (final String propName : properties.stringPropertyNames()) {
-      this._current.put(propName, properties.getProperty(propName));
+      this.current.put(propName, properties.getProperty(propName));
     }
   }
 
@@ -292,21 +289,21 @@ public class Props {
    * Put integer
    */
   public String put(final String key, final Integer value) {
-    return this._current.put(key, value.toString());
+    return this.current.put(key, value.toString());
   }
 
   /**
    * Put Long. Stores as String.
    */
   public String put(final String key, final Long value) {
-    return this._current.put(key, value.toString());
+    return this.current.put(key, value.toString());
   }
 
   /**
    * Put Double. Stores as String.
    */
   public String put(final String key, final Double value) {
-    return this._current.put(key, value.toString());
+    return this.current.put(key, value.toString());
   }
 
   /**
@@ -348,7 +345,7 @@ public class Props {
    * Remove only the local value of key s, and not the parents.
    */
   public String removeLocal(final Object s) {
-    return this._current.remove(s);
+    return this.current.remove(s);
   }
 
   /**
@@ -363,7 +360,7 @@ public class Props {
    * counted)
    */
   public int localSize() {
-    return this._current.size();
+    return this.current.size();
   }
 
   /**
@@ -376,7 +373,7 @@ public class Props {
         return Class.forName(get(key));
       } else {
         throw new UndefinedPropertyException("Missing required property '"
-            + key + "'");
+                + key + "'");
       }
     } catch (final ClassNotFoundException e) {
       throw new IllegalArgumentException(e);
@@ -389,7 +386,7 @@ public class Props {
         return Class.forName(get(key), initialize, cl);
       } else {
         throw new UndefinedPropertyException("Missing required property '"
-            + key + "'");
+                + key + "'");
       }
     } catch (final ClassNotFoundException e) {
       throw new IllegalArgumentException(e);
@@ -426,7 +423,7 @@ public class Props {
       return get(key);
     } else {
       throw new UndefinedPropertyException("Missing required property '" + key
-          + "'");
+              + "'");
     }
   }
 
@@ -467,7 +464,7 @@ public class Props {
       return Arrays.asList(val.split(sep));
     } else {
       throw new UndefinedPropertyException("Missing required property '" + key
-          + "'");
+              + "'");
     }
   }
 
@@ -488,7 +485,7 @@ public class Props {
    * it'll return the defaultValue.
    */
   public List<String> getStringList(final String key, final List<String> defaultValue,
-      final String sep) {
+                                    final String sep) {
     if (containsKey(key)) {
       return getStringList(key, sep);
     } else {
@@ -533,7 +530,7 @@ public class Props {
       return "true".equalsIgnoreCase(get(key));
     } else {
       throw new UndefinedPropertyException("Missing required property '" + key
-          + "'");
+              + "'");
     }
   }
 
@@ -559,7 +556,7 @@ public class Props {
       return Long.parseLong(get(name));
     } else {
       throw new UndefinedPropertyException("Missing required property '" + name
-          + "'");
+              + "'");
     }
   }
 
@@ -585,7 +582,7 @@ public class Props {
       return Integer.parseInt(get(name).trim());
     } else {
       throw new UndefinedPropertyException("Missing required property '" + name
-          + "'");
+              + "'");
     }
   }
 
@@ -611,7 +608,7 @@ public class Props {
       return Double.parseDouble(get(name).trim());
     } else {
       throw new UndefinedPropertyException("Missing required property '" + name
-          + "'");
+              + "'");
     }
   }
 
@@ -624,11 +621,11 @@ public class Props {
       try {
         return new URI(get(name));
       } catch (final URISyntaxException e) {
-        throw new IllegalArgumentException(e.getMessage());
+        throw new IllegalArgumentException(e.getMessage(), e);
       }
     } else {
       throw new UndefinedPropertyException("Missing required property '" + name
-          + "'");
+              + "'");
     }
   }
 
@@ -648,7 +645,7 @@ public class Props {
     try {
       return getUri(name, new URI(defaultValue));
     } catch (final URISyntaxException e) {
-      throw new IllegalArgumentException(e.getMessage());
+      throw new IllegalArgumentException(e.getMessage(), e);
     }
   }
 
@@ -659,12 +656,10 @@ public class Props {
    * @throws IOException If the file can't be found or there is an io error
    */
   public void storeLocal(final File file) throws IOException {
-    final BufferedOutputStream out =
-        new BufferedOutputStream(new FileOutputStream(file));
-    try {
+
+    try (final BufferedOutputStream out =
+                 new BufferedOutputStream(new FileOutputStream(file))) {
       storeLocal(out);
-    } finally {
-      out.close();
     }
   }
 
@@ -672,7 +667,7 @@ public class Props {
    * Returns a copy of only the local values of this props
    */
   public Props local() {
-    return new Props(null, this._current);
+    return new Props(null, this.current);
   }
 
   /**
@@ -683,7 +678,7 @@ public class Props {
    */
   public void storeLocal(final OutputStream out) throws IOException {
     final Properties p = new Properties();
-    for (final String key : this._current.keySet()) {
+    for (final String key : this.current.keySet()) {
       p.setProperty(key, get(key));
     }
     p.store(out, null);
@@ -696,7 +691,7 @@ public class Props {
    */
   public Properties toProperties() {
     final Properties p = new Properties();
-    for (final String key : this._current.keySet()) {
+    for (final String key : this.current.keySet()) {
       p.setProperty(key, get(key));
     }
 
@@ -712,8 +707,9 @@ public class Props {
     allProp.putAll(toProperties());
 
     // import parent properties
-    if(_parent != null)
-      allProp.putAll(_parent.toProperties());
+    if(parent != null) {
+      allProp.putAll(parent.toProperties());
+    }
 
     return allProp;
   }
@@ -725,12 +721,10 @@ public class Props {
    * @throws IOException If there is an error writing
    */
   public void storeFlattened(final File file) throws IOException {
-    final BufferedOutputStream out =
-        new BufferedOutputStream(new FileOutputStream(file));
-    try {
+
+    try (final BufferedOutputStream out =
+                 new BufferedOutputStream(new FileOutputStream(file))) {
       storeFlattened(out);
-    } finally {
-      out.close();
     }
   }
 
@@ -771,8 +765,8 @@ public class Props {
    * @param prefix The string prefix
    */
   public Map<String, String> getMapByPrefix(final String prefix) {
-    final Map<String, String> values = this._parent == null ? new HashMap<>() :
-        this._parent.getMapByPrefix(prefix);
+    final Map<String, String> values = this.parent == null ? new HashMap<>() :
+            this.parent.getMapByPrefix(prefix);
 
     // when there is a conflict, value from the child takes the priority.
     for (final String key : this.localKeySet()) {
@@ -791,8 +785,8 @@ public class Props {
 
     keySet.addAll(localKeySet());
 
-    if (this._parent != null) {
-      keySet.addAll(this._parent.getKeySet());
+    if (this.parent != null) {
+      keySet.addAll(this.parent.getKeySet());
     }
 
     return keySet;
@@ -805,7 +799,7 @@ public class Props {
     logger.info(comment);
 
     for (final String key : getKeySet()) {
-      logger.info("  key=" + key + " value=" + get(key));
+      logger.info("  key={} value={}", key, get(key));
     }
   }
 
@@ -822,7 +816,7 @@ public class Props {
     }
 
     final Props p = (Props) o;
-    return this._current.equals(p._current) && Utils.equals(this._parent, p._parent);
+    return this.current.equals(p.current) && Utils.equals(this.parent, p.parent);
   }
 
   /**
@@ -848,9 +842,9 @@ public class Props {
    */
   @Override
   public int hashCode() {
-    int code = this._current.hashCode();
-    if (this._parent != null) {
-      code += this._parent.hashCode();
+    int code = this.current.hashCode();
+    if (this.parent != null) {
+      code += this.parent.hashCode();
     }
     return code;
   }
@@ -861,15 +855,15 @@ public class Props {
   @Override
   public String toString() {
     final StringBuilder builder = new StringBuilder("{");
-    for (final Map.Entry<String, String> entry : this._current.entrySet()) {
+    for (final Map.Entry<String, String> entry : this.current.entrySet()) {
       builder.append(entry.getKey());
       builder.append(": ");
       builder.append(entry.getValue());
       builder.append(", ");
     }
-    if (this._parent != null) {
+    if (this.parent != null) {
       builder.append(" parent = ");
-      builder.append(this._parent.toString());
+      builder.append(this.parent.toString());
     }
     builder.append("}");
     return builder.toString();
@@ -881,5 +875,9 @@ public class Props {
 
   public void setSource(final String source) {
     this.source = source;
+  }
+
+  public Map<String, String> getCurrent() {
+    return current;
   }
 }

@@ -16,20 +16,30 @@
 
 package azkaban.jobtype.examples.java;
 
-import azkaban.jobtype.javautils.AbstractHadoopJob;
-import azkaban.utils.Props;
+import java.io.IOException;
+import java.util.Iterator;
+import java.util.StringTokenizer;
+
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.Text;
-import org.apache.hadoop.mapred.*;
-import org.slf4j.Logger;
+import org.apache.hadoop.mapred.JobConf;
+import org.apache.hadoop.mapred.MapReduceBase;
+import org.apache.hadoop.mapred.Mapper;
+import org.apache.hadoop.mapred.OutputCollector;
+import org.apache.hadoop.mapred.Reducer;
+import org.apache.hadoop.mapred.FileInputFormat;
+import org.apache.hadoop.mapred.Reporter;
+import org.apache.hadoop.mapred.TextInputFormat;
+import org.apache.hadoop.mapred.FileOutputFormat;
+import org.apache.hadoop.mapred.TextOutputFormat;
 import org.slf4j.LoggerFactory;
+import org.slf4j.Logger;
 
-import java.io.IOException;
-import java.util.Iterator;
-import java.util.StringTokenizer;
+import azkaban.jobtype.javautils.AbstractHadoopJob;
+import azkaban.utils.Props;
 
 public class WordCount extends AbstractHadoopJob {
 

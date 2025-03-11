@@ -183,6 +183,9 @@ public class Permission {
     return flag;
   }
 
+  /**
+   * the type of permission
+   */
   public enum Type {
     READ(0x0000001),
     WRITE(0x0000002),

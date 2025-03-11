@@ -21,22 +21,33 @@ import static java.util.Objects.requireNonNull;
 import azkaban.Constants;
 import azkaban.Constants.ConfigurationKeys;
 import azkaban.alert.Alerter;
-import azkaban.executor.*;
+import azkaban.batch.HoldBatchAlert;
+import azkaban.eventnotify.entity.EventNotify;
+import azkaban.executor.ExecutableFlow;
+import azkaban.executor.ExecutableFlowBase;
+import azkaban.executor.ExecutableNode;
+import azkaban.executor.ExecutionCycle;
+import azkaban.executor.Executor;
+import azkaban.executor.ExecutorLoader;
+import azkaban.executor.ExecutorManagerException;
 import azkaban.executor.mail.DefaultMailCreator;
 import azkaban.executor.mail.MailCreator;
 import azkaban.history.ExecutionRecover;
 import azkaban.metrics.CommonMetrics;
+import azkaban.metrics.ProjectHourlyReportMertics;
+import azkaban.project.entity.FlowBusiness;
+import azkaban.project.entity.ProjectHourlyReportConfig;
+import azkaban.scheduler.Schedule;
 import azkaban.sla.SlaOption;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableListMultimap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Multimaps;
-
-import com.webank.wedatasphere.schedulis.common.executor.ExecutionCycle;
+import java.util.Date;
 import java.util.List;
-import java.util.stream.Collectors;
 import java.util.Map;
-
+import java.util.Set;
+import java.util.stream.Collectors;
 import javax.inject.Inject;
 import javax.inject.Singleton;
 import javax.mail.internet.AddressException;
@@ -106,10 +117,13 @@ public class Emailer extends AbstractMailer implements Alerter {
     }
   }
 
+  @Override
+  public void alertOnFlowStarted(ExecutableFlow executableFlow, List<EventNotify> eventNotifies) throws Exception {
+
+  }
 
   @Override
   public void alertOnSla(final SlaOption slaOption, final String slaMessage) {
-    logger.info("alert on sla");
     final String subject =
         "SLA violation for " + getJobOrFlowName(slaOption) + " on " + getAzkabanName();
     final List<String> emailList =
@@ -120,7 +134,6 @@ public class Emailer extends AbstractMailer implements Alerter {
 
   @Override
   public void alertOnFirstError(final ExecutableFlow flow) {
-    logger.info("alert on first error");
     final EmailMessage message = this.messageCreator.createMessage();
     final MailCreator mailCreator = getMailCreator(flow);
     final boolean mailCreated = mailCreator.createFirstErrorMessage(flow, message, this.azkabanName,
@@ -131,7 +144,6 @@ public class Emailer extends AbstractMailer implements Alerter {
 
   @Override
   public void alertOnError(final ExecutableFlow flow, final String... extraReasons) {
-    logger.info("alert on error");
     final EmailMessage message = this.messageCreator.createMessage();
     final MailCreator mailCreator = getMailCreator(flow);
     final boolean mailCreated = mailCreator.createErrorEmail(flow, message, this.azkabanName,
@@ -140,24 +152,42 @@ public class Emailer extends AbstractMailer implements Alerter {
   }
 
   @Override
-  public void alertOnIMSRegistStart(ExecutableFlow exflow,Map<String, Props> sharedProps,Logger logger) throws Exception {
-    logger.warn("alertOnIMSRegistStart not implement.");
+  public void alertOnIMSRegistFlowStart(ExecutableFlow exflow, Map<String, Props> sharedProps,
+                                        Logger logger,
+                                        FlowBusiness flowBusiness, Props props) throws Exception {
   }
 
   @Override
-  public void alertOnIMSRegistFinish(ExecutableFlow exflow,Map<String, Props> sharedProps,Logger logger) throws Exception {
-    logger.warn("alertOnIMSRegistFinish not implement.");
+  public void alertOnIMSRegistNodeStart(ExecutableFlow exflow, Logger logger, FlowBusiness flowBusiness,
+                                        Props props, ExecutableNode node) throws Exception {
+
   }
 
   @Override
-  public void alertOnIMSRegistError(ExecutableFlow exflow,Map<String, Props> sharedProps,Logger logger) throws Exception {
-    logger.warn("alertOnIMSRegistError not implement.");
+  public String alertOnIMSRegistStart(String projectName, String flowId, FlowBusiness flowBusiness,
+      Props props)
+      throws Exception {
+    return "";
   }
 
+  @Override
+  public void alertOnIMSUploadForFlow(ExecutableFlowBase flowBase, Map<String, Props> sharedProps,
+                                      Logger logger, FlowBusiness flowBusiness, ExecutableNode node, Props props) throws Exception {
+  }
+
+  @Override
+  public void alertOnIMSUploadForNode(ExecutableFlowBase flowBase, Logger logger,
+                                      FlowBusiness flowBusiness, ExecutableNode node, Props props) {
+
+  }
+
+  @Override
+  public void alertOnIMSRegistError(ExecutableFlow exflow, Map<String, Props> sharedProps,
+      Logger logger) throws Exception {
+  }
 
   @Override
   public void alertOnSuccess(final ExecutableFlow flow) {
-    logger.info("alert on success");
     final EmailMessage message = this.messageCreator.createMessage();
     final MailCreator mailCreator = getMailCreator(flow);
     final boolean mailCreated = mailCreator.createSuccessEmail(flow, message, this.azkabanName,
@@ -250,10 +280,152 @@ public class Emailer extends AbstractMailer implements Alerter {
       return flowName;
     }
   }
+  /*
+  public void sendFirstErrorMessage(final ExecutableFlow flow) {
+    final EmailMessage message = new EmailMessage(this.mailHost, this.mailPort, this.mailUser,
+        this.mailPassword);
+    message.setFromAddress(this.mailSender);
+    message.setTLS(this.tls);
+    message.setAuth(super.hasMailAuth());
+
+    final ExecutionOptions option = flow.getExecutionOptions();
+
+    final MailCreator mailCreator =
+        DefaultMailCreator.getCreator(option.getMailCreator());
+
+    logger.debug("ExecutorMailer using mail creator:"
+        + mailCreator.getClass().getCanonicalName());
+
+    final boolean mailCreated =
+        mailCreator.createFirstErrorMessage(flow, message, this.azkabanName, this.scheme,
+            this.clientHostname, this.clientPortNumber);
+
+    if (mailCreated && !this.testMode) {
+      try {
+        message.sendEmail();
+        logger.info("Sent first error email message for execution " + flow.getExecutionId());
+        this.commonMetrics.markSendEmailSuccess();
+      } catch (final Exception e) {
+        logger.error(
+            "Failed to send first error email message for execution " + flow.getExecutionId(), e);
+        this.commonMetrics.markSendEmailFail();
+      }
+    }
+  }
+
+  public void sendErrorEmail(final ExecutableFlow flow, final String... extraReasons) {
+    logger.info("使用默认告警系统发送 ERROR 邮件告警");
+
+    final EmailMessage message = new EmailMessage(this.mailHost, this.mailPort, this.mailUser,
+        this.mailPassword);
+    message.setFromAddress(this.mailSender);
+    message.setTLS(this.tls);
+    message.setAuth(super.hasMailAuth());
+
+    final ExecutionOptions option = flow.getExecutionOptions();
+
+    final MailCreator mailCreator =
+        DefaultMailCreator.getCreator(option.getMailCreator());
+    logger.debug("ExecutorMailer using mail creator:"
+        + mailCreator.getClass().getCanonicalName());
+
+    final boolean mailCreated =
+        mailCreator.createErrorEmail(flow, message, this.azkabanName, this.scheme,
+            this.clientHostname, this.clientPortNumber, extraReasons);
+
+    if (mailCreated && !this.testMode) {
+      try {
+        message.sendEmail();
+        logger.info("Sent error email message for execution " + flow.getExecutionId());
+        this.commonMetrics.markSendEmailSuccess();
+      } catch (final Exception e) {
+        logger
+            .error("Failed to send error email message for execution " + flow.getExecutionId(), e);
+        this.commonMetrics.markSendEmailFail();
+      }
+    }
+  }
+
+  public void sendSuccessEmail(final ExecutableFlow flow) {
+    logger.info("使用默认告警系统发送 SUCCESS 邮件告警");
+
+    final EmailMessage message = new EmailMessage(this.mailHost, this.mailPort, this.mailUser,
+        this.mailPassword);
+    message.setFromAddress(this.mailSender);
+    message.setTLS(this.tls);
+    message.setAuth(super.hasMailAuth());
+
+    final ExecutionOptions option = flow.getExecutionOptions();
+
+    final MailCreator mailCreator =
+        DefaultMailCreator.getCreator(option.getMailCreator());
+    logger.debug("ExecutorMailer using mail creator:"
+        + mailCreator.getClass().getCanonicalName());
+
+    final boolean mailCreated =
+        mailCreator.createSuccessEmail(flow, message, this.azkabanName, this.scheme,
+            this.clientHostname, this.clientPortNumber);
+
+    if (mailCreated && !this.testMode) {
+      try {
+        message.sendEmail();
+        logger.info("Sent success email message for execution " + flow.getExecutionId());
+        this.commonMetrics.markSendEmailSuccess();
+      } catch (final Exception e) {
+        logger.error("Failed to send success email message for execution " + flow.getExecutionId(),
+            e);
+        this.commonMetrics.markSendEmailFail();
+      }
+    }
+  }
+
+  private void sendSlaAlertEmail(final SlaOption slaOption, final ExecutableFlow exflow) {
+    logger.info("使用默认告警系统发送 SLA 邮件告警");
+
+    final String subject = "Sla Violation Alert on " + getAzkabanName();
+    final String body = "This is SLA Alerter";
+    final List<String> emailList =
+        (List<String>) slaOption.getInfo().get(SlaOption.INFO_EMAIL_LIST);
+    if (emailList != null && !emailList.isEmpty()) {
+      final EmailMessage message =
+          super.createEmailMessage(subject, "text/html", emailList);
+
+      message.setBody(body);
+
+      if (!this.testMode) {
+        try {
+          message.sendEmail();
+          this.commonMetrics.markSendEmailSuccess();
+        } catch (final MessagingException e) {
+          logger.error("Failed to send SLA email message" + body, e);
+          this.commonMetrics.markSendEmailFail();
+        }
+      }
+    }
+  }*/
+/*
+  @Override
+  public void alertOnSuccess(final ExecutableFlow exflow) {
+    sendSuccessEmail(exflow);
+  }
 
   @Override
-  public void alertOnSla(SlaOption slaOption, ExecutableFlow exflow) throws Exception {
-    logger.info("alertOnSla.");
+  public void alertOnError(final ExecutableFlow exflow, final String... extraReasons) {
+    sendErrorEmail(exflow, extraReasons);
+  }
+
+  @Override
+  public void alertOnFirstError(final ExecutableFlow exflow) {
+    sendFirstErrorMessage(exflow);
+  }
+
+  @Override
+  public void alertOnSla(final SlaOption slaOption, final String slaMessage) {
+    sendSlaAlertEmail(slaOption, slaMessage);
+  }*/
+
+  @Override
+  public void alertOnSla(SlaOption slaOption, ExecutableFlow exflow, String alertType) throws Exception {
     final EmailMessage message = this.messageCreator.createMessage();
     final MailCreator mailCreator = getMailCreator(exflow);
     final boolean mailCreated = mailCreator.createFirstErrorMessage(exflow, message, this.azkabanName,
@@ -264,7 +436,6 @@ public class Emailer extends AbstractMailer implements Alerter {
 
   @Override
   public void alertOnFinishSla(SlaOption slaOption, ExecutableFlow exflow) throws Exception {
-    logger.info("alertOnFinishSla.");
     final EmailMessage message = this.messageCreator.createMessage();
     final MailCreator mailCreator = getMailCreator(exflow);
     final boolean mailCreated = mailCreator.createFirstErrorMessage(exflow, message, this.azkabanName,
@@ -275,26 +446,54 @@ public class Emailer extends AbstractMailer implements Alerter {
 
   @Override
   public void alertOnFlowPaused(ExecutableFlow exflow, String nodePath) throws Exception {
-
-    logger.warn("alertOnFlowPaused not implement.");
-
+    throw new Exception("undefine...");
   }
 
   @Override
   public void alertOnFlowPausedSla(SlaOption slaOption, ExecutableFlow exflow, String nodePath) throws Exception {
-
-    logger.warn("alertOnFlowPausedSla not implement.");
-
+    throw new Exception("undefine...");
   }
 
   @Override
   public void alertOnCycleFlowInterrupt(ExecutableFlow flow, ExecutionCycle cycleFlow, List<String> emails, String alertLevel, String... extraReasons) throws Exception {
 
-    logger.warn("alertOnCycleFlowInterrupt not implement.");
-
   }
   @Override
   public void alertOnHistoryRecoverFinish(ExecutionRecover executionRecover) throws Exception{
-    logger.warn("alertOnHistoryRecoverFinish not implement.");
+
+  }
+
+  @Override
+  public void alertOnHoldBatch(HoldBatchAlert holdBatchAlert, ExecutorLoader executorLoader, boolean isFrequent) {
+
+  }
+
+  @Override
+  public void doMissSchedulesAlerter(Set<Schedule> scheduleList, Date startTime,
+      Date shutdownTime) {
+    //do in WeBankAlerter
+  }
+
+  @Override
+  public void sendAlert(List<String> alterList, String subject, String body,
+      boolean backExecutionEnable) {
+
+  }
+
+  @Override
+  public void sendAlert(List<String> alertReceiverList, String userDept, String subject,
+      String body, String alertLevel) {
+
+  }
+
+  @Override
+  public void alertOnSingnalBacklog(int jobId, Map<String, String> consumeInfo) {
+
+  }
+
+  @Override
+  public String alertProjectHourlyReportMertics(Props props, ProjectHourlyReportMertics projectHourlyReportMertics,
+                                              ProjectHourlyReportConfig projectHourlyReportConfig, int alertWay) {
+    return null;
   }
 }

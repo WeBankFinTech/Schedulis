@@ -8,6 +8,20 @@ import azkaban.project.ProjectLoader;
 import azkaban.utils.DateUtils;
 import azkaban.utils.Props;
 import azkaban.utils.PropsUtils;
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileReader;
+import java.io.FileWriter;
+import java.io.InputStream;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Map.Entry;
+import java.util.Properties;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import org.apache.commons.collections.MapUtils;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang.StringUtils;
@@ -17,12 +31,6 @@ import org.joda.time.format.DateTimeFormat;
 import org.joda.time.format.DateTimeFormatter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import java.io.*;
-import java.util.*;
-import java.util.Map.Entry;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 /**
  * Created by zhu on 11/28/17.
@@ -131,6 +139,10 @@ public class SystemBuiltInParamReplacer {
     defaultDate.put(Date.RUN_MONTH_NOW_BEGIN_STD.getValue(),
         day4LastMonth.dayOfMonth().withMinimumValue());
 
+    // run_current_mon_now 以及 run_current_mon_now_std 表示 run_today所在月
+    defaultDate.put(Date.RUN_CURRENT_MON_NOW.getValue(), runToday);
+    defaultDate.put(Date.RUN_CURRENT_MON_NOW_STD.getValue(), runToday);
+
     defaultDate.put(Date.RUN_MONTH_END.getValue(), runDate.dayOfMonth().withMaximumValue());
     defaultDate.put(Date.RUN_MONTH_END_STD.getValue(), runDate.dayOfMonth().withMaximumValue());
     //添加参数 RUN_MONTH_NOW_END RUN_MONTH_NOW_END_STD 根据 day4LastMonth 计算
@@ -159,6 +171,9 @@ public class SystemBuiltInParamReplacer {
     defaultDate.put(Date.RUN_YEAR_NOW_BEGIN.getValue(), DateUtils.getYearBegin(day4LastMonth));
     defaultDate.put(Date.RUN_YEAR_NOW_END.getValue(), DateUtils.getYearEnd(day4LastMonth));
 
+    // 增加基于run_today所在月的上个月的变量
+    defaultDate.put(Date.RUN_LAST_MON_NOW.getValue(), runToday.minusMonths(1));
+    defaultDate.put(Date.RUN_LAST_MON_NOW_STD.getValue(), runToday.minusMonths(1));
     defaultDate.put(Date.RUN_LAST_MONTH_END.getValue(), DateUtils.getLastMonthEnd(runDate));
     defaultDate.put(Date.RUN_LAST_QUARTER_END.getValue(), DateUtils.getLastQuarterEnd(runDate));
     defaultDate.put(Date.RUN_LAST_YEAR_END.getValue(), DateUtils.getLastYearEnd(runDate));
@@ -389,7 +404,7 @@ public class SystemBuiltInParamReplacer {
         if (fs.getName().endsWith(".py") || fs.getName().endsWith(".sh")
             || fs.getName().endsWith(".sql") || fs.getName().endsWith(".hql")
             || fs.getName().endsWith(".job") || fs.getName().endsWith(".flow")
-            || fs.getName().endsWith(".properties")) {
+                || fs.getName().endsWith(".properties") || fs.getName().endsWith(".scala")) {
           filePathList.add(fs.getPath());
         }
       }
@@ -407,7 +422,7 @@ public class SystemBuiltInParamReplacer {
       prop.load(input);
 
       if(!prop.isEmpty()){
-        for (Entry<Object, Object> entry : prop.entrySet()) {
+        for (Map.Entry<Object, Object> entry : prop.entrySet()) {
           String key = String.valueOf(entry.getKey());
           String value = String.valueOf(entry.getValue());
           propMap.put(key, value);

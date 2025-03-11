@@ -76,16 +76,22 @@ azkaban.ScheduleContextMenuView = Backbone.View.extend({
         var expandSymbol = document.createElement("div");
         $(expandSymbol).addClass("expandSymbol");
         $(menuItem).append(expandSymbol);
-
+        $(menuItem).attr('key', menu[i].key)
         var subMenu = this.setupMenu(menu[i].submenu);
-        $(subMenu).addClass("subMenu");
+        var addClass = "subMenu " + menu[i].key
+        $(subMenu).addClass(addClass);
         subMenu.parent = contextMenu;
         menuItem.subMenu = subMenu;
         $(subMenu).hide();
         $(this.el).after(subMenu);
 
         $(menuItem).mouseenter(function () {
-          $(".subMenu").hide();
+          var menuKey = this.getAttribute('key')
+          if (menuKey) {
+            $(".subMenu:not(." + menuKey + ")").hide();
+          } else {
+            $(".subMenu").hide()
+          }
           var menuItem = this;
           menuItem.selected = true;
           setTimeout(function () {

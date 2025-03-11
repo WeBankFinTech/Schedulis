@@ -23,7 +23,6 @@
   #parse("azkaban/webapp/servlet/velocity/style.vm")
   #parse("azkaban/webapp/servlet/velocity/javascript.vm")
   <script type="text/javascript">
-    var contextURL = "${context}";
     var currentTime = ${currentTime};
     var timezone = "${timezone}";
     var errorMessage = null;
@@ -35,10 +34,10 @@
       jobTable.tablesorter();
     });
   </script>
-  <script type="text/javascript" src="${context}/js/azkaban/i18n-config.js?version=1.10.0"></script>
-  <script type="text/javascript" src="${context}/js/azkaban/util/ajax.js?version=1.10.0"></script>
-  <script type="text/javascript" src="${context}/js/azkaban/view/executions.js?version=1.10.0"></script>
-  <script type="text/javascript" src="${context}/js/jquery/jquery.tablesorter.js?version=1.10.0"></script>
+  <script type="text/javascript" src="/js/azkaban/i18n-config.js?version=1.49.0"></script>
+  <script type="text/javascript" src="/js/azkaban/util/ajax.js?version=1.49.0"></script>
+  <script type="text/javascript" src="/js/azkaban/view/executions.js?version=1.49.0"></script>
+  <script type="text/javascript" src="/js/jquery/jquery.tablesorter.js?version=1.49.0"></script>
   
   <script>
     $(function () {
@@ -95,7 +94,7 @@
 
 <div class="az-page-header">
   <div class="container-full">
-    <h1><a href="${context}/flowtriggerinstance">Executing Triggers</a></h1>
+    <h1><a href="/flowtriggerinstance">Executing Triggers</a></h1>
   </div>
 </div>
 
@@ -140,7 +139,7 @@
               </td>
               <td>
                 #if (${trigger.getId()})
-                  <a href="${context}/executor?triggerinstanceid=${trigger.getId()}" }>
+                  <a href="javascript:void(0);" onclick="checkHrefUrlXss('/executor?triggerinstanceid=${trigger.getId()}')" }>
                     ${trigger.getId()} </a>
                 #else
                   -
@@ -148,10 +147,10 @@
               </td>
             #*todo chengren311: keep result of vmutils.getProjectName as a variable *#
               <td><a
-                  href="${context}/manager?project=$vmutils.getProjectName(${trigger.getProject().getId()})&flow=${trigger.getFlowId()}">${trigger.getFlowId()}</a>
+                  href="javascript:void(0);" onclick="checkHrefUrlXss('/manager?project=$vmutils.getProjectName(${trigger.getProject().getId()})&flow=${trigger.getFlowId()}')">${trigger.getFlowId()}</a>
               </td>
               <td>
-                <a href="${context}/manager?project=$vmutils.getProjectName(${trigger.getProject().getId()})">$vmutils.getProjectName(${trigger.getProject().getId()})</a>
+                <a href="javascript:void(0);" onclick="checkHrefUrlXss('/manager?project=$vmutils.getProjectName(${trigger.getProject().getId()})')">$vmutils.getProjectName(${trigger.getProject().getId()})</a>
               </td>
 
               <td>${trigger.getSubmitUser()}</td>
@@ -177,7 +176,7 @@
                 <td>Flow failed to be triggered</td>
               #else
                 <td><a
-                    href="${context}/executor?execid=${trigger.getFlowExecId()}">${trigger.getFlowExecId()}</a>
+                    href="javascript:void(0);" onclick="checkHrefUrlXss('/executor?execid=${trigger.getFlowExecId()}')">${trigger.getFlowExecId()}</a>
                 </td>
               #end
 
@@ -229,7 +228,7 @@
 
             #*
             <td>
-              <a href="${context}/manager?project=$vmutils.getProjectName(${flow.getFirst().projectId})"
+              <a href="javascript:void(0);" onclick="checkHrefUrlXss('/manager?project=$vmutils.getProjectName(${flow.getFirst().projectId})')"
             >$vmutils.getProjectName(${flow.getFirst().projectId})</a>
             </td>
             <td>${flow.getFirst().submitUser}</td>
@@ -289,7 +288,7 @@
               </td>
               <td>
                 #if (${trigger.getId()})
-                  <a href="${context}/executor?triggerinstanceid=${trigger.getId()}" }>
+                  <a href="javascript:void(0);" onclick="checkHrefUrlXss('/executor?triggerinstanceid=${trigger.getId()}')" }>
                     ${trigger.getId()} </a>
                 #else
                   -
@@ -297,10 +296,10 @@
               </td>
             #*todo chengren311: keep result of vmutils.getProjectName as a variable *#
               <td><a
-                  href="${context}/manager?project=$vmutils.getProjectName(${trigger.getProject().getId()})&flow=${trigger.getFlowId()}">${trigger.getFlowId()}</a>
+                  href="javascript:void(0);" onclick="checkHrefUrlXss('/manager?project=$vmutils.getProjectName(${trigger.getProject().getId()})&flow=${trigger.getFlowId()}')">${trigger.getFlowId()}</a>
               </td>
               <td>
-                <a href="${context}/manager?project=$vmutils.getProjectName(${trigger.getProject().getId()})">$vmutils.getProjectName(${trigger.getProject().getId()})</a>
+                <a href="javascript:void(0);" onclick="checkHrefUrlXss('/manager?project=$vmutils.getProjectName(${trigger.getProject().getId()})')">$vmutils.getProjectName(${trigger.getProject().getId()})</a>
               </td>
 
               <td>${trigger.getSubmitUser()}</td>
@@ -325,7 +324,7 @@
                 <td>Flow failed to be triggered</td>
               #else
                 <td><a
-                    href="${context}/executor?execid=${trigger.getFlowExecId()}">${trigger.getFlowExecId()}</a>
+                    href="javascript:void(0);" onclick="checkHrefUrlXss('/executor?execid=${trigger.getFlowExecId()}')">${trigger.getFlowExecId()}</a>
                 </td>
               #end
 

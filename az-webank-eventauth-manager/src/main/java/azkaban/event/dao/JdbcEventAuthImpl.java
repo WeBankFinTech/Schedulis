@@ -2,6 +2,7 @@ package azkaban.event.dao;
 
 import azkaban.db.DatabaseOperator;
 import azkaban.event.entity.EventAuth;
+import azkaban.event.entity.EventQueue;
 
 import javax.inject.Inject;
 import javax.inject.Singleton;
@@ -36,12 +37,12 @@ public class JdbcEventAuthImpl implements EventLoader<EventAuth> {
     }
 
     @Override
-    public int getEventTotal(String searchValue, String... filterValue) throws SQLException {
+    public int getEventTotal(String searchValue, boolean authType, String... filterValue) throws SQLException {
         return 0;
     }
 
     @Override
-    public int getEventTotal4Page(String searchValue, int index, int sum, String... filterValue) throws SQLException {
+    public int getEventTotal4Page(String searchValue, boolean authType, int index, int sum, String... filterValue) throws SQLException {
         return 0;
     }
 
@@ -55,13 +56,18 @@ public class JdbcEventAuthImpl implements EventLoader<EventAuth> {
     }
 
     @Override
-    public List<EventAuth> findEventList(String searchValue, int startIndex, int count, String... filterValue) throws SQLException {
+    public List<EventAuth> findEventList(String searchValue, boolean type, int startIndex, int count, String... filterValue) throws SQLException {
         return null;
     }
 
     @Override
     public int queryMessageNum(String... filterValue) throws SQLException {
         return 0;
+    }
+
+    @Override
+    public List<EventQueue> queryMessage(String topic,String sender,String msgName,String msgBody,String isLike,Integer pageNo,Integer pageSize) throws SQLException {
+        return null;
     }
 
     @Override
@@ -86,7 +92,7 @@ public class JdbcEventAuthImpl implements EventLoader<EventAuth> {
     }
 
     @Override
-    public List<EventAuth> getEventAuth(String topic, String sender, String msgName) throws SQLException {
+    public List<EventAuth> getEvent(String topic, String sender, String msgName) throws SQLException {
         String querySql = FIND_EVENT_AUTH_LIST + " WHERE topic=? and sender=? and msg_name=?";
         return dbOperator.query(querySql, eventListHandler(EventAuth.class), topic, sender, msgName);
     }

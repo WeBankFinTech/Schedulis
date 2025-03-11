@@ -1,9 +1,8 @@
 package azkaban.utils;
 
-import org.apache.commons.lang.StringEscapeUtils;
-
 import javax.servlet.http.Cookie;
 import javax.servlet.http.HttpServletRequest;
+import org.apache.commons.lang.*;
 
 /**
  * Created by zhu on 5/7/18.

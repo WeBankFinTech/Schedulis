@@ -3,16 +3,15 @@ package azkaban.server;
 import azkaban.db.DatabaseOperator;
 import azkaban.executor.ExecutionCycleDao;
 import azkaban.server.entity.WebServerRecord;
-import org.apache.commons.dbutils.ResultSetHandler;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import javax.inject.Inject;
-import javax.inject.Singleton;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
+import javax.inject.Inject;
+import javax.inject.Singleton;
+import org.apache.commons.dbutils.ResultSetHandler;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * @author v_wbxgchen

@@ -26,7 +26,7 @@ import org.junit.Before;
 import org.junit.Test;
 
 import azkaban.flow.CommonJobProperties;
-import com.webank.wedatasphere.schedulis.jobtype.javautils.Whitelist;
+import azkaban.jobtype.javautils.Whitelist;
 import azkaban.utils.Props;
 
 public class TestWhitelist {

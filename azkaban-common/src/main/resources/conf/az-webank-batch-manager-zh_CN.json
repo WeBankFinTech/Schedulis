@@ -11,7 +11,6 @@
     "quicklySearch": "快速查找",
     "batchId": "批次号",
     "holdType": "Hold批类型",
-    "execId": "执行ID",
     "projectName": "项目",
     "flowName": "工作流",
     "busPath": "关键路径",

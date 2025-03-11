@@ -7,8 +7,13 @@ $(function() {
         model: eventQueueModel
     });
 
-    $("#quickSearchEventQueue").click(function() {
-        $("#quickSearchForm").submit();
+    $("#quickSearchEventQueue").on("click", function() {
+        eventQueueModel.trigger("change:page");
+    });
+    $("#searchTextbox").on("keyup", function() {
+        if (e.keyCode === 13) {
+            eventQueueModel.trigger("change:page");
+        }
     });
 });
 
@@ -24,30 +29,28 @@ azkaban.EventQueueListView = Backbone.View.extend({
         this.model.bind('change:view', this.handleChangeView, this);
         this.model.bind('render', this.render, this);
         this.model.bind('change:page', this.handlePageChange, this);
-        var searchText = filterXSS($("#searchTextbox").val());
-        this.model.set({ search: searchText });
+        this.setMessageParams();
+        if (this.model.get("type") !== "auth") {
+            $("#rmbNumber").hide();
+        }
         this.model.set({ page: 1, pageSize: 20 });
         var hash = window.location.hash;
         this.model.set('elDomId','eventQueuePageSelection'); 
         this.createResize();
-        // if ("#page" === hash.substring(0, "#page".length)) {
-        //     var arr = hash.split("#");
-        //     var page;
-        //     if ("" !== this.model.get("search").trim() && 1 === this.model.get("pageNum")) {
-        //         page = 1;
-        //     } else {
-        //         page = arr[1].substring("#page".length - 1, arr[1].length);
-        //     }
-        //     this.model.set({ pageNum: parseInt(page) });
-        // } else {
-        //     this.model.set({ pageNum: 1 });
-        // }
-        // this.model.trigger("change:view");
+    },
+    setMessageParams: function() {
+        // topic 、 msgName包含特殊字符
+        const url = window.location.href;
+        const arr = url.split("?topic=");
+        const topicArr = arr[1].split("&msgName=");
+        const msgNameArr = topicArr[1].split("&type=");
+        this.model.set({ topic: topicArr[0], msgName: msgNameArr[0], type: msgNameArr[1] });
     },
     render: function() {
         var tbody = $("#eventQueueTbody");
         tbody.empty();
         var eventQueueList = this.model.get("eventQueueList");
+        const isAuth = this.model.get("type") === "auth"
         if (!eventQueueList || eventQueueList.length === 0) {
             $("#eventQueuePageSelection").hide();
         } else {
@@ -67,12 +70,13 @@ azkaban.EventQueueListView = Backbone.View.extend({
             var tdSender = document.createElement("td");
             $(tdSender).text(eq.sender);
             row.appendChild(tdSender);
-
+            if (isAuth) {
             // rmb
             var tdRmb = document.createElement("td");
             $(tdRmb).text(eq.wemqBizno);
             $(tdTopic).attr("style", "word-break:break-all;width:250px");
             row.appendChild(tdRmb);
+            }
 
             var tdTopic = document.createElement("td");
             $(tdTopic).text(eq.topic);
@@ -101,19 +105,19 @@ azkaban.EventQueueListView = Backbone.View.extend({
     },
     ...commonPaginationFun(),
     handlePageChange: function() {
-        var pageNum = this.model.get("page");
-        var pageSize = this.model.get("pageSize");
-        var searchKey = this.model.get("search");
-        var requestURL = "/event/queue";
-        var model = this.model;
+        const model = this.model;
+        const pageNum = model.get("page");
+        const pageSize = model.get("pageSize");
+        const searchKey = $("#searchTextbox").val();;
+        const requestURL = "/event/queue";
         var requestData = {
             "ajax": "loadEventQueueData",
             "pageNum": pageNum,
             "pageSize": pageSize,
             "search": searchKey,
-            "topic": topic,
-            "msgName": msgName,
-            "showPageNum": 5
+            "topic": model.get("topic"),
+            "msgName": model.get("msgName"),
+            authType: model.get("type") === "auth",
         };
         var successHandler = function(data) {
             model.set({

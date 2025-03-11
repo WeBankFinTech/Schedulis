@@ -16,95 +16,61 @@
 
 package azkaban.webapp;
 
-import static azkaban.ServiceProvider.SERVICE_PROVIDER;
-import static java.util.Objects.requireNonNull;
-
 import azkaban.AzkabanCommonModule;
 import azkaban.Constants;
 import azkaban.Constants.ConfigurationKeys;
 import azkaban.database.AzkabanDatabaseSetup;
-import azkaban.executor.AlerterHolder;
-import azkaban.executor.ExecutableFlow;
-import azkaban.executor.ExecutionController;
-import azkaban.executor.ExecutionControllerUtils;
-import azkaban.executor.ExecutorManager;
-import azkaban.executor.ExecutorManagerAdapter;
-import azkaban.executor.ExecutorManagerException;
+import azkaban.eventnotify.EventNotifyService;
+import azkaban.eventnotify.EventNotifyServiceImpl;
 import azkaban.executor.Status;
+import azkaban.executor.*;
 import azkaban.flowtrigger.FlowTriggerService;
 import azkaban.flowtrigger.quartz.FlowTriggerScheduler;
 import azkaban.jmx.JmxExecutionController;
 import azkaban.jmx.JmxExecutorManager;
 import azkaban.jmx.JmxJettyServer;
 import azkaban.jmx.JmxTriggerManager;
+import azkaban.log.JobLogDiagnosisManager;
 import azkaban.metrics.MetricsManager;
 import azkaban.project.ProjectManager;
+import azkaban.scheduler.EventScheduleServiceImpl;
+import azkaban.scheduler.MissedScheduleManager;
+import azkaban.scheduler.Schedule;
 import azkaban.scheduler.ScheduleManager;
-import azkaban.server.AzkabanServer;
+import azkaban.server.AbstractAzkabanServer;
 import azkaban.server.HttpRequestUtils;
 import azkaban.server.session.SessionCache;
-import azkaban.trigger.HATriggerManager;
+import azkaban.system.common.TransitionService;
 import azkaban.trigger.TriggerManager;
 import azkaban.trigger.TriggerManagerException;
-import azkaban.trigger.builtin.BasicTimeChecker;
-import azkaban.trigger.builtin.CreateTriggerAction;
-import azkaban.trigger.builtin.ExecuteFlowAction;
-import azkaban.trigger.builtin.ExecutionChecker;
-import azkaban.trigger.builtin.KillExecutionAction;
-import azkaban.trigger.builtin.SlaAlertAction;
-import azkaban.trigger.builtin.SlaChecker;
-import azkaban.utils.FileIOUtils;
-import azkaban.utils.Props;
-import azkaban.utils.PropsUtils;
-import azkaban.utils.StdOutErrRedirect;
-import azkaban.utils.Utils;
+import azkaban.trigger.builtin.*;
+import azkaban.utils.*;
 import azkaban.webapp.plugin.PluginRegistry;
 import azkaban.webapp.plugin.TriggerPlugin;
 import azkaban.webapp.plugin.ViewerPlugin;
-import azkaban.webapp.servlet.AbstractAzkabanServlet;
-import azkaban.webapp.servlet.DSSOriginSSOFilter;
-import azkaban.webapp.servlet.ExecutorServlet;
-import azkaban.webapp.servlet.FlowTriggerInstanceServlet;
-import azkaban.webapp.servlet.FlowTriggerServlet;
-import azkaban.webapp.servlet.HistoryServlet;
-import azkaban.webapp.servlet.IndexRedirectServlet;
-import azkaban.webapp.servlet.JMXHttpServlet;
-import azkaban.webapp.servlet.NoteServlet;
-import azkaban.webapp.servlet.ProjectManagerServlet;
-import azkaban.webapp.servlet.ProjectServlet;
-import azkaban.webapp.servlet.RecoverServlet;
-import azkaban.webapp.servlet.ScheduleServlet;
-import azkaban.webapp.servlet.StatsServlet;
-import azkaban.webapp.servlet.StatusServlet;
-import azkaban.webapp.servlet.TriggerManagerServlet;
+import azkaban.webapp.servlet.*;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
 import com.linkedin.restli.server.RestliServlet;
-import com.webank.wedatasphere.schedulis.common.executor.ExecutionCycle;
-import com.webank.wedatasphere.schedulis.common.executor.ExecutorManagerHA;
-import com.webank.wedatasphere.schedulis.common.jmx.JmxExecutorManagerAdapter;
-import com.webank.wedatasphere.schedulis.common.system.common.TransitionService;
-import com.webank.wedatasphere.schedulis.web.webapp.LocaleFilter;
-import com.webank.wedatasphere.schedulis.web.webapp.servlet.CycleServlet;
-import java.io.File;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.lang.management.ManagementFactory;
-import java.lang.reflect.Constructor;
-import java.net.InetSocketAddress;
-import java.net.MalformedURLException;
-import java.net.URL;
-import java.net.URLClassLoader;
-import java.nio.charset.StandardCharsets;
-import java.sql.SQLException;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.EnumSet;
-import java.util.List;
-import java.util.Map;
-import java.util.TimeZone;
-import java.util.concurrent.CompletableFuture;
+import joptsimple.internal.Strings;
+import org.apache.commons.lang.StringUtils;
+import org.apache.velocity.app.VelocityEngine;
+import org.eclipse.jetty.io.EndPoint;
+import org.eclipse.jetty.server.HttpChannel;
+import org.eclipse.jetty.server.Request;
+import org.eclipse.jetty.server.Server;
+import org.eclipse.jetty.server.handler.ContextHandler;
+import org.eclipse.jetty.server.handler.HandlerList;
+import org.eclipse.jetty.server.handler.IPAccessHandler;
+import org.eclipse.jetty.server.handler.ResourceHandler;
+import org.eclipse.jetty.servlet.DefaultServlet;
+import org.eclipse.jetty.servlet.FilterHolder;
+import org.eclipse.jetty.servlet.ServletContextHandler;
+import org.eclipse.jetty.servlet.ServletHolder;
+import org.joda.time.DateTimeZone;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import javax.inject.Inject;
 import javax.inject.Singleton;
 import javax.management.MBeanInfo;
@@ -114,21 +80,24 @@ import javax.servlet.DispatcherType;
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
-import joptsimple.internal.Strings;
-import org.apache.commons.lang.StringUtils;
-import org.apache.velocity.app.VelocityEngine;
-import org.eclipse.jetty.io.EndPoint;
-import org.eclipse.jetty.server.HttpChannel;
-import org.eclipse.jetty.server.Request;
-import org.eclipse.jetty.server.Server;
-import org.eclipse.jetty.server.handler.IPAccessHandler;
-import org.eclipse.jetty.servlet.DefaultServlet;
-import org.eclipse.jetty.servlet.FilterHolder;
-import org.eclipse.jetty.servlet.ServletContextHandler;
-import org.eclipse.jetty.servlet.ServletHolder;
-import org.joda.time.DateTimeZone;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import java.io.*;
+import java.lang.management.ManagementFactory;
+import java.lang.reflect.Constructor;
+import java.net.InetSocketAddress;
+import java.net.MalformedURLException;
+import java.net.URL;
+import java.net.URLClassLoader;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Paths;
+import java.sql.SQLException;
+import java.util.*;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ScheduledThreadPoolExecutor;
+
+import static azkaban.Constants.ConfigurationKeys.WTSS_QUERY_SERVER_ENABLE;
+import static azkaban.ServiceProvider.SERVICE_PROVIDER;
+import static java.util.Objects.requireNonNull;
 
 
 /**
@@ -149,7 +118,7 @@ import org.slf4j.LoggerFactory;
  * Jetty truststore jetty.trustpassword - Jetty truststore password
  */
 @Singleton
-public class AzkabanWebServer extends AzkabanServer {
+public class AzkabanWebServer extends AbstractAzkabanServer {
 
   public static final String DEFAULT_CONF_PATH = "conf";
   private static final String AZKABAN_ACCESS_LOGGER_NAME =
@@ -157,6 +126,10 @@ public class AzkabanWebServer extends AzkabanServer {
   private static final Logger logger = LoggerFactory.getLogger(AzkabanWebServer.class);
   private static final int MAX_FORM_CONTENT_SIZE = 10 * 1024 * 1024;
   private static final String DEFAULT_TIMEZONE_ID = "default.timezone.id";
+  /**
+   * LDAP 超时配置
+   */
+  private static final String FORGEROCK_OPENDJ_IO_CONNECTTIMEOUT = "org.forgerock.opendj.io.connectTimeout";
   private static final String DEFAULT_STATIC_DIR = "";
 
   @Deprecated
@@ -170,8 +143,8 @@ public class AzkabanWebServer extends AzkabanServer {
   private final ScheduleManager scheduleManager;
   private final TransitionService transitionService;
   private final TriggerManager triggerManager;
-  private final HATriggerManager haTriggerManager;
   private final MetricsManager metricsManager;
+  private final MissedScheduleManager missedScheduleManager;
   private final Props props;
   private final SessionCache sessionCache;
   private final List<ObjectName> registeredMBeans = new ArrayList<>();
@@ -180,6 +153,11 @@ public class AzkabanWebServer extends AzkabanServer {
   private Map<String, TriggerPlugin> triggerPlugins;
   private MBeanServer mbeanServer;
   private final AlerterHolder alerterHolder;
+  private final EventNotifyService eventNotifyService;
+  private final EventScheduleServiceImpl eventScheduleService;
+  private ScheduledThreadPoolExecutor webankUsersLoadThread;
+
+  private JobLogDiagnosisManager jobLogDiagnosisManager;
 
 
   @Inject
@@ -188,8 +166,9 @@ public class AzkabanWebServer extends AzkabanServer {
       final ExecutorManagerAdapter executorManagerAdapter,
       final ProjectManager projectManager,
       final TriggerManager triggerManager,
-      final HATriggerManager haTriggerManager,
       final MetricsManager metricsManager,
+      final MissedScheduleManager missedScheduleManager,
+      final JobLogDiagnosisManager jobLogDiagnosisManager,
       final SessionCache sessionCache,
       final ScheduleManager scheduleManager,
       final TransitionService transitionService,
@@ -197,14 +176,18 @@ public class AzkabanWebServer extends AzkabanServer {
       final FlowTriggerScheduler scheduler,
       final FlowTriggerService flowTriggerService,
       final StatusService statusService,
-      final AlerterHolder alerterHolder) {
+      final EventNotifyServiceImpl eventNotifyServiceImpl,
+      final AlerterHolder alerterHolder,
+      final EventScheduleServiceImpl eventScheduleService) {
     this.props = requireNonNull(props, "props is null.");
     this.server = requireNonNull(server, "server is null.");
     this.executorManagerAdapter = requireNonNull(executorManagerAdapter,"executorManagerAdapter is null.");
     this.projectManager = requireNonNull(projectManager, "projectManager is null.");
     this.triggerManager = requireNonNull(triggerManager, "triggerManager is null.");
-    this.haTriggerManager = requireNonNull(haTriggerManager, "triggerManager is null.");
     this.metricsManager = requireNonNull(metricsManager, "metricsManager is null.");
+    this.missedScheduleManager = requireNonNull(missedScheduleManager,
+        "missedScheduleManager is null");
+    this.jobLogDiagnosisManager = jobLogDiagnosisManager;
     this.sessionCache = requireNonNull(sessionCache, "sessionCache is null.");
     this.scheduleManager = requireNonNull(scheduleManager, "scheduleManager is null.");
     this.transitionService = requireNonNull(transitionService, "transitionService is null.");
@@ -213,6 +196,8 @@ public class AzkabanWebServer extends AzkabanServer {
     this.scheduler = requireNonNull(scheduler, "scheduler is null.");
     this.flowTriggerService = requireNonNull(flowTriggerService, "flow trigger service is null");
     this.alerterHolder = requireNonNull(alerterHolder, "eventStatusManager is null");
+    this.eventNotifyService = requireNonNull(eventNotifyServiceImpl, "eventNotifyService is null");
+    this.eventScheduleService = requireNonNull(eventScheduleService, "eventScheduleService is null.");
     loadBuiltinCheckersAndActions();
 
     // load all trigger agents here
@@ -230,6 +215,13 @@ public class AzkabanWebServer extends AzkabanServer {
       DateTimeZone.setDefault(DateTimeZone.forID(timezone));
       logger.info("Setting timezone to " + timezone);
     }
+
+    // Set up LDAP Timeout, org.forgerock.opendj.io.connectTimeout default 10000
+    if (props.containsKey(FORGEROCK_OPENDJ_IO_CONNECTTIMEOUT)) {
+      final String connectTimeout = props.getString(FORGEROCK_OPENDJ_IO_CONNECTTIMEOUT);
+      System.setProperty("org.forgerock.opendj.io.connectTimeout", connectTimeout);
+      logger.info("Setting LDAP connectTimeout to " + connectTimeout);
+    }
     configureMBeanServer();
   }
 
@@ -244,7 +236,7 @@ public class AzkabanWebServer extends AzkabanServer {
     StdOutErrRedirect.redirectOutAndErrToLog();
 
     logger.info("Starting Jetty Azkaban Web Server...");
-    final Props props = AzkabanServer.loadProps(args);
+    final Props props = AbstractAzkabanServer.loadProps(args);
 
     if (props == null) {
       logger.error("Azkaban Properties not loaded. Exiting..");
@@ -269,6 +261,13 @@ public class AzkabanWebServer extends AzkabanServer {
 
     // TODO refactor code into ServerProvider
     webServer.prepareAndStartServer();
+
+    try{
+      Class.forName("org.apache.linkis.errorcode.client.handler.LinkisErrorCodeHandler");
+    }catch(ClassNotFoundException e){
+      logger.error("instantace LinkisErrorCodeHandler failed",e);
+    }
+
 	  // FIXME New feature: When restarting the web service, it is necessary to terminate the job stream that is executed cyclically.
     webServer.stopAllCycleFlows(args);
 
@@ -283,6 +282,11 @@ public class AzkabanWebServer extends AzkabanServer {
           }
         } catch (final Exception e) {
           logger.error("Exception while shutting down flow trigger service.", e);
+        }
+
+        if (null != webServer.webankUsersLoadThread) {
+          logger.info("Shutting down webank user load scheduler...");
+          webServer.webankUsersLoadThread.shutdown();
         }
 
         try {
@@ -305,6 +309,28 @@ public class AzkabanWebServer extends AzkabanServer {
           logger.error("Exception while shutting down web server.", e);
         }
 
+        if (!webServer.props.getBoolean(ConfigurationKeys.WEBSERVER_HA_MODEL, false)) {
+          logger.info("back up schedules...");
+          String backupPath = webServer.props
+              .getString("schedules.backup.path", "/appcom/Install/AzkabanInstall");
+          long maxTime = System.currentTimeMillis() + webServer.props
+              .getLong("schedules.backup.range", 2 * 60 * 60 * 1000L);
+          try (final BufferedWriter writer = Files
+              .newBufferedWriter(Paths.get(backupPath, Constants.SCHEDULES_BACKUP_FILE),
+                  StandardCharsets.UTF_8)) {
+            for (Schedule schedule : webServer.scheduleManager.getSchedules()) {
+              if ((boolean) schedule.getOtherOption().getOrDefault("activeFlag", false)
+                  && schedule.getNextExecTime() < maxTime) {
+                writer.write(
+                    schedule.getProjectName() + "#" + schedule.getFlowName() + "#" + schedule
+                        .getScheduleId() + "#" + schedule.getNextExecTime() + "\n");
+              }
+            }
+          } catch (Exception e) {
+            logger.error("Exception while back up schedules", e);
+          }
+        }
+
         logger.info("kk thx bye.");
       }
 
@@ -313,8 +339,8 @@ public class AzkabanWebServer extends AzkabanServer {
             && new File("/usr/bin/head").exists()) {
           logger.info("logging top memory consumer");
 
-          final ProcessBuilder processBuilder =
-              new ProcessBuilder("/bin/bash", "-c",
+          final java.lang.ProcessBuilder processBuilder =
+              new java.lang.ProcessBuilder("/bin/bash", "-c",
                   "/bin/ps aux --sort -rss | /usr/bin/head");
           final Process p = processBuilder.start();
           p.waitFor();
@@ -523,10 +549,11 @@ public class AzkabanWebServer extends AzkabanServer {
       throws Exception {
     validateDatabaseVersion();
     //createThreadPool();
+    this.missedScheduleManager.start();
     configureRoutes();
 
     // Todo jamiesjc: enable web metrics for azkaban poll model later
-    if (this.props.getBoolean(ConfigurationKeys.IS_METRICS_ENABLED, false)
+    if (this.props.getBoolean(Constants.ConfigurationKeys.IS_METRICS_ENABLED, false)
         && !this.props.getBoolean(ConfigurationKeys.AZKABAN_POLL_MODEL, false)) {
       startWebMetrics();
     }
@@ -538,6 +565,12 @@ public class AzkabanWebServer extends AzkabanServer {
       this.flowTriggerService.start();
       logger.info("starting flow trigger scheduler");
       this.scheduler.start();
+    }
+
+    if (this.props.getBoolean(WTSS_QUERY_SERVER_ENABLE, false) && this.props.getBoolean(
+        ConfigurationKeys.WTSS_JOB_LOG_AUTO_DIAGNOSIS_SWITCH,
+        true) && this.jobLogDiagnosisManager != null) {
+      this.jobLogDiagnosisManager.start();
     }
 
     try {
@@ -553,7 +586,7 @@ public class AzkabanWebServer extends AzkabanServer {
     String argsStr = Strings.join(args, ",");
     logger.info("WebServer start args: " + argsStr);
     boolean stopCycleFlows = Arrays.stream(args)
-            .anyMatch(arg -> arg.equalsIgnoreCase("cyclestop"));
+            .anyMatch(arg -> "cyclestop".equalsIgnoreCase(arg));
     if (stopCycleFlows) {
       List<ExecutionCycle> executionCycles = executorManagerAdapter.getAllRunningCycleFlows();
       logger.info("starting stop all cycle flows");
@@ -605,13 +638,13 @@ public class AzkabanWebServer extends AzkabanServer {
     CreateTriggerAction.setTriggerManager(this.triggerManager);
     ExecutionChecker.setExecutorManager(this.executorManagerAdapter);
 
-    this.triggerManager.registerCheckerType(BasicTimeChecker.type, BasicTimeChecker.class);
-    this.triggerManager.registerCheckerType(SlaChecker.type, SlaChecker.class);
-    this.triggerManager.registerCheckerType(ExecutionChecker.type, ExecutionChecker.class);
-    this.triggerManager.registerActionType(ExecuteFlowAction.type, ExecuteFlowAction.class);
-    this.triggerManager.registerActionType(KillExecutionAction.type, KillExecutionAction.class);
-    this.triggerManager.registerActionType(SlaAlertAction.type, SlaAlertAction.class);
-    this.triggerManager.registerActionType(CreateTriggerAction.type, CreateTriggerAction.class);
+    this.triggerManager.registerCheckerType(BasicTimeChecker.TYPE, BasicTimeChecker.class);
+    this.triggerManager.registerCheckerType(SlaChecker.TYPE, SlaChecker.class);
+    this.triggerManager.registerCheckerType(ExecutionChecker.TYPE, ExecutionChecker.class);
+    this.triggerManager.registerActionType(ExecuteFlowAction.TYPE, ExecuteFlowAction.class);
+    this.triggerManager.registerActionType(KillExecutionAction.TYPE, KillExecutionAction.class);
+    this.triggerManager.registerActionType(SlaAlertAction.TYPE, SlaAlertAction.class);
+    this.triggerManager.registerActionType(CreateTriggerAction.TYPE, CreateTriggerAction.class);
   }
 
   /**
@@ -648,13 +681,16 @@ public class AzkabanWebServer extends AzkabanServer {
   }
 
   public TriggerManager getTriggerManager() {
-    if(props.getBoolean(ConfigurationKeys.WEBSERVER_HA_MODEL, false)){
-      return this.haTriggerManager;
-    }else{
       return this.triggerManager;
     }
+
+  public EventScheduleServiceImpl getEventScheduleService() {
+    return eventScheduleService;
   }
 
+  public EventNotifyService getEventNotifyService() {
+    return eventNotifyService;
+  }
 
   /**
    * Returns the global azkaban properties
@@ -685,8 +721,6 @@ public class AzkabanWebServer extends AzkabanServer {
     } else if (this.executorManagerAdapter instanceof ExecutionController) {
       registerMbean("executionController", new JmxExecutionController((ExecutionController) this
           .executorManagerAdapter));
-    } else if (this.executorManagerAdapter instanceof ExecutorManagerHA) {
-      registerMbean("executorManagerHA", new JmxExecutorManagerAdapter((ExecutorManagerHA) this.executorManagerAdapter));
     }
 
     // Register Log4J loggers as JMX beans so the log level can be
@@ -718,6 +752,10 @@ public class AzkabanWebServer extends AzkabanServer {
     this.scheduleManager.shutdown();
     this.executorManagerAdapter.shutdown();
     try {
+      this.missedScheduleManager.stop();
+      if (this.jobLogDiagnosisManager != null) {
+        this.jobLogDiagnosisManager.stop();
+      }
       this.server.stop();
     } catch (final Exception e) {
       // Catch all while closing server
@@ -767,9 +805,24 @@ public class AzkabanWebServer extends AzkabanServer {
         this.props.getString("web.resource.dir", DEFAULT_STATIC_DIR);
     logger.info("Setting up web resource dir " + staticDir);
     final ServletContextHandler root = new ServletContextHandler(this.server, "/", ServletContextHandler.SESSIONS);
-    root.getSessionHandler().setMaxInactiveInterval(30 * 60);
+    root.getSessionHandler().setMaxInactiveInterval(this.props.getInt("session.time.to.live", 1800));
     root.addFilter(new FilterHolder(LocaleFilter.class),"/*", EnumSet.of(DispatcherType.REQUEST));
+    root.addFilter(new FilterHolder(WebServerExcludeRequestFilter.class),"/*", EnumSet.of(DispatcherType.REQUEST));
     root.addFilter(new FilterHolder(DSSOriginSSOFilter.class),"/*", EnumSet.of(DispatcherType.REQUEST));
+
+    FilterHolder docsFilterHolder = new FilterHolder(new DocsAccessFilter());
+    root.addFilter(docsFilterHolder, "docs/*", EnumSet.of(DispatcherType.REQUEST));
+
+    ResourceHandler resourceHandler = new ResourceHandler();
+    resourceHandler.setDirectoriesListed(false);
+    resourceHandler.setResourceBase("/docs");
+
+    ContextHandler contextHandler = new ContextHandler("/docs");
+    contextHandler.setHandler(resourceHandler);
+
+    HandlerList handlerList = new HandlerList();
+    handlerList.addHandler(contextHandler);
+
     root.setMaxFormContentSize(MAX_FORM_CONTENT_SIZE);
     final String defaultServletPath =
         this.props.getString("azkaban.default.servlet.path", "/index");
@@ -786,12 +839,14 @@ public class AzkabanWebServer extends AzkabanServer {
     root.addServlet(staticServlet, "/images/*");
     root.addServlet(staticServlet, "/fonts/*");
     root.addServlet(staticServlet, "/favicon.ico");
+    root.addServlet(staticServlet, "/docs/*");
 
 
     root.addServlet(new ServletHolder(new ProjectManagerServlet()), "/manager");
     root.addServlet(new ServletHolder(new ExecutorServlet()), "/executor");
     root.addServlet(new ServletHolder(new HistoryServlet()), "/history");
     root.addServlet(new ServletHolder(new ScheduleServlet()), "/schedule");
+    root.addServlet(new ServletHolder(new EventScheduleServlet()), "/eventschedule");
     root.addServlet(new ServletHolder(new JMXHttpServlet()), "/jmx");
     root.addServlet(new ServletHolder(new TriggerManagerServlet()), "/triggers");
     root.addServlet(new ServletHolder(new StatsServlet()), "/stats");
@@ -808,18 +863,20 @@ public class AzkabanWebServer extends AzkabanServer {
     root.addServlet(restliHolder, "/restli/*");
 
     final String viewerPluginDir =
-        this.props.getString("viewer.plugin.dir", "plugins/viewer");
+        this.props.getString("viewer.plugin.dir", "/plugins/viewer");
     loadViewerPlugins(root, viewerPluginDir, getVelocityEngine());
 
     // Trigger Plugin Loader
     final TriggerPluginLoader triggerPluginLoader = new TriggerPluginLoader(this.props);
-
+     logger.info("11111");
     final Map<String, TriggerPlugin> triggerPlugins = triggerPluginLoader.loadTriggerPlugins(root);
     setTriggerPlugins(triggerPlugins);
     // always have basic time trigger
     // TODO: find something else to do the job
     getTriggerManager().start();
-
+    logger.info("222");
+    getScheduleManager().start();
+    logger.info("333");
     root.setAttribute(Constants.AZKABAN_SERVLET_CONTEXT_KEY, this);
 
     try {
@@ -836,7 +893,7 @@ public class AzkabanWebServer extends AzkabanServer {
                 InetSocketAddress address = endp.getRemoteAddress();
                 if("/executor".equals(baseRequest.getMetaData().getURI().getDecodedPath())
                         && HttpRequestUtils.hasParam(request, "ajax")
-                        && ("executeFlowCycleFromExecutor".equals(HttpRequestUtils.getParam(request,"ajax")) || "reloadWebData".equals(HttpRequestUtils.getParam(request,"ajax")))){
+                        && "executeFlowCycleFromExecutor".equals(HttpRequestUtils.getParam(request,"ajax"))){
                   if (address != null && !this.isAddrUriAllowed(address.getHostString(), baseRequest.getMetaData().getURI().getDecodedPath())) {
                     logger.warn("Illegal access detected , ip >> {} , path >> {}",address.getHostString(),baseRequest.getMetaData().getURI());
                     response.sendError(403);
@@ -851,11 +908,17 @@ public class AzkabanWebServer extends AzkabanServer {
         };
         ipAccessHandler.setWhite(whiteListArr);
         ipAccessHandler.setHandler(root);
-        server.setHandler(ipAccessHandler);
+        handlerList.addHandler(ipAccessHandler);
+        handlerList.addHandler(root);
+        server.setHandler(handlerList);
       }
     }catch (Exception e){
       logger.error("setting Executor whiteList failed ,caused by {}" , e);
     }
+  }
+
+  public void setWebankUsersLoadThread(ScheduledThreadPoolExecutor webankUsersLoadThread) {
+    this.webankUsersLoadThread = webankUsersLoadThread;
   }
 
   public AlerterHolder getAlerterHolder() {

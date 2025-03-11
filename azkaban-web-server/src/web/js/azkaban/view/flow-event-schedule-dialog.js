@@ -18,10 +18,12 @@ $.namespace('azkaban');
 
 var flowEventScheduleDialogView;
 var executingSvgGraphView;
+var eventJobListView;
 azkaban.FlowEventScheduleDialogView = Backbone.View.extend({
     events: {
         "click .closeExecPanel": "hideScheduleOptionPanel",
-        "click #event-schedule-flow-button": "scheduleFlow"
+        "click #event-schedule-flow-button": "scheduleFlow",
+        "click #project-upload-sch-btn": "handleUploadSchJob",
     },
 
     initialize: function(settings) {
@@ -29,16 +31,20 @@ azkaban.FlowEventScheduleDialogView = Backbone.View.extend({
         $("#event-schedule-override-success-emails").click(function(evt) {
             if ($(this).is(':checked')) {
                 $('#event-schedule-success-emails').attr('disabled', null);
+                $('#event-schedule-custom-success-alert').attr('disabled', null);
             } else {
                 $('#event-schedule-success-emails').attr('disabled', "disabled");
+                $('#event-schedule-custom-success-alert').attr('disabled', "disabled");
             }
         });
 
         $("#event-schedule-override-failure-emails").click(function(evt) {
             if ($(this).is(':checked')) {
                 $('#event-schedule-failure-emails').attr('disabled', null);
+                $('#event-schedule-custom-failure-alert').attr('disabled', null);
             } else {
                 $('#event-schedule-failure-emails').attr('disabled', "disabled");
+                $('#event-schedule-custom-failure-alert').attr('disabled', "disabled");
             }
         });
 
@@ -49,7 +55,9 @@ azkaban.FlowEventScheduleDialogView = Backbone.View.extend({
     getExecutionOptionData: function() {
         var failureAction = $('#event-schedule-failure-action').val();
         var failureEmails = $('#event-schedule-failure-emails').val();
+        var failedMessageContent = $('#event-schedule-custom-failure-alert').val()
         var successEmails = $('#event-schedule-success-emails').val();
+        var successMessageContent = $('#event-schedule-custom-success-alert').val();
         var notifyFailureFirst = $('#event-schedule-notify-failure-first').parent().attr('class').search('active') > -1 ? true : false;
         var notifyFailureLast = !notifyFailureFirst;
         var failureEmailsOverride = $("#event-schedule-override-failure-emails").is(':checked');
@@ -119,7 +127,9 @@ azkaban.FlowEventScheduleDialogView = Backbone.View.extend({
             successEmailsOverride: successEmailsOverride,
             failureAction: failureAction,
             failureEmails: failureEmails,
+            failedMessageContent: failedMessageContent || '',
             successEmails: successEmails,
+            successMessageContent: successMessageContent || '',
             notifyFailureFirst: notifyFailureFirst,
             notifyFailureLast: notifyFailureLast,
             flowOverride: flowOverride,
@@ -148,8 +158,10 @@ azkaban.FlowEventScheduleDialogView = Backbone.View.extend({
     },
 
     changeFlowInfo: function() {
-        var successEmails = this.model.get("successEmails").length == 0 ? [loginUser] : this.model.get("successEmails");
-        var failureEmails = this.model.get("failureEmails").length == 0 ? [loginUser] : this.model.get("failureEmails");
+        var successEmails = Array.isArray(this.model.get("successEmails")) && this.model.get("successEmails").filter(val=>val).length > 0 ?  this.model.get("successEmails").filter(val=>val) : [loginUser];
+        var successMessageContent = this.model.get("successMessageContent") || '';
+        var failureEmails = Array.isArray(this.model.get("failureEmails")) && this.model.get("failureEmails").filter(val=>val).length > 0 ?  this.model.get("failureEmails").filter(val=>val) : [loginUser];
+        var failedMessageContent = this.model.get("failedMessageContent") || '';
         var failureActions = this.model.get("failureAction") || 'finishPossible';
         var notifyFailure = this.model.get("notifyFailure");
         var flowParams = this.model.get("flowParams");
@@ -159,8 +171,8 @@ azkaban.FlowEventScheduleDialogView = Backbone.View.extend({
         var pipelineExecutionId = this.model.get("pipelineExecution");
         var queueLevel = this.model.get("schedule-queueLevel");
         var nodeStatus = this.model.get("nodeStatus");
-        var overrideSuccessEmails = this.model.get("failureEmailsOverride");
-        var overrideFailureEmails = this.model.get("successEmailsOverride");
+        var overrideSuccessEmails = this.model.get("successEmailsOverride");
+        var overrideFailureEmails = this.model.get("failureEmailsOverride");
         var enableHistoryRecover = this.model.get("enableHistoryRecover");
         var rerunAction = this.model.get("rerunAction") || 'rerun';
 
@@ -169,19 +181,27 @@ azkaban.FlowEventScheduleDialogView = Backbone.View.extend({
         } else {
             $('#event-schedule-override-success-emails').prop('checked', false);
             $('#event-schedule-success-emails').attr('disabled', 'disabled');
+            $('#event-schedule-custom-success-alert').attr('disabled', 'disabled');
         }
         if (overrideFailureEmails) {
             $('#event-schedule-override-failure-emails').prop('checked', true);
         } else {
             $('#event-schedule-override-failure-emails').prop('checked', false);
             $('#event-schedule-failure-emails').attr('disabled', 'disabled');
+            $('#event-schedule-custom-failure-alert').attr('disabled', 'disabled');
         }
 
         if (successEmails) {
             $('#event-schedule-success-emails').val(successEmails.join());
         }
+        if (successMessageContent){
+            $('#event-schedule-custom-success-alert').val(successMessageContent);
+        }
         if (failureEmails) {
             $('#event-schedule-failure-emails').val(failureEmails.join());
+        }
+        if (failedMessageContent){
+            $('#event-schedule-custom-failure-alert').val(failedMessageContent);
         }
         if (failureActions) {
             $('#event-schedule-failure-action').val(failureActions);
@@ -220,7 +240,7 @@ azkaban.FlowEventScheduleDialogView = Backbone.View.extend({
 
     },
 
-    show: function(data) {
+    show: function(data, createTast) {
 
         // 兼容不同地方变量名不同
         if (data.project) {
@@ -262,7 +282,7 @@ azkaban.FlowEventScheduleDialogView = Backbone.View.extend({
         $('#event-schedule-comment').val("");
         // 检查是否有定时调度
         var scheduleId = data.scheduleId;
-        if (scheduleId) {
+        if (scheduleId && !createTast) {
             $('#event-work-flow-token_input').val(data.token);
             var topicOption = new Option(data.topic, data.topic)
             $('#event-schedule-topic_input').append(topicOption).trigger('change');
@@ -273,7 +293,7 @@ azkaban.FlowEventScheduleDialogView = Backbone.View.extend({
         }
 
         var loadedId = eventSchedulableGraphModel.get("flowId");
-        this.loadGraph(projectName, flowId, exgraph, loadCallback);
+        this.loadGraph(projectName, flowId, exgraph, loadCallback, createTast);
         this.loadFlowInfo(projectName, flowId, execId);
         this.loadSchedule();
         // this.loadEventAuthData(data.topic, data.msgName);
@@ -366,7 +386,7 @@ azkaban.FlowEventScheduleDialogView = Backbone.View.extend({
         // Triggers a render
         this.model.trigger("change:graph");
     },
-    
+
     showScheduleJob: function(scheduleFlowTitle, projectName, flowId, jobId, withDep) {
         eventScheduleSideMenuDialogView.menuSelect($("#event-schedule-flow-option"));
         $("#event-schedule-flow-panel-title").text(scheduleFlowTitle + flowId);
@@ -395,14 +415,14 @@ azkaban.FlowEventScheduleDialogView = Backbone.View.extend({
     },
     getFlowRealJobList: function(flowId, projectName) {
             var requestURL = "/manager?project=" + projectName;
-    
+
             var model = this.model;
-    
+
             var requestData = {
                 "ajax": "fetchFlowRealJobLists",
                 "flow": flowId,
             };
-    
+
             var successHandler = function(data) {
                 if (data.error) {
                     console.log(data.error.message);
@@ -417,7 +437,7 @@ azkaban.FlowEventScheduleDialogView = Backbone.View.extend({
                     eventScheduleJobSkipFailedView.model.set({ "jobList": data.jobList });
                 }
             }
-    
+
             $.ajax({
                 url: requestURL,
                 type: "get",
@@ -439,7 +459,7 @@ azkaban.FlowEventScheduleDialogView = Backbone.View.extend({
         fetchFlowInfo(this.model, projectName, flowId, execId);
     },
 
-    loadGraph: function(projectName, flowId, exgraph, callback) {
+    loadGraph: function(projectName, flowId, exgraph, callback, createTast) {
         console.log("Loading flow " + flowId);
         var requestURL = "/executor";
 
@@ -447,7 +467,7 @@ azkaban.FlowEventScheduleDialogView = Backbone.View.extend({
         // fetchFlow(this.model, projectName, flowId, true);
         var requestData = {
             "project": projectName,
-            "ajax": "fetcheventscheduledflowgraph",
+            "ajax": createTast ? "fetchscheduledflowgraphNew" : "fetcheventscheduledflowgraph",
             "flow": flowId
         };
         var self = this;
@@ -478,7 +498,14 @@ azkaban.FlowEventScheduleDialogView = Backbone.View.extend({
                     },
                     tooltipcontainer: "#event-schedule-svg-div-custom"
                 });
-
+                if (!eventJobListView) {
+                    eventJobListView = new azkaban.ExecuteJobListView({
+                        el: $('#event-joblist-panel'),
+                        model: graphModel,
+                        contextMenuCallback: jobClickCallback,
+                        openBtnName: 'open-event-joblist-btn',
+                    });
+                }
                 if (callback) {
                     callback.call(this);
                 }
@@ -534,6 +561,7 @@ azkaban.FlowEventScheduleDialogView = Backbone.View.extend({
         scheduleData.msgName = $('#event-schedule-msgname_input').val();
         scheduleData.saveKey = $('#event-schedule-savekey_input').val();
         scheduleData.comment = $('#event-schedule-comment').val();
+        scheduleData.itsmNo = ''
         if (!scheduleData.topic) {
             alert(wtssI18n.view.messageTopicReq);
             return;
@@ -597,8 +625,14 @@ azkaban.FlowEventScheduleDialogView = Backbone.View.extend({
                 var flowName = data.schedule.flowName;
 
                 var successEmails = data.schedule.executionOptions.successEmails;
+                var successMessageContent = data.schedule.executionOptions.successMessageContent;
                 var failureEmails = data.schedule.executionOptions.failureEmails;
+                var failedMessageContent = data.schedule.executionOptions.failedMessageContent;
                 var failureActions = data.schedule.executionOptions.failureAction;
+                var enabledCacheProjectFiles = data.schedule.executionOptions.enabledCacheProjectFiles;
+                if (enabledCacheProjectFiles) {
+                    $('#scheduleEnabledCacheProjectFiles input[value="' + enabledCacheProjectFiles + '"][name="scheduleCacheProject"]').prop('checked', true);
+                }
                 var notifyOnFirstFailure = data.schedule.executionOptions.notifyOnFirstFailure;
                 var notifyOnLastFailure = data.schedule.executionOptions.notifyOnLastFailure;
                 var flowParams = data.schedule.executionOptions.flowParameters;
@@ -619,12 +653,14 @@ azkaban.FlowEventScheduleDialogView = Backbone.View.extend({
                     $('#event-schedule-override-success-emails').click();
                 } else if (!$('#event-schedule-override-success-emails').is(':checked')) {
                     $('#event-schedule-success-emails').attr('disabled', 'disabled');
+                    $('#event-schedule-custom-success-alert').attr('disabled', 'disabled');
                 }
 
                 if (overrideFailureEmails && !$('#event-schedule-override-failure-emails').is(':checked')) {
                     $('#event-schedule-override-failure-emails').click();
                 } else if (!$('#event-schedule-override-failure-emails').is(':checked')) {
                     $('#event-schedule-failure-emails').attr('disabled', 'disabled');
+                    $('#event-schedule-custom-failure-alert').attr('disabled', 'disabled');
                 }
 
                 if (successEmails && successEmails.length > 0) {
@@ -633,10 +669,18 @@ azkaban.FlowEventScheduleDialogView = Backbone.View.extend({
                     $('#event-schedule-success-emails').val(loginUser);
                 }
 
+                if (successMessageContent) {
+                    $('#event-schedule-custom-success-alert').val(successMessageContent);
+                }
+
                 if (failureEmails && failureEmails.length > 0) {
                     $('#event-schedule-failure-emails').val(failureEmails.join());
                 } else {
                     $('#event-schedule-failure-emails').val(loginUser);
+                }
+
+                if (failedMessageContent) {
+                    $('#event-schedule-custom-failure-alert').val(failedMessageContent);
                 }
 
                 if (failureActions) {
@@ -692,7 +736,7 @@ azkaban.FlowEventScheduleDialogView = Backbone.View.extend({
                     var failSetIntervalCount = 0;
                     var renderJobFailRow = setInterval(function() {
                         failSetIntervalCount++;
-                        if (failSetIntervalCount >= 20) {
+                        if (failSetIntervalCount >= 1000) {
                             clearInterval(renderJobFailRow)
                             return;
                         }
@@ -709,7 +753,7 @@ azkaban.FlowEventScheduleDialogView = Backbone.View.extend({
                             clearInterval(renderJobFailRow)
                             console.log('clearInterval')
                         }
-                    }, 200)
+                    }, 300)
                 }
 
                 //清理旧数据
@@ -721,7 +765,7 @@ azkaban.FlowEventScheduleDialogView = Backbone.View.extend({
                     var skipSetIntervalCount = 0;
                     var renderSkipRow = setInterval(function() {
                         skipSetIntervalCount++;
-                        if (skipSetIntervalCount >= 20) {
+                        if (skipSetIntervalCount >= 1000) {
                             clearInterval(renderSkipRow)
                             return;
                         }
@@ -737,7 +781,7 @@ azkaban.FlowEventScheduleDialogView = Backbone.View.extend({
                             clearInterval(renderSkipRow)
                             console.log('clearInterval')
                         }
-                    }, 200)
+                    }, 300)
                 }
 
                 $('#schedule_id').val(scheduleId);
@@ -755,7 +799,14 @@ azkaban.FlowEventScheduleDialogView = Backbone.View.extend({
 
         $.post(scheduleURL, scheduleData, successHandler, "json");
 
-    }
+    },
+
+    // 上传定时调度信息
+    handleUploadSchJob: function(evt) {
+        console.log("handleUploadSchJob");
+        $('#upload-sch-modal').modal();
+    },
+
 });
 
 var eventSchedulEditTableView;
@@ -915,12 +966,14 @@ azkaban.EventScheduleSideMenuDialogView = Backbone.View.extend({
 
         // 当点击定时调度工作流时，显示隐藏流程图切换按钮
         if ((target[0] && target[0].id === "event-schedule-flow-option") || target.id === "event-schedule-flow-option") {
-            $("#switching-event-schedule-flow-btn").show()
-            $("#event-workflow-zoom-in").show()
+            $("#switching-event-schedule-flow-btn").show();
+            $("#event-workflow-zoom-in").show();
+            $("#open-event-joblist-btn").show();
         } else {
             $("#switching-event-schedule-flow-btn").hide()
             $("#event-workflow-zoom-in").hide()
             $("#event-workflow-zoom-out").hide()
+            $("#open-event-joblist-btn").hide();
         }
 
 
@@ -1571,6 +1624,11 @@ $(function() {
         $('#event-schedule-flow-executing-graph')[0].style.height = '500px'
         eventScheduleZoomInWorflow() // 参数是否切换工作流
     })
+
+    // 关闭弹窗 关闭接口搜索
+    $("#event-schedule-flow-panel").on('hide.bs.modal',function(){
+        eventJobListView && eventJobListView.handleClose();
+    });
 
 });
 

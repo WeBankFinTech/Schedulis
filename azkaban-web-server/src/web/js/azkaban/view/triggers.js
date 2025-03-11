@@ -17,8 +17,8 @@
 $.namespace('azkaban');
 
 function expireTrigger(triggerId) {
-  var triggerURL = contextURL + "/triggers"
-  var redirectURL = contextURL + "/triggers"
+  var triggerURL = "/triggers"
+  var redirectURL = "/triggers"
   var requestData = {"ajax": "expireTrigger", "triggerId": triggerId};
   var successHandler = function (data) {
     if (data.error) {
@@ -34,8 +34,8 @@ function expireTrigger(triggerId) {
 }
 
 function removeSched(scheduleId) {
-  var scheduleURL = contextURL + "/schedule"
-  var redirectURL = contextURL + "/schedule"
+  var scheduleURL = "/schedule"
+  var redirectURL = "/schedule"
   var requestData = {"action": "removeSched", "scheduleId": scheduleId};
   var successHandler = function (data) {
     if (data.error) {
@@ -51,8 +51,8 @@ function removeSched(scheduleId) {
 }
 
 function removeSla(scheduleId) {
-  var scheduleURL = contextURL + "/schedule"
-  var redirectURL = contextURL + "/schedule"
+  var scheduleURL = "/schedule"
+  var redirectURL = "/schedule"
   var requestData = {"action": "removeSla", "scheduleId": scheduleId};
   var successHandler = function (data) {
     if (data.error) {
@@ -82,7 +82,7 @@ azkaban.ChangeSlaView = Backbone.View.extend({
 
   handleSlaCancel: function (evt) {
     console.log("Clicked cancel button");
-    var scheduleURL = contextURL + "/schedule";
+    var scheduleURL = "/schedule";
 
     $('#slaModalBackground').hide();
     $('#sla-options').hide();
@@ -98,7 +98,7 @@ azkaban.ChangeSlaView = Backbone.View.extend({
   initFromSched: function (scheduleId, flowName) {
     this.scheduleId = scheduleId;
 
-    var scheduleURL = contextURL + "/schedule"
+    var scheduleURL = "/schedule"
     this.scheduleURL = scheduleURL;
     var indexToName = {};
     var nameToIndex = {};
@@ -208,7 +208,7 @@ azkaban.ChangeSlaView = Backbone.View.extend({
   handleRemoveSla: function (evt) {
     console.log("Clicked remove sla button");
     var scheduleURL = this.scheduleURL;
-    var redirectURL = this.scheduleURL;
+    var redirectURL = filterXSS(this.scheduleURL);
     var requestData = {"action": "removeSla", "scheduleId": this.scheduleId};
     var successHandler = function (data) {
       if (data.error) {
@@ -244,7 +244,7 @@ azkaban.ChangeSlaView = Backbone.View.extend({
       settings: settings
     };
 
-    var scheduleURL = this.scheduleURL;
+    var scheduleURL = filterXSS(this.scheduleURL);
     var successHandler = function (data) {
       if (data.error) {
         alert(data.error);
@@ -341,7 +341,7 @@ $(function () {
   slaView = new azkaban.ChangeSlaView({el: $('#sla-options')});
   tableSorterView = new azkaban.TableSorter({el: $('#scheduledFlowsTbl')});
   /*
-  var requestURL = contextURL + "/manager";
+  var requestURL =  "/manager";
 
   // Set up the Flow options view. Create a new one every time :p
   $('#addSlaBtn').click( function() {

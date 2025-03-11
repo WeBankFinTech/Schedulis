@@ -18,12 +18,13 @@ package azkaban.webapp.servlet;
 
 import azkaban.flowtrigger.quartz.FlowTriggerScheduler;
 import azkaban.flowtrigger.quartz.FlowTriggerScheduler.ScheduledFlowTrigger;
+import azkaban.i18n.utils.LoadJsonUtils;
 import azkaban.project.Project;
 import azkaban.project.ProjectManager;
 import azkaban.server.session.Session;
 import azkaban.user.Permission.Type;
+import azkaban.utils.WebUtils;
 import azkaban.webapp.AzkabanWebServer;
-import com.webank.wedatasphere.schedulis.common.i18nutils.LoadJsonUtils;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
@@ -33,11 +34,13 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import org.quartz.SchedulerException;
 
-public class FlowTriggerServlet extends LoginAbstractAzkabanServlet {
+public class FlowTriggerServlet extends AbstractLoginAzkabanServlet {
 
   private static final long serialVersionUID = 1L;
   private FlowTriggerScheduler scheduler;
   private ProjectManager projectManager;
+
+  protected static final WebUtils utils = new WebUtils();
 
   @Override
   public void init(final ServletConfig config) throws ServletException {
@@ -49,7 +52,7 @@ public class FlowTriggerServlet extends LoginAbstractAzkabanServlet {
 
   @Override
   protected void handleGet(final HttpServletRequest req, final HttpServletResponse resp,
-      final Session session) throws ServletException, IOException {
+                           final Session session) throws ServletException, IOException {
     if (hasParam(req, "ajax")) {
       handleAJAXAction(req, resp, session);
     } else {
@@ -58,22 +61,22 @@ public class FlowTriggerServlet extends LoginAbstractAzkabanServlet {
   }
 
   private void ajaxFetchTrigger(final int projectId, final String flowId, final Session session,
-      final HashMap<String,
-          Object> ret) {
+                                final HashMap<String,
+                                        Object> ret) {
     final ScheduledFlowTrigger res = this.scheduler
-        .getScheduledFlowTriggerJobs().stream().filter(
-            scheduledFlowTrigger -> scheduledFlowTrigger.getFlowId().equals(flowId)
-                && scheduledFlowTrigger.getProjectId
-                () == projectId).findFirst().orElse(null);
+            .getScheduledFlowTriggerJobs().stream().filter(
+                    scheduledFlowTrigger -> scheduledFlowTrigger.getFlowId().equals(flowId)
+                            && scheduledFlowTrigger.getProjectId
+                            () == projectId).findFirst().orElse(null);
 
     if (res != null) {
       final Map<String, Object> jsonObj = new HashMap<>();
       jsonObj.put("cronExpression", res.getFlowTrigger().getSchedule().getCronExpression());
       jsonObj.put("submitUser", res.getSubmitUser());
       jsonObj.put("firstSchedTime",
-          utils.formatDateTime(res.getQuartzTrigger().getStartTime().getTime()));
+              utils.formatDateTime(res.getQuartzTrigger().getStartTime().getTime()));
       jsonObj.put("nextExecTime",
-          utils.formatDateTime(res.getQuartzTrigger().getNextFireTime().getTime()));
+              utils.formatDateTime(res.getQuartzTrigger().getNextFireTime().getTime()));
 
       Long maxWaitMin = null;
       if (res.getFlowTrigger().getMaxWaitDuration().isPresent()) {
@@ -93,17 +96,17 @@ public class FlowTriggerServlet extends LoginAbstractAzkabanServlet {
   }
 
   private void handleAJAXAction(final HttpServletRequest req,
-      final HttpServletResponse resp, final Session session) throws ServletException,
-      IOException {
+                                final HttpServletResponse resp, final Session session) throws ServletException,
+          IOException {
     final HashMap<String, Object> ret = new HashMap<>();
     final String ajaxName = getParam(req, "ajax");
-    if (ajaxName.equals("fetchTrigger")) {
+    if ("fetchTrigger".equals(ajaxName)) {
       if (checkProjectIdAndFlowId(req)) {
         final int projectId = getIntParam(req, "projectId");
         final String flowId = getParam(req, "flowId");
         ajaxFetchTrigger(projectId, flowId, session, ret);
       }
-    } else if (ajaxName.equals("pauseTrigger") || ajaxName.equals("resumeTrigger")) {
+    } else if ("pauseTrigger".equals(ajaxName) || "resumeTrigger".equals(ajaxName)) {
       if (checkProjectIdAndFlowId(req)) {
         final int projectId = getIntParam(req, "projectId");
         final String flowId = getParam(req, "flowId");
@@ -115,7 +118,7 @@ public class FlowTriggerServlet extends LoginAbstractAzkabanServlet {
           ret.put("error", "Permission denied. Need ADMIN access.");
         } else {
           try {
-            if (ajaxName.equals("pauseTrigger")) {
+            if ("pauseTrigger".equals(ajaxName)) {
               this.scheduler.pauseFlowTrigger(projectId, flowId);
             } else {
               this.scheduler.resumeFlowTrigger(projectId, flowId);
@@ -133,10 +136,10 @@ public class FlowTriggerServlet extends LoginAbstractAzkabanServlet {
   }
 
   private void handlePage(final HttpServletRequest req,
-      final HttpServletResponse resp, final Session session) {
+                          final HttpServletResponse resp, final Session session) {
     final Page page =
-        newPage(req, resp, session,
-            "azkaban/webapp/servlet/velocity/flowtriggerspage.vm");
+            newPage(req, resp, session,
+                    "azkaban/webapp/servlet/velocity/flowtriggerspage.vm");
 
     page.add("flowTriggers", this.scheduler.getScheduledFlowTriggerJobs());
     String languageType = LoadJsonUtils.getLanguageType();
@@ -146,6 +149,6 @@ public class FlowTriggerServlet extends LoginAbstractAzkabanServlet {
 
   @Override
   protected void handlePost(final HttpServletRequest req, final HttpServletResponse resp,
-      final Session session) throws ServletException, IOException {
+                            final Session session) throws ServletException, IOException {
   }
 }

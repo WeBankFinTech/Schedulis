@@ -1,9 +1,9 @@
 package azkaban.jobtype;
 
+import java.util.Map;
+
 import org.junit.Assert;
 import org.junit.Test;
-
-import java.util.Map;
 
 public class TestHadoopSecureHiveWrapper {
   // Ensure that hivevars with equal signs in them are parsed
