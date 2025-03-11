@@ -28,9 +28,6 @@
               <fieldset class="form-horizontal">
                 <div class="form-group">
                   <label for="datetimebegin" class="col-sm-2 control-label">$refreshInterval</label>
-##                  <div class="col-sm-3">
-##                    <input type="number" id="refresh-num" value="1" step="1" min="1" max="888" class="form-control">
-##                  </div>
                   <div class="col-sm-3">
                     <select id="refresh-flowlog-time-select" class="form-control">
                       <option value="0">$interval20s</option>
@@ -40,13 +37,6 @@
                       <option value="4">$plsSelect</option>
                     </select>
                   </div>
-##                  <label for="datetimebegin" class="col-sm-2 control-label">间隔单位</label>
-##                  <div class="col-sm-3">
-##                    <select id="refresh-interval" name="" class="form-control form-control-auto">
-##                      <option value="second">秒</option>
-##                      <option value="min">分</option>
-##                    </select>
-##                  </div>
                 </div>
               </fieldset>
             </div>

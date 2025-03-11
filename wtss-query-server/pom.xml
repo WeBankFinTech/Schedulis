@@ -6,7 +6,7 @@
     <parent>
         <groupId>com.webank.wedatasphere.schedulis</groupId>
         <artifactId>schedulis</artifactId>
-        <version>0.9.0</version>
+        <version>1.50.0</version>
     </parent>
 
     <artifactId>wtss-query-server</artifactId>

@@ -187,10 +187,10 @@ public class JwtTokenUtils {
     }
 
     public static void main(String[] args) {
-        String token = getToken(null,false,"***REMOVED***",1 * 7 * 24 * 60 * 60 );
+        String token = getToken(null,false,"dws-wtss|WeBankBDPWTSS&DWS@2019",1 * 7 * 24 * 60 * 60 );
         System.out.println("testEncode: " + token);
 
-        Claims claims = getJws(token,"***REMOVED***").getBody();
+        Claims claims = getJws(token,"dws-wtss|WeBankBDPWTSS&DWS@2019").getBody();
         System.out.println("ID: " + claims.getId());
         System.out.println("Subject: " + claims.getSubject());
         System.out.println("Issuer: " + claims.getIssuer());

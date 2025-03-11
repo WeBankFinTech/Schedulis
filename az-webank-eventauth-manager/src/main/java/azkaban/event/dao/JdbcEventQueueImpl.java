@@ -2,13 +2,19 @@ package azkaban.event.dao;
 
 import azkaban.db.DatabaseOperator;
 import azkaban.event.entity.EventQueue;
+import com.alibaba.fastjson.JSONArray;
+import org.apache.commons.lang.StringUtils;
 
 import javax.inject.Inject;
 import javax.inject.Singleton;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
+import java.util.stream.Collectors;
+
+import static java.util.stream.Collectors.joining;
 
 @Singleton
 public class JdbcEventQueueImpl implements EventLoader<EventQueue> {
@@ -16,6 +22,8 @@ public class JdbcEventQueueImpl implements EventLoader<EventQueue> {
     private final DatabaseOperator dbOperator;
 
     private static final String GET_EVENT_QUEUE_TOTAL = "SELECT count(*) FROM event_queue";
+
+    private static final String IS_LIKE = "Y";
 
     private static final String FIND_EVENT_QUEUE_LIST = "SELECT msg_id, sender, send_time, topic, msg_name, msg, send_ip , wemq_bizno FROM event_queue";
 
@@ -40,9 +48,10 @@ public class JdbcEventQueueImpl implements EventLoader<EventQueue> {
     }
 
     @Override
-    public int getEventTotal(String searchValue, String... filterValue) throws SQLException {
+    public int getEventTotal(String searchValue, boolean authType, String... filterValue) throws SQLException {
         String querySQL = GET_EVENT_QUEUE_TOTAL
                 + whereAndSQL(EVENT_QUEUE_FILTER_KEYS)
+                + (authType ? "AND source_type = \"wemq\"" : "AND source_type = \"\"")
                 + andOrSQL(EVENT_QUEUE_SEARCH_KEYS, searchValue);
         List<Object> params = andParams(filterValue)
                 .andThen(orParams(EVENT_QUEUE_SEARCH_KEYS, searchValue))
@@ -51,9 +60,10 @@ public class JdbcEventQueueImpl implements EventLoader<EventQueue> {
     }
 
     @Override
-    public int getEventTotal4Page(String searchValue, int index, int sum, String... filterValue) throws SQLException {
+    public int getEventTotal4Page(String searchValue, boolean authType, int index, int sum, String... filterValue) throws SQLException {
         String querySQL = "select count(*) from (select 1 from event_queue "
                 + whereAndSQL(EVENT_QUEUE_FILTER_KEYS)
+                + (authType ? "AND source_type = \"wemq\"" : "AND source_type = \"\"")
                 + andOrSQL(EVENT_QUEUE_SEARCH_KEYS, searchValue)
                 + " ORDER BY send_time DESC,msg_id DESC"
                 + limitSQL() + ") a";
@@ -74,9 +84,10 @@ public class JdbcEventQueueImpl implements EventLoader<EventQueue> {
     }
 
     @Override
-    public List<EventQueue> findEventList(String searchValue, int startIndex, int count, String... filterValue) throws SQLException {
+    public List<EventQueue> findEventList(String searchValue, boolean authType, int startIndex, int count, String... filterValue) throws SQLException {
         String querySQL = FIND_EVENT_QUEUE_LIST
                 + whereAndSQL(EVENT_QUEUE_FILTER_KEYS)
+                + (authType ? "AND source_type = \"wemq\"" : "AND source_type = \"\"")
                 + andOrSQL(EVENT_QUEUE_SEARCH_KEYS, searchValue)
                 + " ORDER BY send_time DESC,msg_id DESC"
                 + limitSQL();
@@ -96,6 +107,76 @@ public class JdbcEventQueueImpl implements EventLoader<EventQueue> {
     }
 
     @Override
+    public List<EventQueue> queryMessage(String topic, String sender, String msgName, String msgBody, String isLike, Integer pageNo, Integer pageSize) throws SQLException {
+        String querySQL = FIND_EVENT_QUEUE_LIST;
+        List<String> searchParams = new ArrayList<>();
+        searchParams.add(topic);
+        searchParams.add(sender);
+        searchParams.add(msgName);
+
+        HashMap<String, String> paramsMap = new HashMap<>();
+        paramsMap.put("topic", topic);
+        paramsMap.put("sender", sender);
+        paramsMap.put("msg_name", msgName);
+        List<Object> allParams = searchParams.stream().filter(param -> StringUtils.isNotEmpty(param)).collect(Collectors.toList());
+        List<String> keys = Arrays.asList("topic", "sender", "msg_name");
+        querySQL = querySQL + keys.stream()
+                .filter(key -> StringUtils.isNotEmpty(paramsMap.get(key)))
+                .map(key -> key + " = ? ")
+                .collect(joining(" AND ", " WHERE ", ""));
+
+        //组装msgSQL
+        if (StringUtils.isNotEmpty(msgBody)) {
+            JSONArray msgArray = new JSONArray();
+            if(msgBody.startsWith("[") && msgBody.endsWith("]")){
+                msgArray = JSONArray.parseArray(msgBody);
+            }else {
+                msgArray.add(msgBody);
+            }
+            if (msgArray.size() > 0) {
+                if (IS_LIKE.equals(isLike)) {
+                    querySQL = querySQL + msgArray.stream()
+                            .map(value -> " msg LIKE ?")
+                            .collect(joining(" OR ", "AND (", ")"));
+                    for (int i = 0; i < msgArray.size(); i++) {
+                        String msgLike = "%" + msgArray.getString(i) + "%";
+                        allParams.add(msgLike);
+                    }
+
+                } else {
+                    querySQL = querySQL + msgArray.stream()
+                            .map(value -> " msg = ?")
+                            .collect(joining(" OR ", "AND (", ")"));
+                    for (int i = 0; i < msgArray.size(); i++) {
+                        allParams.add(msgArray.getString(i));
+                    }
+                }
+
+            }
+        }
+        //组织limit，分页
+        if (pageNo != 0 && pageSize != 0) {
+            Integer index = pageSize * (pageNo - 1);
+            allParams.add(index);
+            allParams.add(pageSize);
+            querySQL = querySQL + sortDescSQl("send_time") + limitSQL();
+        }else {
+            querySQL = querySQL + sortDescSQl("send_time");
+        }
+
+
+        List<EventQueue> eventQueues = dbOperator.query(querySQL, resultSet -> {
+            List<EventQueue> eventQueueList = new ArrayList<>();
+            while (resultSet.next()) {
+                EventQueue eventQueue = new EventQueue(resultSet.getString("send_time"), resultSet.getString("msg"));
+                eventQueueList.add(eventQueue);
+            }
+            return eventQueueList;
+        }, allParams.toArray());
+        return eventQueues;
+    }
+
+    @Override
     public <T> T getEventTotalBySearch(String searchKey, String searchTerm) {
         return null;
     }
@@ -112,7 +193,7 @@ public class JdbcEventQueueImpl implements EventLoader<EventQueue> {
     }
 
     @Override
-    public List<EventQueue> getEventAuth(String topic, String sender, String msgName) throws SQLException {
+    public List<EventQueue> getEvent(String topic, String sender, String msgName) throws SQLException {
         return null;
     }
 

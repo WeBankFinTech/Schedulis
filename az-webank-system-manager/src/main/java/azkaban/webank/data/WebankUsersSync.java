@@ -3,9 +3,23 @@ package azkaban.webank.data;
 import azkaban.Constants;
 import azkaban.common.utils.HttpUtil;
 import azkaban.utils.Props;
+import azkaban.utils.RSAUtils;
 import azkaban.webank.entity.ExternalUser;
 import azkaban.webank.entity.WebankDepartment;
-import bsp.encrypt.EncryptUtil;
+
+import java.sql.Connection;
+import java.sql.DriverManager;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.sql.Statement;
+import java.time.Instant;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.List;
+import java.util.ListIterator;
+import java.util.Map;
 import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.commons.collections4.MapUtils;
 import org.apache.commons.lang3.RandomStringUtils;
@@ -16,12 +30,8 @@ import org.json.JSONObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.sql.*;
-import java.time.Instant;
-import java.util.*;
-
 /**
- * Created by kirkzhou on 7/5/18.
+ * Created by johnnwang on 7/5/18.
  */
 public class WebankUsersSync {
 
@@ -261,6 +271,7 @@ public class WebankUsersSync {
             continue;  // 该人员的信息不写入两张表中
           }
           String departmentName = null;
+          // "OrgFullName" : "xxxx-xxx部-xxxx室" 员工所在部门全层级名称
           String orgFullName = node.getString("OrgFullName");
 //            java.sql.Date startDate = DateUtils
 //                .ConvertStrtoSqlDate(DateUtils.DATE_PATTERN_HALF, node.getString("EntryDate"));
@@ -279,7 +290,8 @@ public class WebankUsersSync {
             departmentName = orgName;
             defaultGroupName = "";
           } else {
-            departmentName = orgFullName.substring(0, orgFullName.indexOf("-"));  // 基础科技产品部-大数据平台室
+            departmentName = orgFullName.substring(0,
+                orgFullName.lastIndexOf("-"));  // X3-基础科技产品部-大数据平台室
             defaultGroupName = orgName;
           }
 
@@ -320,14 +332,14 @@ public class WebankUsersSync {
 
     try {
 
-      String wherehowsHost = this.prop.getString("wtss.db.jdbc.url");
-      String wherehowsUserName = this.prop.getString("wtss.db.username");
+      String wherehowsHost = this.prop.getString("wtss.db.jdbc.url");//"jdbc:mysql://10.255.4.29:8504/bdp_wemeta_01?charset=utf8&zeroDateTimeBehavior=convertToNull";
+      String wherehowsUserName = this.prop.getString("wtss.db.username");//"bdpwemeta";
 
       String wherehowsPassWord = null;
       try {
         String privateKey = this.prop.getString("password.private.key");
         String ciphertext = this.prop.getString("wtss.db.password");
-        wherehowsPassWord = EncryptUtil.decrypt(privateKey, ciphertext);
+        wherehowsPassWord = RSAUtils.decrypt(privateKey, ciphertext);
       } catch (Exception e){
         logger.error("password decore failed", e);
       }
@@ -415,7 +427,7 @@ public class WebankUsersSync {
       try {
         String privateKey = this.prop.getString("password.private.key");
         String ciphertext = this.prop.getString("wtss.db.password");
-        wherehowsPassWord = EncryptUtil.decrypt(privateKey, ciphertext);
+        wherehowsPassWord = RSAUtils.decrypt(privateKey, ciphertext);
       } catch (Exception e){
         logger.error("password decore failed", e);
       }
@@ -1042,5 +1054,4 @@ public class WebankUsersSync {
     }
     return false;
   }
-
 }

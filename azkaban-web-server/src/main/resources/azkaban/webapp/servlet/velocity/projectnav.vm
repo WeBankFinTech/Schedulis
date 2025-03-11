@@ -16,15 +16,25 @@
 
 <ul class="nav nav-tabs nav-sm">
   <li#if($project_page == 'flows') class="active"#end><a
-      href="${context}/manager?project=${project.name}">$flowList</a></li>
+      href="javascript:void(0);" onclick="checkHrefUrlXss('/manager?project=${project.name}&projectId=${project.id}')">$flowList</a></li>
   <li#if($project_page == 'permissions') class="active"#end><a id="project-permission-btn"
-                                                               href="${context}/manager?project=${project.name}&permissions">$perList</a>
+                                                               href="javascript:void(0);" onclick="checkHrefUrlXss('/manager?project=${project.name}&projectId=${project.id}&permissions')">$perList</a>
   </li>
   #if ($admin)
     <li#if($project_page == 'logs') class="active"#end><a id="project-logs-btn"
-                                                          href="${context}/manager?project=${project.name}&logs">$proOperateRecord</a></li>
+                                                          href="javascript:void(0);" onclick="checkHrefUrlXss('/manager?project=${project.name}&projectId=${project.id}&logs')">$proOperateRecord</a></li>
   #end
  <li#if($project_page == 'versions') class="active"#end><a id="project-versions-btn"
-                                                                  href="${context}/manager?project=${project.name}&versions">$flowVersionList</a>
+                                                                 href="javascript:void(0);" onclick="checkHrefUrlXss('/manager?project=${project.name}&projectId=${project.id}&versions')">$flowVersionList</a>
+  </li>
+  #if($project_page == 'flows')
+  <li class="nav-button pull-right" id="filterJobBox" style="margin-left:15px;">
+           <select id="subFlowFilterList" class="form-control" data-placeholder="$filterbytaskname" required="required"  style="margin-left:15px; width: 250px; display: block;" >
+        </select>
  </li>
+  <li class="nav-button pull-right" id="filterFlowBox">
+           <select id="flowFilterList" class="form-control" style="width: 250px; display: block;" >
+        </select>
+        </li>
+          #end
 </ul>

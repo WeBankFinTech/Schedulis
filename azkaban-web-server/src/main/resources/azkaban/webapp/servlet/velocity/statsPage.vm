@@ -22,13 +22,12 @@
   <meta http-equiv="Expires" content="0">
   #parse("azkaban/webapp/servlet/velocity/style.vm")
   #parse("azkaban/webapp/servlet/velocity/javascript.vm")
-  <link rel="stylesheet" type="text/css" href="${context}/css/bootstrap-datetimepicker.css?version=1.10.0"/>
-  <script type="text/javascript" src="${context}/js/raphael.min.js?version=1.10.0"></script>
-  <script type="text/javascript" src="${context}/js/morris.min.js?version=1.10.0"></script>
-  <script type="text/javascript" src="${context}/js/moment.min.js?version=1.10.0"></script>
-  <script type="text/javascript" src="${context}/js/bootstrap-datetimepicker.min.js?version=1.10.0"></script>
+  <link rel="stylesheet" type="text/css" href="/css/bootstrap-datetimepicker.css?version=1.49.0"/>
+  <script type="text/javascript" src="/js/raphael.min.js?version=1.49.0"></script>
+  <script type="text/javascript" src="/js/morris.min.js?version=1.49.0"></script>
+  <script type="text/javascript" src="/js/moment-2.29.4.min.js?version=1.49.0"></script>
+  <script type="text/javascript" src="/js/bootstrap-datetimepicker.min.js?version=1.49.0"></script>
   <script type="text/javascript">
-    var contextURL = "${context}";
     var currentTime = ${currentTime};
     var timezone = "${timezone}";
     var langType = "${currentlangType}";
@@ -108,7 +107,7 @@
     <div class="container-full">
       <div class="row">
         <div class="header-title" style="width: 17%;">
-          <h1><a href="${context}/stats">Statistics</a></h1>
+          <h1><a href="/stats">Statistics</a></h1>
         </div>
         <div class="header-control" style="width: 1300px; padding-top: 5px;">
           <form id="metric-form" method="get">

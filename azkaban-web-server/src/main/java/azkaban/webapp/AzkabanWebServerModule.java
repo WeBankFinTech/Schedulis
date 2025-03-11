@@ -17,24 +17,6 @@
 
 package azkaban.webapp;
 
-import azkaban.trigger.HATriggerManager;
-import azkaban.trigger.TriggerManager;
-import com.google.inject.AbstractModule;
-import com.google.inject.Provides;
-
-import com.webank.wedatasphere.schedulis.common.executor.ExecutorManagerHA;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.apache.velocity.app.VelocityEngine;
-import org.apache.velocity.runtime.log.Log4JLogChute;
-import org.apache.velocity.runtime.resource.loader.ClasspathResourceLoader;
-import org.apache.velocity.runtime.resource.loader.JarResourceLoader;
-import org.eclipse.jetty.server.Server;
-
-import javax.inject.Inject;
-import javax.inject.Singleton;
-
 import azkaban.Constants.ConfigurationKeys;
 import azkaban.executor.ExecutionController;
 import azkaban.executor.ExecutorManager;
@@ -43,12 +25,28 @@ import azkaban.flowtrigger.database.FlowTriggerInstanceLoader;
 import azkaban.flowtrigger.database.JdbcFlowTriggerInstanceLoaderImpl;
 import azkaban.flowtrigger.plugin.FlowTriggerDependencyPluginException;
 import azkaban.flowtrigger.plugin.FlowTriggerDependencyPluginManager;
-import azkaban.scheduler.ScheduleLoader;
-import azkaban.scheduler.TriggerBasedScheduleLoader;
+import azkaban.jobid.jump.JobIdJumpService;
+import azkaban.jobid.jump.JobIdJumpServiceImpl;
+import azkaban.log.JobLogDiagnosisManager;
+import azkaban.log.diagnosis.dao.JobLogDiagnosisDao;
+import azkaban.log.diagnosis.dao.JobLogDiagnosisDaoImpl;
+import azkaban.scheduler.*;
+import azkaban.trigger.ProjectDeleteTrigger;
 import azkaban.utils.Props;
-
-import org.slf4j.LoggerFactory;
+import com.google.inject.AbstractModule;
+import com.google.inject.Provides;
+import com.google.inject.Scopes;
+import org.apache.velocity.app.VelocityEngine;
+import org.apache.velocity.runtime.log.Log4JLogChute;
+import org.apache.velocity.runtime.resource.loader.ClasspathResourceLoader;
+import org.apache.velocity.runtime.resource.loader.JarResourceLoader;
+import org.eclipse.jetty.server.Server;
 import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import javax.inject.Inject;
+import javax.inject.Singleton;
+
 //import org.mortbay.jetty.Server;
 
 /**
@@ -88,16 +86,19 @@ public class AzkabanWebServerModule extends AbstractModule {
     bind(ScheduleLoader.class).to(TriggerBasedScheduleLoader.class);
     bind(FlowTriggerInstanceLoader.class).to(JdbcFlowTriggerInstanceLoaderImpl.class);
     bind(ExecutorManagerAdapter.class).to(resolveExecutorManagerAdaptorClassType());
-    if (props.getBoolean(ConfigurationKeys.WEBSERVER_HA_MODEL, false)) {
-      bind(TriggerManager.class).to(HATriggerManager.class);
-    }
+
+    bind(EventScheduleServiceAdapter.class).to(EventScheduleServiceImpl.class);
+    bind(EventScheduleDaoAdapter.class).to(EventScheduleDaoImpl.class);
+    bind(MissedScheduleManager.class).in(Scopes.SINGLETON);
+    bind(JobLogDiagnosisManager.class).in(Scopes.SINGLETON);
+    bind(ProjectDeleteTrigger.class);
+    bind(JobIdJumpService.class).to(JobIdJumpServiceImpl.class);
+    bind(JobLogDiagnosisDao.class).to(JobLogDiagnosisDaoImpl.class);
   }
 
   private Class<? extends ExecutorManagerAdapter> resolveExecutorManagerAdaptorClassType() {
     if(props.getBoolean(ConfigurationKeys.AZKABAN_POLL_MODEL, false)){
       return ExecutionController.class;
-    }else if(props.getBoolean(ConfigurationKeys.WEBSERVER_HA_MODEL, false)){
-      return ExecutorManagerHA.class;
     }else{
       return ExecutorManager.class;
     }

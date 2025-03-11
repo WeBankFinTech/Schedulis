@@ -16,34 +16,37 @@ function getCycleOption(executeData) {
 }
 
 function checkCycleParam(cycleOption, submitCycleFlowFunc) {
-    var url = contextURL + "/executor?ajax=cycleParamVerify";
+  var url = "/executor?ajax=cycleParamVerify";
     var successHandler = function(data) {
         if (data.error) {
+      $("#execute-btn").attr("disabled", false).removeClass("button-disable");
             messageDialogView.show(wtssI18n.view.cycleExecutionError, data.error);
             return false;
+    } else if (data.alert) {
+      $("#execute-btn").attr("disabled", false).removeClass("button-disable");
+      messageDialogView.show(wtssI18n.view.cycleExecution, data.alert,
+          function () {
+            window.location.href = "/executor#cycle-execution";
+            submitCycleFlowFunc(cycleOption);
+          });
         } else {
             flowExecuteDialogView.hideExecutionOptionPanel();
             messageDialogView.show(wtssI18n.view.cycleExecution, wtssI18n.view.cycleExecutionSubmitSuccess,
                 function() {
-                    window.location.href = contextURL + "/executor#cycle-execution";
+            setTimeout(function() {
+                window.location.href = "/executor#cycle-execution";
                     submitCycleFlowFunc(cycleOption);
+            }, 1500);
                 }
             );
         }
     };
-    $.ajax({
-        type: "GET",
-        contentType: "application/json",
-        url: url,
-        data: cycleOption,
-        dataType: 'json',
-        success: successHandler,
-    });
+  $.get(url, cycleOption, successHandler, "json");
 }
 
 
 function submitCycleFlow(cycleData) {
-    executeURL = contextURL + "/executor?ajax=submitCycleFlow";
+  executeURL = "/executor?ajax=submitCycleFlow";
     $.ajax({
         type: "GET",
         contentType: "application/json; charset=utf-8",

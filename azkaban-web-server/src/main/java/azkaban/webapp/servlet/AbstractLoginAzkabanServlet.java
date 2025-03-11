@@ -16,6 +16,10 @@
 
 package azkaban.webapp.servlet;
 
+import static azkaban.Constants.ConfigurationKeys.ENABLE_APPID_LOGIN;
+import static azkaban.Constants.WTSS_PUBLIC_KEY;
+import static azkaban.ServiceProvider.SERVICE_PROVIDER;
+
 import azkaban.ServiceProvider;
 import azkaban.i18n.utils.LoadJsonUtils;
 import azkaban.project.Project;
@@ -27,30 +31,52 @@ import azkaban.system.JdbcSystemUserImpl;
 import azkaban.system.SystemManager;
 import azkaban.system.SystemUserLoader;
 import azkaban.system.SystemUserManagerException;
+import azkaban.system.credential.CredentialServiceImpl;
+import azkaban.system.dto.CredentialDto;
 import azkaban.system.entity.WtssUser;
 import azkaban.trigger.TriggerManagerException;
-import azkaban.user.*;
-import azkaban.utils.*;
+import azkaban.user.Permission;
+import azkaban.user.Role;
+import azkaban.user.SystemUserManager;
+import azkaban.user.User;
+import azkaban.user.UserManager;
+import azkaban.user.UserManagerException;
+import azkaban.user.UserType;
+import azkaban.utils.Props;
+import azkaban.utils.RSAUtils;
+import azkaban.utils.StringUtils;
+import azkaban.utils.WebUtils;
+import azkaban.utils.XSSFilterUtils;
 import azkaban.webapp.AzkabanWebServer;
 import azkaban.webapp.WebMetrics;
-import bsp.encrypt.EncryptUtil;
+
+import com.google.common.cache.Cache;
+import com.google.common.cache.CacheBuilder;
+import java.io.BufferedInputStream;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.io.OutputStream;
+import java.io.Writer;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.UUID;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
+import javax.servlet.ServletConfig;
+import javax.servlet.ServletException;
+import javax.servlet.http.Cookie;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.fileupload.servlet.ServletFileUpload;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang.ObjectUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import javax.servlet.ServletConfig;
-import javax.servlet.ServletException;
-import javax.servlet.http.Cookie;
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
-import java.io.*;
-import java.util.*;
-
-import static azkaban.Constants.WTSS_PUBLIC_KEY;
-import static azkaban.ServiceProvider.SERVICE_PROVIDER;
 
 /**
  * Abstract Servlet that handles auto login when the session hasn't been verified.
@@ -96,6 +122,11 @@ public abstract class AbstractLoginAzkabanServlet extends AbstractAzkabanServlet
   private MultipartParser multipartParser;
   private boolean shouldLogRawUserAgent = false;
 
+  /**
+   * 使用 Guava Cache 缓存登录鉴权信息
+   */
+  private Cache<String, CredentialDto> credentialCache;
+
   @Override
   public void init(final ServletConfig config) throws ServletException {
     super.init(config);
@@ -114,6 +145,10 @@ public abstract class AbstractLoginAzkabanServlet extends AbstractAzkabanServlet
 
     this.requestWithoutSessionList = this.application.getServerProps().getStringList(REQUEST_WITHOUTSESSION,
             Arrays.asList("executeFlowCycleFromExecutor", "reloadWebData", "alertMissedSchedules", "reloadExecutors","recordRunningFlow"));
+
+    this.credentialCache = CacheBuilder.newBuilder()
+        .expireAfterWrite(10, TimeUnit.MINUTES)
+        .build();
   }
 
   public void setResourceDirectory(final File file) {
@@ -610,6 +645,21 @@ public abstract class AbstractLoginAzkabanServlet extends AbstractAzkabanServlet
     }
 
     final String ip = getRealClientIpAddr(req);
+
+    if (props.getBoolean(ENABLE_APPID_LOGIN, true)) {
+      // appId + appSecret 校验
+      if (hasParam(req, "appId") && hasParam(req, "appSecret")) {
+        Session sessionByAppIdAndAppToken = this.serverValid(req, props, username, password, ip,
+            getParam(req, "appId"), getParam(req, "appSecret"));
+
+        if (sessionByAppIdAndAppToken != null) {
+          return sessionByAppIdAndAppToken;
+        } else {
+          throw new UserManagerException("failed to get session by appId and appToken ");
+        }
+      }
+    }
+
     Session session = this
             .validSecret(req, props, username, password, ip, "common.secret", "common_secret");
     if (session != null) {
@@ -623,7 +673,7 @@ public abstract class AbstractLoginAzkabanServlet extends AbstractAzkabanServlet
     if("true".equals(frompage)){
       try {
         String passwordPrivateKey = props.getString("password.private.key");
-        password = EncryptUtil.decrypt(passwordPrivateKey, password);
+        password = RSAUtils.decrypt(passwordPrivateKey, password);
       } catch (Exception e){
         logger.error("decrypt password failed.", e);
         throw new UserManagerException("decrypt password failed.");
@@ -633,6 +683,91 @@ public abstract class AbstractLoginAzkabanServlet extends AbstractAzkabanServlet
     return createSession(username, password, ip, req);
   }
 
+  private Session serverValid(HttpServletRequest req, Props props, String username, String password,
+      String ip, String appId, String appSecret) throws UserManagerException {
+
+    CredentialDto credentialDto;
+    CredentialServiceImpl credentialService = SERVICE_PROVIDER.getInstance(
+        CredentialServiceImpl.class);
+    try {
+      credentialDto = credentialCache.get(appId, () -> credentialService.getCredentialByAppId(
+          appId));
+    } catch (ExecutionException e) {
+      logger.error("Error when get credential info for appId {}", appId);
+      throw new RuntimeException("Error when get credential info, cause by", e);
+    }
+
+    if (credentialDto == null) {
+      logger.warn("handle appId login failed, no credential info");
+      return null;
+    }
+
+    if ((!credentialDto.getAppId().equals(appId) && credentialDto.getAppSecret()
+        .equals(appSecret))) {
+      logger.warn("handle appId login failed, no match credential info");
+      return null;
+    }
+
+    // 判断 IP 是否在 IP 白名单中
+    String[] ipArray = credentialDto.getIpWhitelist().split(",");
+    List<String> ipList = Arrays.asList(ipArray);
+    if (!ipList.contains(ip)) {
+      logger.warn("IP {} is not in whitelist for subsystem {}", ip,
+          credentialDto.getSubsystemId());
+      throw new UserManagerException(
+          "IP " + ip + " is not in whitelist for subsystem " + credentialDto.getSubsystemId());
+    }
+
+    String normalUserName = getParam(req, "normalUserName", "");
+    if (org.apache.commons.lang.StringUtils.isNotEmpty(normalUserName)) {
+      final UserManager manager = getApplication().getTransitionService().getUserManager();
+      manager.validDepartmentOpsUser(username, normalUserName);
+    }
+
+    logger.info("handle appId login , appId pass check, subsystem {}",
+        credentialDto.getSubsystemId());
+    //如果超级用户用户名和密码都是对的，那么我们直接放行
+    if (!StringUtils.isFromBrowser(req.getHeader("User-Agent"))) {
+      logger.info("not browser.");
+      Session cacheSession = null;
+      try {
+        cacheSession = this.application.getSessionCache().getSessionByUsername(username);
+      } catch (Exception e) {
+        logger.warn("get session by username error, caused by: " + e);
+      }
+      if (cacheSession != null) {
+        logger.info("session for user {} was found in cache.", username);
+        return cacheSession;
+      }
+    }
+
+    SessionCache sessionCache = getApplication().getSessionCache();
+    Session sessionByUsername = sessionCache.getSessionByUsername(username);
+    if (sessionByUsername == null) {
+      logger.info("session for user {} was not found in cache, trying to create new session",
+          username);
+      Session newSession = createSession(username, password, ip, appSecret);
+      sessionCache.addSession(newSession);
+      return newSession;
+    } else {
+      logger.info("session for user {} was found in cache.", username);
+      return sessionByUsername;
+    }
+
+  }
+
+  /**
+   * @param req       HTTP 请求
+   * @param props     服务配置
+   * @param username  用户名
+   * @param password  用户密码
+   * @param ip        调用 IP
+   * @param secretKey 涉及密钥的服务配置参数名
+   * @param reqSecret 涉及密钥的请求参数名
+   * @return
+   * @throws ServletException
+   * @throws UserManagerException
+   */
   private Session validSecret(HttpServletRequest req, Props props, String username, String password,
                               String ip, String secretKey, String reqSecret) throws ServletException, UserManagerException {
     if (!hasParam(req, reqSecret)) {
@@ -645,6 +780,7 @@ public abstract class AbstractLoginAzkabanServlet extends AbstractAzkabanServlet
     }
     String wtss_private_key = props.getString("wtss.private.key", "");
     String from_dss_secret_de = "";
+    // 从请求中获取密文
     String from_dss_secret_en = getParam(req, reqSecret);
     logger.debug("handle secret login , secret > {}", from_dss_secret_en);
     try {
@@ -656,6 +792,7 @@ public abstract class AbstractLoginAzkabanServlet extends AbstractAzkabanServlet
       throw new RuntimeException("parse secret failed , caused by ", e);
     }
 
+    // 请求中的 secret 与配置中的 secret 比对
     if (wtss_secret_de.equals(from_dss_secret_de)) {
       String normalUserName = getParam(req, "normalUserName", "");
       if (org.apache.commons.lang.StringUtils.isNotEmpty(normalUserName)) {
@@ -768,6 +905,16 @@ public abstract class AbstractLoginAzkabanServlet extends AbstractAzkabanServlet
     return session;
   }
 
+  /**
+   * @param username 用户名
+   * @param password 用户密码
+   * @param ip 调用 IP
+   * @param request HTTP 请求
+   * @return
+   * @throws UserManagerException
+   * @throws ServletException
+   * @throws IOException
+   */
   private Session createSession(final String username, final String password, final String ip, HttpServletRequest request)
           throws UserManagerException, ServletException, IOException {
     final UserManager manager = getApplication().getTransitionService().getUserManager();
@@ -987,6 +1134,17 @@ public abstract class AbstractLoginAzkabanServlet extends AbstractAzkabanServlet
     page.render();
     resp.sendError(230);
   }
+  public  boolean getBooleanParam(final HttpServletRequest request,
+                                        final String name, final boolean defaultVal) {
+    if (hasParam(request, name)) {
+      try {
+        return getBooleanParam(request, name,defaultVal);
+      } catch (final Exception e) {
+        return defaultVal;
+      }
+    }
 
+    return defaultVal;
+  }
 
 }

@@ -10,7 +10,7 @@
   <parent>
     <groupId>com.webank.wedatasphere.schedulis</groupId>
     <artifactId>schedulis</artifactId>
-    <version>0.9.0</version>
+    <version>1.50.0</version>
   </parent>
 
 
@@ -104,7 +104,11 @@
     <artifactId>jetty-servlet</artifactId>
     <version>${jetty.version}</version>
   </dependency>
-
+  <dependency>
+    <groupId>com.github.oshi</groupId>
+    <artifactId>oshi-core</artifactId>
+    <version>6.2.1</version>
+  </dependency>
   <dependency>
     <groupId>joda-time</groupId>
     <artifactId>joda-time</artifactId>
@@ -252,6 +256,13 @@
     <version>${mail.version}</version>
   </dependency>
   <dependency>
+    <groupId>org.forgerock.opendj</groupId>
+    <artifactId>opendj-grizzly</artifactId>
+    <version>3.0.0</version>
+    <scope>system</scope>
+    <systemPath>${project.basedir}/extlib/opendj-grizzly-3.0.0.jar</systemPath>
+  </dependency>
+  <dependency>
     <groupId>org.apache.velocity</groupId>
     <artifactId>velocity</artifactId>
     <version>${velocity.version}</version>
@@ -274,57 +285,109 @@
     <artifactId>okhttp</artifactId>
     <version>4.2.2</version>
   </dependency>
+  <dependency>
+    <groupId>cn.hutool</groupId>
+    <artifactId>hutool-all</artifactId>
+    <version>${hutool.all.version}</version>
+  </dependency>
 
   <dependency>
-    <groupId>com.webank.wedatasphere.dss</groupId>
-    <artifactId>dss-linkis-node-execution</artifactId>
-    <version>${dss.version}</version>
-    <exclusions>
-      <exclusion>
-        <artifactId>jackson-annotations</artifactId>
-        <groupId>com.fasterxml.jackson.core</groupId>
-      </exclusion>
-      <exclusion>
-        <artifactId>jackson-core</artifactId>
-        <groupId>com.fasterxml.jackson.core</groupId>
-      </exclusion>
-      <exclusion>
-        <artifactId>jackson-databind</artifactId>
-        <groupId>com.fasterxml.jackson.core</groupId>
-      </exclusion>
-      <exclusion>
-        <artifactId>log4j</artifactId>
-        <groupId>log4j</groupId>
-      </exclusion>
-      <exclusion>
-        <artifactId>jetty-servlet</artifactId>
-        <groupId>org.eclipse.jetty</groupId>
-      </exclusion>
-      <exclusion>
-        <artifactId>ooxml-schemas</artifactId>
-        <groupId>org.apache.poi</groupId>
-      </exclusion>
-      <exclusion>
-        <artifactId>poi</artifactId>
-        <groupId>org.apache.poi</groupId>
-      </exclusion>
-      <exclusion>
-        <artifactId>poi-ooxml-schemas</artifactId>
-        <groupId>org.apache.poi</groupId>
-      </exclusion>
-      <exclusion>
-        <artifactId>poi-ooxml</artifactId>
-        <groupId>org.apache.poi</groupId>
-      </exclusion>
-      <exclusion>
-        <artifactId>gson</artifactId>
-        <groupId>com.google.code.gson</groupId>
-      </exclusion>
-      <exclusion>
-        <artifactId>slf4j-api</artifactId>
-        <groupId>org.slf4j</groupId>
-      </exclusion>
-    </exclusions>
+    <groupId>org.springframework</groupId>
+    <artifactId>spring-web</artifactId>
+    <version>${spring.web.version}</version>
+  </dependency>
+  <dependency>
+    <groupId>org.springframework</groupId>
+    <artifactId>spring-core</artifactId>
+    <version>${spring.core.version}</version>
+  </dependency>
+
+<!--  <dependency>-->
+<!--    <groupId>com.webank.wedatasphere.dss</groupId>-->
+<!--    <artifactId>dss-linkis-node-execution</artifactId>-->
+<!--    <version>${dss.version}</version>-->
+<!--    <exclusions>-->
+<!--      <exclusion>-->
+<!--        <artifactId>jackson-annotations</artifactId>-->
+<!--        <groupId>com.fasterxml.jackson.core</groupId>-->
+<!--      </exclusion>-->
+<!--      <exclusion>-->
+<!--        <artifactId>jackson-core</artifactId>-->
+<!--        <groupId>com.fasterxml.jackson.core</groupId>-->
+<!--      </exclusion>-->
+<!--      <exclusion>-->
+<!--        <artifactId>jackson-databind</artifactId>-->
+<!--        <groupId>com.fasterxml.jackson.core</groupId>-->
+<!--      </exclusion>-->
+<!--      <exclusion>-->
+<!--        <artifactId>log4j</artifactId>-->
+<!--        <groupId>log4j</groupId>-->
+<!--      </exclusion>-->
+<!--      <exclusion>-->
+<!--        <artifactId>jetty-servlet</artifactId>-->
+<!--        <groupId>org.eclipse.jetty</groupId>-->
+<!--      </exclusion>-->
+<!--      <exclusion>-->
+<!--        <artifactId>ooxml-schemas</artifactId>-->
+<!--        <groupId>org.apache.poi</groupId>-->
+<!--      </exclusion>-->
+<!--      <exclusion>-->
+<!--        <artifactId>poi</artifactId>-->
+<!--        <groupId>org.apache.poi</groupId>-->
+<!--      </exclusion>-->
+<!--      <exclusion>-->
+<!--        <artifactId>poi-ooxml-schemas</artifactId>-->
+<!--        <groupId>org.apache.poi</groupId>-->
+<!--      </exclusion>-->
+<!--      <exclusion>-->
+<!--        <artifactId>poi-ooxml</artifactId>-->
+<!--        <groupId>org.apache.poi</groupId>-->
+<!--      </exclusion>-->
+<!--      <exclusion>-->
+<!--        <artifactId>gson</artifactId>-->
+<!--        <groupId>com.google.code.gson</groupId>-->
+<!--      </exclusion>-->
+<!--      <exclusion>-->
+<!--        <artifactId>slf4j-api</artifactId>-->
+<!--        <groupId>org.slf4j</groupId>-->
+<!--      </exclusion>-->
+<!--      <exclusion>-->
+<!--        <artifactId>scala-compiler</artifactId>-->
+<!--        <groupId>org.scala-lang</groupId>-->
+<!--      </exclusion>-->
+<!--      <exclusion>-->
+<!--        <artifactId>scala-library</artifactId>-->
+<!--        <groupId>org.scala-lang</groupId>-->
+<!--      </exclusion>-->
+<!--      <exclusion>-->
+<!--        <artifactId>scalap</artifactId>-->
+<!--        <groupId>org.scala-lang</groupId>-->
+<!--      </exclusion>-->
+<!--      <exclusion>-->
+<!--        <artifactId>scala-reflect</artifactId>-->
+<!--        <groupId>org.scala-lang</groupId>-->
+<!--      </exclusion>-->
+<!--    </exclusions>-->
+<!--  </dependency>-->
+  <dependency>
+    <artifactId>scala-compiler</artifactId>
+    <groupId>org.scala-lang</groupId>
+    <version>2.11.12</version>
+  </dependency>
+  <dependency>
+    <artifactId>scala-library</artifactId>
+    <groupId>org.scala-lang</groupId>
+    <version>2.11.8</version>
+  </dependency>
+  <dependency>
+    <artifactId>scalap</artifactId>
+    <groupId>org.scala-lang</groupId>
+    <version>2.11.8</version>
+  </dependency>
+  <dependency>
+    <artifactId>scala-reflect</artifactId>
+    <groupId>org.scala-lang</groupId>
+    <version>2.11.8</version>
   </dependency>
 
   <dependency>

@@ -26,10 +26,15 @@ import azkaban.Constants.JobProperties;
 import azkaban.flow.CommonJobProperties;
 import azkaban.jobExecutor.utils.process.AzkabanProcess;
 import azkaban.jobExecutor.utils.process.AzkabanProcessBuilder;
+import azkaban.jobid.BDPClientJobInfo;
 import azkaban.metrics.CommonMetrics;
-import azkaban.utils.*;
+import azkaban.utils.ExecuteAsUser;
+import azkaban.utils.HadoopJobUtils;
+import azkaban.utils.JobUtils;
+import azkaban.utils.Pair;
+import azkaban.utils.Props;
+import azkaban.utils.SystemMemoryInfo;
 import com.google.common.annotations.VisibleForTesting;
-import com.webank.wedatasphere.schedulis.common.utils.HadoopJobUtils;
 import java.io.File;
 import java.io.IOException;
 import java.time.Duration;
@@ -39,9 +44,10 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.TimeUnit;
-
 import org.slf4j.Logger;
+
 
 
 /**
@@ -70,8 +76,16 @@ public class ProcessJob extends AbstractProcessJob {
   // For testing only. True if the job process exits successfully.
   private volatile boolean success;
 
+  private static final String AZKABAN_LINKIS_TIPS = "azkaban.linkis.tips";
+
+  public static final List<String> CMD_TIPS_LIST=Arrays.asList("spark-sql ","hive ","spark-submit ");
+
+  private List<String> yarnAppId = new CopyOnWriteArrayList<>();
+  private List<String> linkisTaskId = new CopyOnWriteArrayList<>();
+  private List<BDPClientJobInfo> bdpJobserverId =  new CopyOnWriteArrayList<>();
+
   public ProcessJob(final String jobId, final Props sysProps,
-      final Props jobProps, final Logger log) {
+                    final Props jobProps, final Logger log) {
     super(jobId, sysProps, jobProps, log);
     // TODO: reallocf fully guicify CommonMetrics through ProcessJob dependents
     this.commonMetrics = SERVICE_PROVIDER.getInstance(CommonMetrics.class);
@@ -143,14 +157,14 @@ public class ProcessJob extends AbstractProcessJob {
     }
 
     if (this.sysProps.getBoolean(MEMCHECK_ENABLED, true)
-        && this.jobProps.getBoolean(AZKABAN_MEMORY_CHECK, true)) {
+            && this.jobProps.getBoolean(AZKABAN_MEMORY_CHECK, true)) {
       final Pair<Long, Long> memPair = getProcMemoryRequirement();
       final long xms = memPair.getFirst();
       final long xmx = memPair.getSecond();
       // retry backoff in ms
       final String oomMsg = String
-          .format("Cannot request memory (Xms %d kb, Xmx %d kb) from system for job %s",
-              xms, xmx, getId());
+              .format("Cannot request memory (Xms %d kb, Xmx %d kb) from system for job %s",
+                      xms, xmx, getId());
       int attempt;
       boolean isMemGranted = true;
 
@@ -167,9 +181,9 @@ public class ProcessJob extends AbstractProcessJob {
         }
         if (attempt < Constants.MEMORY_CHECK_RETRY_LIMIT) {
           info(String.format(oomMsg + ", sleep for %s secs and retry, attempt %s of %s",
-              TimeUnit.MILLISECONDS.toSeconds(
-                  Constants.MEMORY_CHECK_INTERVAL_MS), attempt,
-              Constants.MEMORY_CHECK_RETRY_LIMIT));
+                  TimeUnit.MILLISECONDS.toSeconds(
+                          Constants.MEMORY_CHECK_INTERVAL_MS), attempt,
+                  Constants.MEMORY_CHECK_RETRY_LIMIT));
           if (attempt == 1) {
             this.commonMetrics.incrementOOMJobWaitCount();
           }
@@ -214,7 +228,8 @@ public class ProcessJob extends AbstractProcessJob {
     // change krb5ccname env var so that each job execution gets its own cache
     final Map<String, String> envVars = getEnvironmentVariables();
     envVars.put(KRB5CCNAME, getKrb5ccname(this.jobProps));
-
+    JobUtils.setHiveOpts(envVars, jobProps, getLog());
+    JobUtils.setSparkOpts(envVars, jobProps, getLog());
     // determine whether to run as Azkaban or run as effectiveUser,
     // by default, run as effectiveUser
     String executeAsUserBinaryPath = null;
@@ -223,10 +238,10 @@ public class ProcessJob extends AbstractProcessJob {
 
     //Get list of users we never execute flows as. (ie: root, azkaban)
     final Set<String> blackListedUsers = new HashSet<>(
-        Arrays.asList(
-            this.sysProps.getString(Constants.ConfigurationKeys.BLACK_LISTED_USERS, "root,azkaban")
-                .split(",")
-        )
+            Arrays.asList(
+                    this.sysProps.getString(Constants.ConfigurationKeys.BLACK_LISTED_USERS, "root,azkaban")
+                            .split(",")
+            )
     );
 
     // nativeLibFolder specifies the path for execute-as-user file,
@@ -238,22 +253,25 @@ public class ProcessJob extends AbstractProcessJob {
       // Throw exception if Azkaban tries to run flow as a prohibited user
       if (blackListedUsers.contains(effectiveUser)) {
         throw new RuntimeException(
-            String.format("Not permitted to proxy as '%s' through Azkaban", effectiveUser)
+                String.format("Not permitted to proxy as '%s' through Azkaban", effectiveUser)
         );
       }
       // Set parent directory permissions to <uid>:azkaban so user can write in their execution directory
       // if the directory is not permissioned correctly already (should happen once per execution)
       if (!canWriteInCurrentWorkingDirectory(effectiveUser)) {
-        info("Changing current working directory ownership");
+        info("Changing current working directory ownership: " + effectiveUser);
         assignUserFileOwnership(effectiveUser, getWorkingDirectory());
       }
       // Set property file permissions to <uid>:azkaban so user can write to their prop files
       // in order to pass properties from one job to another设置配置文件权限 方便参数传递
       for (final File propFile : propFiles) {
-        info("Changing properties files ownership");
+        info("Changing properties files ownership: " + effectiveUser);
         assignUserFileOwnership(effectiveUser, propFile.getAbsolutePath());
       }
     }
+
+    boolean isCommand = getSysProps().getBoolean(AZKABAN_LINKIS_TIPS, true) && jobProps.get("type").equals(COMMAND);
+
 
     for (String command : commands) {
       AzkabanProcessBuilder builder = null;
@@ -262,15 +280,15 @@ public class ProcessJob extends AbstractProcessJob {
         String[] cmd = new String[]{executeAsUserBinaryPath, effectiveUser, command};
         info("Command: " + command);
         builder =
-            new AzkabanProcessBuilder(cmd)
-                .setEnv(envVars).setWorkingDir(getCwd()).setLogger(getLog())
-                .enableExecuteAsUser().setExecuteAsUserBinaryPath(executeAsUserBinaryPath)
-                .setEffectiveUser(effectiveUser);
+                new AzkabanProcessBuilder(cmd)
+                        .setEnv(envVars).setWorkingDir(getCwd()).setLogger(getLog())
+                        .enableExecuteAsUser().setExecuteAsUserBinaryPath(executeAsUserBinaryPath)
+                        .setEffectiveUser(effectiveUser);
       } else {
         info("Command: " + command);
         builder =
-            new AzkabanProcessBuilder(partitionCommandLine(command))
-                .setEnv(envVars).setWorkingDir(getCwd()).setLogger(getLog());
+                new AzkabanProcessBuilder(partitionCommandLine(command))
+                        .setEnv(envVars).setWorkingDir(getCwd()).setLogger(getLog());
       }
 
       if (builder.getEnv().size() > 0) {
@@ -293,6 +311,10 @@ public class ProcessJob extends AbstractProcessJob {
         this.process = builder.build();
       }
       try {
+        this.process.setProps(jobProps);
+        this.process.setYarnAppId(this.yarnAppId);
+        this.process.setLinkisTaskId(this.linkisTaskId);
+        this.process.setBdpJobserverId(this.bdpJobserverId);
         this.process.run();
         this.success = true;
       } catch (final Throwable e) {
@@ -304,8 +326,16 @@ public class ProcessJob extends AbstractProcessJob {
         throw new RuntimeException(e);
       } finally {
         info("Process completed "
-            + (this.success ? "successfully" : "unsuccessfully") + " in "
-            + ((System.currentTimeMillis() - startMs) / 1000) + " seconds.");
+                + (this.success ? "successfully" : "unsuccessfully") + " in "
+                + ((System.currentTimeMillis() - startMs) / 1000) + " seconds.");
+        if(isCommand){
+          for (String str:CMD_TIPS_LIST){
+            if(command.startsWith(str)){
+              info("您当前使用正在使用"+str.trim()+"提交任务，建议您使用linkis提交任务");
+              break;
+            }
+          }
+        }
       }
     }
 
@@ -329,16 +359,16 @@ public class ProcessJob extends AbstractProcessJob {
   private String getKrb5ccname(final Props jobProps) {
     final String effectiveUser = getEffectiveUser(jobProps);
     final String projectName =
-        jobProps.getString(CommonJobProperties.PROJECT_NAME).replace(" ", "_");
+            jobProps.getString(CommonJobProperties.PROJECT_NAME).replace(" ", "_");
     final String flowId =
-        jobProps.getString(CommonJobProperties.FLOW_ID).replace(" ", "_");
+            jobProps.getString(CommonJobProperties.FLOW_ID).replace(" ", "_");
     final String jobId =
-        jobProps.getString(CommonJobProperties.JOB_ID).replace(" ", "_");
+            jobProps.getString(CommonJobProperties.JOB_ID).replace(" ", "_");
     // execId should be an int and should not have space in it, ever
     final String execId = jobProps.getString(CommonJobProperties.EXEC_ID);
     final String krb5ccname =
-        String.format("/tmp/krb5cc__%s__%s__%s__%s__%s", projectName, flowId,
-            jobId, execId, effectiveUser);
+            String.format("/tmp/krb5cc__%s__%s__%s__%s__%s", projectName, flowId,
+                    jobId, execId, effectiveUser);
 
     return krb5ccname;
   }
@@ -360,9 +390,9 @@ public class ProcessJob extends AbstractProcessJob {
       effectiveUser = jobProps.getString(CommonJobProperties.SUBMIT_USER);
     } else {
       throw new RuntimeException(
-          "Internal Error: No user.to.proxy or submit.user in the jobProps");
+              "Internal Error: No user.to.proxy or submit.user in the jobProps");
     }
-    info("effective user is: " + effectiveUser);
+    //info("effective user is: " + effectiveUser);
     return effectiveUser;
   }
 
@@ -376,11 +406,11 @@ public class ProcessJob extends AbstractProcessJob {
    * @return true if user has write permissions in current working directory otherwise false
    */
   private boolean canWriteInCurrentWorkingDirectory(final String effectiveUser)
-      throws IOException {
+          throws IOException {
     final ExecuteAsUser executeAsUser = new ExecuteAsUser(
-        this.sysProps.getString(AZKABAN_SERVER_NATIVE_LIB_FOLDER));
+            this.sysProps.getString(AZKABAN_SERVER_NATIVE_LIB_FOLDER));
     final List<String> checkIfUserCanWriteCommand = Arrays
-        .asList(CREATE_FILE, getWorkingDirectory() + "/" + TEMP_FILE_NAME);
+            .asList(CREATE_FILE, getWorkingDirectory() + "/" + TEMP_FILE_NAME);
     final int result = executeAsUser.execute(effectiveUser, checkIfUserCanWriteCommand);
     return result == SUCCESSFUL_EXECUTION;
   }
@@ -395,13 +425,13 @@ public class ProcessJob extends AbstractProcessJob {
    * @param fileName the name of the file whose permissions will be changed
    */
   private void assignUserFileOwnership(final String effectiveUser, final String fileName) throws
-      Exception {
+          Exception {
     final ExecuteAsUser executeAsUser = new ExecuteAsUser(
-        this.sysProps.getString(AZKABAN_SERVER_NATIVE_LIB_FOLDER));
+            this.sysProps.getString(AZKABAN_SERVER_NATIVE_LIB_FOLDER));
     //如果没有设置组名 使用默认用户名作为组名
     final String groupName = this.sysProps.getString(AZKABAN_SERVER_GROUP_NAME, effectiveUser);
     final List<String> changeOwnershipCommand = Arrays
-        .asList(CHOWN, effectiveUser + ":" + groupName, fileName);
+            .asList(CHOWN, effectiveUser + ":" + groupName, fileName);
     //info("Change ownership of " + fileName + " to " + effectiveUser + ":" + groupName + ".");
 
     info("修改工作目录名： " + fileName + " 执行用户： " + effectiveUser + " 用户的组名：" + groupName + ".");
@@ -409,8 +439,8 @@ public class ProcessJob extends AbstractProcessJob {
     if (result != 0) {
 //      handleError("Failed to change current working directory ownership. Error code: " + Integer
 //          .toString(result), null);
-      handleError("使用chown命令修改当前工作目录权限失败.请检查执行用户或组是否有相应的权限。 错误代码: " + Integer
-          .toString(result), null);
+      handleError("使用chown命令修改[file: " + fileName + " ]权限失败.请检查执行用户或组是否有相应的权限，或者文件名是否包含空格等其他非法字符。 错误代码: " + Integer
+              .toString(result), null);
     }
   }
 
@@ -472,18 +502,32 @@ public class ProcessJob extends AbstractProcessJob {
       this.process.hardKill();
     } catch (InterruptedException ie){
       throw ie;
-    }finally {
+    } finally {
       // FIXME Solve the bug that hive task cannot be killed using spark submitted by command type.
       if(jobProps.get("type").equals(COMMAND)) {
         //kill job by application_id
         String logFilePath = this.jobProps.get(CommonJobProperties.JOB_LOG_FILE);
-        info("log file path is: " + logFilePath);
-        if(org.apache.commons.lang.StringUtils.isBlank(logFilePath)){
-          info("log file does not exist.");
-          return;
+
+        if (this.bdpJobserverId.isEmpty() && this.yarnAppId.isEmpty()) {
+          if(org.apache.commons.lang.StringUtils.isNotBlank(logFilePath)) {
+            info("log file path is: " + logFilePath);
+            HadoopJobUtils.killAllHadoopJobs(logFilePath, getLog(), this.sysProps);
+            HadoopJobUtils.killBdpClientJob(getCommandList(), logFilePath, getLog(), this.sysProps);
+          }
+        } else {
+          info("kill job from cache: " + getId());
+          try {
+            HadoopJobUtils.killAllHadoopJobs(new HashSet<String>(this.yarnAppId), getLog(), this.sysProps);
+          } catch (Exception e) {
+            info("kill yarn job failed", e);
+          }
+          try {
+            HadoopJobUtils.killBdpClientJob(this.bdpJobserverId, getLog(), this.sysProps);
+          } catch (Exception e) {
+            info("kill yarn job failed", e);
+          }
         }
-        HadoopJobUtils.killAllHadoopJobs(logFilePath, getLog());
-        HadoopJobUtils.killBdpClientJob(getCommandList(), logFilePath, getLog(), this.sysProps);
+
       }
     }
   }
@@ -508,6 +552,6 @@ public class ProcessJob extends AbstractProcessJob {
   }
 
   public String getPath() {
-    return this._jobPath == null ? "" : this._jobPath;
+    return this.jobPath == null ? "" : this.jobPath;
   }
 }

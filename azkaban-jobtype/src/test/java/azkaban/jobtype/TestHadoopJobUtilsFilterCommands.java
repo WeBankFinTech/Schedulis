@@ -1,17 +1,16 @@
 package azkaban.jobtype;
 
-import com.webank.wedatasphere.schedulis.jobtype.HadoopJobUtils;
 import java.io.IOException;
 import java.util.Collections;
 import java.util.LinkedList;
 import java.util.List;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.junit.Before;
 import org.junit.Test;
 
 import junit.framework.Assert;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Test class for filterCommands method in HadoopJobUtils

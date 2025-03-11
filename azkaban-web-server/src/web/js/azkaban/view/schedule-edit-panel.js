@@ -54,7 +54,7 @@ azkaban.ScheduleEditPanelView = Backbone.View.extend({
   },
   //调用后台修改定时任务参数
   editScheduleFlow: function () {
-    var scheduleURL = contextURL + "/schedule"
+    var scheduleURL = "/schedule"
 
     var s_scheduleId = $('#schedule_id').val();
     var s_projectName = $('#schedule_projectName').val();
@@ -83,17 +83,21 @@ azkaban.ScheduleEditPanelView = Backbone.View.extend({
     var retSignal = validateQuartzStr(scheduleData.cronExpression);
 
     if (retSignal == "NUM_FIELDS_ERROR") {
-      var tipMsg1 = "Cron 表达式错误, 一个有效的Cron表达式至少有6个或者7个属性."
+      var tipMsg1 = ""
       if (langType === "en_US") {
         tipMsg1 = "Cron Syntax Error, A valid Quartz Cron Expression should have 6 or 7 fields.";
+      } else {
+        tipMsg1 = "Cron 表达式错误, 一个有效的Cron表达式至少有6个或者7个属性."
       }
       alert(tipMsg1);
       return;
     } else if (retSignal == "DOW_DOM_STAR_ERROR") {
-      var tipMsg2 = "Cron 表达式错误, 月的某日和周的某天不能同时有值" + "(你必须将其中一个的值改为 ‘?’). <a href=\"http://www.quartz-scheduler.org/documentation/quartz-2.x/tutorials/crontrigger.html\" target=\"_blank\">详情请见</a>";
+      var tipMsg2 = ""
       if (langType === "en_US") {
         tipMsg2 = "Cron Syntax Error, Currently Quartz doesn't support specifying both a day-of-week and a day-of-month value"
           + "(you must use the ‘?’ character in one of these fields). <a href=\"http://www.quartz-scheduler.org/documentation/quartz-2.x/tutorials/crontrigger.html\" target=\"_blank\">Detailed Explanation</a>";
+      } else {
+        tipMsg2 = "Cron 表达式错误, 月的某日和周的某天不能同时有值" + "(你必须将其中一个的值改为 ‘?’). <a href=\"http://www.quartz-scheduler.org/documentation/quartz-2.x/tutorials/crontrigger.html\" target=\"_blank\">详情请见</a>";
       }
       alert(tipMsg2)
       return;
@@ -148,7 +152,7 @@ azkaban.ScheduleEditPanelView = Backbone.View.extend({
 
       // Get the time. The original occurance time string is like: "2016-09-09T05:00:00.999",
       // We trim the string to ignore milliseconds.
-      var nextTime = '<li style="color:DarkGreen">' + strTime.substring(1, strTime.length - 6) + '</li>';
+      var nextTime = filterXSS('<li style="color:DarkGreen">' + strTime.substring(1, strTime.length - 6) + '</li>', { 'whiteList': { 'li': ['style'] } });
       $('#nextRecurId').prepend(nextTime);
     }
   }
@@ -186,13 +190,13 @@ $(function () {
     $(cron_translate_warning_id).text("")
     $('#nextRecurId').html("");
 
-    while ($("#instructions tbody tr:last").index() >= 4) {
+    while ($("#instructions tbody tr:last").index() >= 5) {
       $("#instructions tbody tr:last").remove();
     }
   });
 
   $("#minute_input").click(function () {
-    while ($("#instructions tbody tr:last").index() >= 4) {
+    while ($("#instructions tbody tr:last").index() >= 5) {
       $("#instructions tbody tr:last").remove();
     }
     resetLabelColor();
@@ -203,7 +207,7 @@ $(function () {
   });
 
   $("#hour_input").click(function () {
-    while ($("#instructions tbody tr:last").index() >= 4) {
+    while ($("#instructions tbody tr:last").index() >= 5) {
       $("#instructions tbody tr:last").remove();
     }
     resetLabelColor();
@@ -214,7 +218,7 @@ $(function () {
   });
 
   $("#dom_input").click(function () {
-    while ($("#instructions tbody tr:last").index() >= 4) {
+    while ($("#instructions tbody tr:last").index() >= 5) {
       $("#instructions tbody tr:last").remove();
     }
     resetLabelColor();
@@ -223,14 +227,10 @@ $(function () {
     $('#instructions tbody tr:last th').html("1-31");
     $('#instructions tbody tr:last td').html(wtssI18n.view.allowedValue);
 
-    $('#instructions tbody').append($("#instructions tbody tr:first").clone());
-    $('#instructions tbody tr:last').find('td').css({ 'class': 'danger' });
-    $('#instructions tbody tr:last th').html("?");
-    $('#instructions tbody tr:last td').html(wtssI18n.view.Space);
   });
 
   $("#month_input").click(function () {
-    while ($("#instructions tbody tr:last").index() >= 4) {
+    while ($("#instructions tbody tr:last").index() >= 5) {
       $("#instructions tbody tr:last").remove();
     }
     resetLabelColor();
@@ -241,7 +241,7 @@ $(function () {
   });
 
   $("#dow_input").click(function () {
-    while ($("#instructions tbody tr:last").index() >= 4) {
+    while ($("#instructions tbody tr:last").index() >= 5) {
       $("#instructions tbody tr:last").remove();
     }
     resetLabelColor();
@@ -251,9 +251,6 @@ $(function () {
     $('#instructions tbody tr:last th').html("1-7");
     $('#instructions tbody tr:last td').html("SUN MON TUE WED THU FRI SAT");
 
-    $('#instructions tbody').append($("#instructions tbody tr:first").clone());
-    $('#instructions tbody tr:last th').html("?");
-    $('#instructions tbody tr:last td').html(wtssI18n.view.Space);
   });
 });
 
@@ -314,7 +311,7 @@ function updateExpression () {
 
     // Get the time. The original occurance time string is like: "2016-09-09T05:00:00.999",
     // We trim the string to ignore milliseconds.
-    var nextTime = '<li style="color:DarkGreen">' + strTime.substring(1, strTime.length - 6) + '</li>';
+    var nextTime = filterXSS('<li style="color:DarkGreen">' + strTime.substring(1, strTime.length - 6) + '</li>', { 'whiteList': { 'li': ['style'] } });
     $('#nextRecurId').prepend(nextTime);
   }
 }

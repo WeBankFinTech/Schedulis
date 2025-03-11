@@ -19,6 +19,40 @@
 }
 
 
+/* 消息提示 */
+
+.message-box {
+    min-width: 380px;
+    box-sizing: border-box;
+    border-radius: 4px;
+    position: fixed;
+    left: 50%;
+    top: 20px;
+    transform: translateX(-50%);
+    transition: opacity .3s, transform .4s, top .4s;
+    overflow: hidden;
+    padding: 15px 15px 15px 20px;
+    display: flex;
+    align-items: center;
+    z-index: 9999;
+}
+
+.dom-inline-block {
+    display: inline-block;
+}
+
+.margin-r15 {
+    margin-right: 15px;
+}
+
+.margin-tb10 {
+    margin: 10px 0;
+}
+
+.form-group .input-group-btn .margin-l10 {
+    margin-left: 10px;
+}
+
 /* Always float the navbar header */
 
 .navbar-header {
@@ -115,17 +149,25 @@
   min-width: 1075px;
 }
 
+.flowDescript {
+    height: 30px;
+    line-height: 30px;
+    background-color: #f0f0f0;
+    border-bottom: 1px solid #dddddd;
+    padding: 0 105px;
+    color: #999999;
+    font-weight: 700;
+}
+
 @media (min-width: 1301px) and (max-width: 1550px) {
-  .container-full {
+
+    .container-full,
+    .flowDescript {
       padding: 0 35px;
   }
 }
 
-@media (max-width: 1300px) {
-  .container-full {
-      padding: 0 15px;
-  }
-}
+
 
 .margin-left-15 {
   margin-left: 15px;
@@ -136,6 +178,10 @@
   top: -2px;
 }
 
+.select2-container .select2-selection--single {
+    height: 32px;
+}
+
 #pageTable .select2-container .select2-selection--single,
 #pageTable .select2-container .select2-selection--single .select2-selection__rendered,
 #pageTable .select2-container--default .select2-selection--single .select2-selection__arrow {
@@ -144,6 +190,18 @@
 
 #pageTable .select2-container--default .select2-selection--single .select2-selection__rendered {
   line-height: 34px
+}
+
+
+/*任务列表job过滤*/
+
+#headertabs .select2-container {
+    top: 0;
+}
+
+#headertabs .select2-container--default .select2-selection--single {
+    border: 1px solid #cccccc;
+    height: 29px;
 }
 
 .container-fill {
@@ -348,6 +406,13 @@ div#graphView.container-fill {
   text-decoration: none;
 }
 
+
+/*tooltip*/
+
+.tooltip .tooltip-inner {
+    word-break: break-all;
+}
+
 @media (min-width: 768px) {
   .navbar>.container .navbar-logo {
       margin-left: -15px;
@@ -466,6 +531,24 @@ div#graphView.container-fill {
   background-color: transparent;
 }
 
+@media (max-width: 1350px) {
+    .container-full {
+        padding: 0 15px;
+    }
+
+    .navbar-inverse .navbar-logo {
+        padding: 12px 0 5px 0px;
+    }
+
+    .navbar-enviro .navbar-enviro-name {
+        font-size: 12px;
+    }
+
+    .navbar-enviro {
+        margin: 30px 0px 0px 6px;
+    }
+}
+
 .az-page-header {
   padding: 5px 0 5px;
   margin: 0 0 20px;
@@ -509,7 +592,7 @@ div#graphView.container-fill {
 .az-page-header .header-title {
   padding-left: 15px;
   float: left;
-  width: 40%;
+    width: 35%;
 }
 
 .az-page-header .wb-header-title {
@@ -525,13 +608,13 @@ div#graphView.container-fill {
 }
 
 .az-page-header .program-header-control {
-  width: 700px;
+    width: 1000px;
 }
 
 .az-page-header .header-control2 {
   float: right;
   padding-right: 15px;
-  width: 59%;
+    width: 64%;
 }
 
 @media (max-width: 1260px) {
@@ -813,6 +896,7 @@ table.table-properties {
   font-size: 16px;
   height: auto;
   padding: 10px;
+    border-radius: 0;
   -webkit-box-sizing: border-box;
   -moz-box-sizing: border-box;
   box-sizing: border-box;
@@ -822,16 +906,19 @@ table.table-properties {
   z-index: 2;
 }
 
-.login input[type="text"] {
-  margin-bottom: -1px;
-  border-bottom-left-radius: 0;
-  border-bottom-right-radius: 0;
+#tabContent {
+    margin-bottom: 20px;
 }
 
-.login input[type="password"] {
-  margin-bottom: 20px;
-  border-top-left-radius: 0;
-  border-top-right-radius: 0;
+.login .bottom-radius {
+  margin-bottom: -1px;
+    border-bottom-left-radius: 4px;
+    border-bottom-right-radius: 4px;
+}
+
+.login #username {
+    border-top-left-radius: 4px;
+    border-top-right-radius: 4px;
 }
 
 #project-list {
@@ -862,6 +949,12 @@ table.table-properties {
   height: 30px;
 }
 
+#project-list .project-restore {
+    float: right;
+    padding-right: 20px;
+    height: 30px;
+}
+
 #project-list .project-expander:hover {
   color: #2a6496;
 }
@@ -877,11 +970,14 @@ table.table-properties {
 
 #project-list .project-info .project-description {
   margin-bottom: 4px;
+    font-size: 16px;
+    word-break: break-all;
 }
 
 #project-list .project-info .project-last-modified {
   color: #a0a0a0;
   margin-bottom: 16px;
+    font-size: 16px;
 }
 
 #project-list .project-info .project-last-modified strong {
@@ -1118,6 +1214,10 @@ td .status.PAUSED {
   background-color: #c82123;
 }
 
+td .status.SYSTEM_PAUSED {
+    background-color: #c82123;
+}
+
 td .status.READY,
 td .status.UNKNOWN,
 td .status.PREPARING {
@@ -1185,6 +1285,10 @@ td .status.RETRIED_SUCCEEDED {
   color: #c82123;
 }
 
+#flowStatus.SYSTEM_PAUSED {
+    color: #c82123;
+}
+
 #flowStatus.FAILED {
   color: #d9534f;
 }
@@ -1225,8 +1329,13 @@ td .status.RETRIED_SUCCEEDED {
 }
 
 .graph-sidebar-float .graph-sidebar-list {
+    height: calc(100% - 102px);
   overflow-y: auto;
-  height: calc(100% - 102px);
+}
+
+.modal-dialog .graph-sidebar-float .graph-sidebar-list {
+    max-height: 430px;
+    overflow-y: auto;
 }
 
 .graph-sidebar-float .panel {
@@ -1280,6 +1389,37 @@ font-size: 15.5px;
 .switching-flow-btn {
   margin-left: 45px;
   margin-top: 9.2px;
+}
+
+.switching-glyphicon-zoom {
+    margin-left: 80px;
+    margin-top: 11px;
+}
+
+.switching-glyphicon-random {
+    margin-left: 110px;
+    margin-top: 11px;
+}
+
+/* 执行弹框节点搜索 */
+
+#execution-graph-panel-box {
+    position: relative;
+}
+
+
+/* 执行弹框节点搜索 */
+
+.execute-graph-sidebar-float {
+    top: -5px;
+    left: 0;
+}
+
+
+/* 执行弹框节点搜索展示节点高度 */
+
+.graph-sidebar-list.job-select-list {
+    height: 440px;
 }
 
 ul.tree-list {
@@ -1441,22 +1581,27 @@ li.tree-list-item>a .filterHighlight {
   height: 500px;
 }
 
+#event-schedule-flow-executing-graph {
+    width: 100%;
+    height: 500px;
+}
+
 .schedule-select2-search+.select2-container{
 top:0;
 }
-.schedule-select2-search+.select2-container--default .select2-selection--single{
+
+.select2 .select2-container--default .select2-selection--single {
 border: 1px solid #cccccc;
 height: 34px;
 }
-.schedule-select2-search+.select2-container--default .select2-selection--single .select2-selection__rendered{
+
+.select2 .select2-container--default .select2-selection--single .select2-selection__rendered {
+    color: #444;
 line-height: 34px;
 }
-.schedule-select2-search+.select2-container--default .select2-selection--single .select2-selection__arrow{
+
+.select2 .select2-container--default .select2-selection--single .select2-selection__arrow {
 height: 32px;
-}
-.select2-container--default .select2-selection--single .select2-selection__rendered {
-  color: #444;
-  line-height: 28px;
 }
 
 .select2-status-style {
@@ -1482,6 +1627,44 @@ height: 32px;
 #upload-project-form .upload-file-name {
   margin-left: 20px;
 }
+
+#upload-business-form .upload-button {
+    background-color: #f7f7f7;
+    padding: 5px 10px;
+    border: 1px solid #d7dde4;
+    border-radius: 5px;
+    color: #657180;
+    cursor: pointer;
+}
+
+#upload-business-form .upload-button:hover {
+    color: #5cadff;
+    border-color: #5cadff;
+}
+
+#upload-business-form .upload-file-name {
+    margin-left: 20px;
+}
+
+#upload-sch-form .upload-button {
+    background-color: #f7f7f7;
+    padding: 5px 10px;
+    border: 1px solid #d7dde4;
+    border-radius: 5px;
+    color: #657180;
+    cursor: pointer;
+}
+
+#upload-sch-form .upload-button:hover {
+    color: #5cadff;
+    border-color: #5cadff;
+}
+
+#upload-sch-form .upload-file-name {
+    margin-left: 20px;
+}
+
+
 /* 历史重跑 自然日增加重置 */
 #history-recover-panel .form-group{
 position: relative;
@@ -1493,12 +1676,247 @@ top: 10px;
 cursor: pointer;
 }
 .helpDocs{
-position: absolute;
-right: 220px;
 font-size: 18px;
-top: 25px;
 color: #ccc;
 }
 .helpDocs:hover{
 color: #ccc;
+}
+
+#statusFilterList,
+#jobsFilterList,
+#excuteTimeFilterList {
+    height: 30px;
+}
+
+#job-param-table thead .tb-pname {
+    min-width: 150px;
+}
+
+
+/* 调度管理隐藏定时调度、时间调度头部 */
+
+#time-schedule-view,
+#time-schedule-view {
+    display: none
+}
+
+
+/* 事件调度配置topic msg*/
+
+#event-schedule-panel .bs-placeholder,
+#event-schedule-panel .dropdown-toggle.btn-default {
+    display: none
+}
+
+.button-disable {
+    cursor: not-allowed;
+}
+
+#jobIdRelationBody .application-id {
+    color: #428bca;
+    cursor: pointer;
+}
+
+.select-log-model {
+    z-index: 1050;
+}
+
+#logModalForm {
+    height: 100px;
+}
+
+#logModalForm .label {
+    display: inline-block;
+    width: 80px;
+    color: #333;
+}
+
+#logModalForm input {
+    margin-left: 15px;
+}
+
+#logSection {
+    padding: 10px;
+    height: 600px;
+    overflow-y: scroll;
+}
+
+#esLogBody code,
+#logSection code {
+    display: block;
+}
+
+#itsm-form-info-box {
+    display: inline-block;
+    width: 530px;
+}
+
+#itsm-form-info-box .bootstrap-select {
+    padding: 4px 0 0 10px;
+}
+
+
+/* 水印 */
+
+.water-mark-wrap {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    z-index: 9999;
+    pointer-events: none;
+    top: 0;
+    left: 0;
+    display: flex;
+    overflow: hidden;
+    flex-wrap: wrap;
+}
+
+.water-mark-wrap .water-word {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+    color: rgba(8, 8, 8, .1);
+    transform: rotate(-45deg);
+    user-select: none;
+}
+
+.project-info .project-checkbox {
+    margin-right: 5px;
+}
+
+.required {
+    padding-right: 3px;
+    font-size: 14px;
+    color: red;
+}
+
+#create-handover-modal .modal-body {
+    max-height: 450px;
+    overflow-y: auto;
+}
+
+.schedule-batch-opr,
+.event-schedule-batch-opr {
+    float: right;
+}
+
+.schedule-batch-opr .btn,
+.event-schedule-batch-opr .btn {
+    margin-left: 10px;
+}
+
+.search-container {
+    width: 600px;
+    margin-bottom: 20px;
+    float: right;
+}
+
+.running-header {
+    line-height: 30px;
+    margin-bottom: 10px;
+}
+
+.running-header .search-container {
+    margin-bottom: 0;
+}
+
+.execute-flow-type {
+    margin: 10px 0;
+    display: none;
+}
+
+.execute-flow-type .title {
+    margin-right: 10px;
+}
+
+.table .checkbox-th {
+    padding: 0 !important;
+}
+
+.checkbox-th .head-checkbox-box {
+    padding: 5px;
+}
+
+.input-box {
+    position: relative;
+}
+
+.input-box input {
+    display: block;
+    border: 1px solid #d7d6d6;
+    background: #fff;
+    padding: 10px 10px 10px 20px;
+    width: 195px;
+}
+
+.unit {
+    position: absolute;
+    display: block;
+    left: 5px;
+    top: 7px;
+    z-index: 9;
+}
+
+#history-recover-panel table .form-group .control-label {
+    height: 29px;
+    line-height: 34px;
+}
+
+.schedulis-comment {
+    max-width: 150px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    word-break: break-all;
+}
+
+#cross-dayp-alert {
+    cursor: pointer;
+}
+
+.position-relative {
+    position: relative;
+}
+
+#add-project-alarm-modal .modal-dialog {
+    width: 900px;
+}
+
+.project-alarm-type {
+    width: 130px;
+    height: 27px;
+    line-height: 27px;
+}
+
+.project-alarm-type input {
+    margin-right: 5px;
+}
+
+.alarm-project .select2-selection--single {
+    width: 320px;
+}
+
+.alarm-user .select2-selection__rendered {
+    max-height: 26px;
+    overflow-y: auto !important;
+}
+
+#project-options .btn {
+    margin: 2px;
+}
+
+#azkaban-warn-dialog {
+    z-index: 1060;
+}
+
+#azkaban-message-dialog {
+    z-index: 1060;
+}
+
+#upload-sch-modal {
+    z-index: 1059;
 }

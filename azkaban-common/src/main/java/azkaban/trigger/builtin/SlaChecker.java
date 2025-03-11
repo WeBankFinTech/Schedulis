@@ -27,28 +27,29 @@ import azkaban.trigger.ConditionChecker;
 import azkaban.utils.Utils;
 import java.util.HashMap;
 import java.util.Map;
-
-import org.slf4j.LoggerFactory;
-import org.slf4j.Logger;
 import org.joda.time.DateTime;
 import org.joda.time.ReadablePeriod;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class SlaChecker implements ConditionChecker {
 
-  public static final String type = "SlaChecker";
+  public static final String TYPE = "SlaChecker";
   private static final Logger logger = LoggerFactory.getLogger(SlaChecker.class);
   private final String id;
   private final SlaOption slaOption;
   private final int execId;
   private final ExecutorLoader executorLoader;
   private long checkTime = -1;
+  private long duration = -1;
 
   //todo chengren311: move this class to executor module when all existing triggers in db are expired
-  public SlaChecker(final String id, final SlaOption slaOption, final int execId) {
+  public SlaChecker(final String id, final SlaOption slaOption, final int execId, final long duration) {
     this.id = id;
     this.slaOption = slaOption;
     this.execId = execId;
     this.executorLoader = ServiceProvider.SERVICE_PROVIDER.getInstance(ExecutorLoader.class);
+    this.duration = duration;
   }
 
   public static SlaChecker createFromJson(final Object obj) throws Exception {
@@ -56,97 +57,72 @@ public class SlaChecker implements ConditionChecker {
   }
 
   public static SlaChecker createFromJson(final HashMap<String, Object> obj)
-      throws Exception {
+          throws Exception {
     final Map<String, Object> jsonObj = (HashMap<String, Object>) obj;
-    if (!jsonObj.get("type").equals(type)) {
-      throw new Exception("Cannot create checker of " + type + " from "
-          + jsonObj.get("type"));
+    if (!jsonObj.get("type").equals(TYPE)) {
+      throw new Exception("Cannot create checker of " + TYPE + " from "
+              + jsonObj.get("type"));
     }
     final String id = (String) jsonObj.get("id");
     final SlaOption slaOption = SlaOption.fromObject(jsonObj.get("slaOption"));
     final int execId = Integer.valueOf((String) jsonObj.get("execId"));
-    return new SlaChecker(id, slaOption, execId);
+    final long duration = Long.valueOf((String) jsonObj.get("duration"));
+    return new SlaChecker(id, slaOption, execId, duration);
   }
   //flow超时处理方法
   private Boolean isSlaMissed(final ExecutableFlow flow) {
     final String type = this.slaOption.getType();
+    logger.info("SLA type for flow {} is {}", flow.getId(), type);
     if (flow.getStartTime() < 0) {
+      logger.info("Start time is < 0 for flow " + flow.getId());
       return Boolean.FALSE;
     }
+    logger.info("SLA duration = {} ms ", this.duration);
     final Status status;
     if (type.equals(SlaOption.TYPE_FLOW_FINISH)) {
-      if (this.checkTime < flow.getStartTime()) {
-        final ReadablePeriod duration =
-            Utils.parsePeriodString((String) this.slaOption.getInfo().get(
-                SlaOption.INFO_DURATION));
-        final DateTime startTime = new DateTime(flow.getStartTime());
-        final DateTime nextCheckTime = startTime.plus(duration);
-        this.checkTime = nextCheckTime.getMillis();
-      }
       status = flow.getStatus();
-      if (this.checkTime < DateTime.now().getMillis()) {
-        return !isFlowFinished(status);
-      }
+      logger.info("Flow {} with execId = {}, status = {}, isFlowFinished? {}", flow.getId(),
+              flow.getExecutionId(), status, Status.isStatusFinished(status));
+      return !Status.isStatusFinished(status);
     } else if (type.equals(SlaOption.TYPE_FLOW_SUCCEED)) {
-      if (this.checkTime < flow.getStartTime()) {
-        final ReadablePeriod duration =
-            Utils.parsePeriodString((String) this.slaOption.getInfo().get(
-                SlaOption.INFO_DURATION));
-        final DateTime startTime = new DateTime(flow.getStartTime());
-        final DateTime nextCheckTime = startTime.plus(duration);
-        this.checkTime = nextCheckTime.getMillis();
-      }
       status = flow.getStatus();
-      if (this.checkTime < DateTime.now().getMillis()) {
-        return !isFlowSucceeded(status);
-      } else {
-        return status.equals(Status.FAILED) || status.equals(Status.KILLED);
-      }
+      logger.info("Flow {} with execId = {}, status = {}, isFlowSucceeded? {}", flow.getId(),
+              flow.getExecutionId(), status, Status.isStatusSucceeded(status));
+      return !Status.isStatusSucceeded(status);
     } else if (type.equals(SlaOption.TYPE_JOB_FINISH)) {
       final String jobName =
-          (String) this.slaOption.getInfo().get(SlaOption.INFO_JOB_NAME);
-	  // FIXME The node path is used to obtain node information instead. The purpose is to solve the problem that subflow and subflow jobs cannot be alerted.
+              (String) this.slaOption.getInfo().get(SlaOption.INFO_JOB_NAME);
+      // FIXME The node path is used to obtain node information instead. The purpose is to solve the problem that subflow and subflow jobs cannot be alerted.
       final ExecutableNode node = flow.getExecutableNodePath(jobName);
       if (node.getStartTime() < 0) {
         return Boolean.FALSE;
       }
-      if (this.checkTime < node.getStartTime()) {
-        final ReadablePeriod duration =
-            Utils.parsePeriodString((String) this.slaOption.getInfo().get(
-                SlaOption.INFO_DURATION));
-        final DateTime startTime = new DateTime(node.getStartTime());
-        final DateTime nextCheckTime = startTime.plus(duration);
-        this.checkTime = nextCheckTime.getMillis();
-      }
       status = node.getStatus();
-      if (this.checkTime < DateTime.now().getMillis()) {
-        return !isJobFinished(status);
-      }
+      logger.info("Flow {} job: {} with execId = {}, status = {}, isJobFinished? {}", flow.getId(),
+              node.getId(), flow.getExecutionId(), status, Status.isStatusFinished(status));
+      return !Status.isStatusFinished(status);
     } else if (type.equals(SlaOption.TYPE_JOB_SUCCEED)) {
       final String jobName =
-          (String) this.slaOption.getInfo().get(SlaOption.INFO_JOB_NAME);
-	  // FIXME The node path is used to obtain node information instead. The purpose is to solve the problem that subflow and subflow jobs cannot be alerted.
+              (String) this.slaOption.getInfo().get(SlaOption.INFO_JOB_NAME);
+      // FIXME The node path is used to obtain node information instead. The purpose is to solve the problem that subflow and subflow jobs cannot be alerted.
       final ExecutableNode node = flow.getExecutableNodePath(jobName);
       if (node.getStartTime() < 0) {
         return Boolean.FALSE;
       }
-      if (this.checkTime < node.getStartTime()) {
-        final ReadablePeriod duration =
-            Utils.parsePeriodString((String) this.slaOption.getInfo().get(
-                SlaOption.INFO_DURATION));
-        final DateTime startTime = new DateTime(node.getStartTime());
-        final DateTime nextCheckTime = startTime.plus(duration);
-        this.checkTime = nextCheckTime.getMillis();
-      }
       status = node.getStatus();
-      if (this.checkTime < DateTime.now().getMillis()) {
-        return !isJobFinished(status);
-      } else {
-        return status.equals(Status.FAILED) || status.equals(Status.KILLED);
-      }
+      logger.info("Flow {} job: {} with execId = {}, status = {}, isJobFinished? {}", flow.getId(),
+              node.getId(), flow.getExecutionId(), status, Status.isStatusSucceeded(status));
+      return !Status.isStatusSucceeded(status);
     }
     return Boolean.FALSE;
   }
+
+  private void calCheckTime(long startTimeMills) {
+    if (this.checkTime < startTimeMills) {
+      this.checkTime = new DateTime(startTimeMills).plus(this.duration).getMillis();
+    }
+  }
+
   //flow超时前结束的处理方法
   private Boolean isSlaGood(final ExecutableFlow flow) {
     final String type = this.slaOption.getType();
@@ -155,61 +131,33 @@ public class SlaChecker implements ConditionChecker {
     }
     final Status status;
     if (type.equals(SlaOption.TYPE_FLOW_FINISH)) {
-      if (this.checkTime < flow.getStartTime()) {
-        final ReadablePeriod duration =
-            Utils.parsePeriodString((String) this.slaOption.getInfo().get(
-                SlaOption.INFO_DURATION));
-        final DateTime startTime = new DateTime(flow.getStartTime());
-        final DateTime nextCheckTime = startTime.plus(duration);
-        this.checkTime = nextCheckTime.getMillis();
-      }
+      calCheckTime(flow.getStartTime());
       status = flow.getStatus();
       return isFlowFinished(status);
     } else if (type.equals(SlaOption.TYPE_FLOW_SUCCEED)) {
-      if (this.checkTime < flow.getStartTime()) {
-        final ReadablePeriod duration =
-            Utils.parsePeriodString((String) this.slaOption.getInfo().get(
-                SlaOption.INFO_DURATION));
-        final DateTime startTime = new DateTime(flow.getStartTime());
-        final DateTime nextCheckTime = startTime.plus(duration);
-        this.checkTime = nextCheckTime.getMillis();
-      }
+      calCheckTime(flow.getStartTime());
       status = flow.getStatus();
       return isFlowSucceeded(status);
     } else if (type.equals(SlaOption.TYPE_JOB_FINISH)) {
       final String jobName =
-          (String) this.slaOption.getInfo().get(SlaOption.INFO_JOB_NAME);
-	  // FIXME The node path is used to obtain node information instead. The purpose is to solve the problem that subflow and subflow jobs cannot be alerted.
+              (String) this.slaOption.getInfo().get(SlaOption.INFO_JOB_NAME);
+      // FIXME The node path is used to obtain node information instead. The purpose is to solve the problem that subflow and subflow jobs cannot be alerted.
       final ExecutableNode node = flow.getExecutableNodePath(jobName);
       if (node.getStartTime() < 0) {
         return Boolean.FALSE;
       }
-      if (this.checkTime < node.getStartTime()) {
-        final ReadablePeriod duration =
-            Utils.parsePeriodString((String) this.slaOption.getInfo().get(
-                SlaOption.INFO_DURATION));
-        final DateTime startTime = new DateTime(node.getStartTime());
-        final DateTime nextCheckTime = startTime.plus(duration);
-        this.checkTime = nextCheckTime.getMillis();
-      }
+      calCheckTime(node.getStartTime());
       status = node.getStatus();
       return isJobFinished(status);
     } else if (type.equals(SlaOption.TYPE_JOB_SUCCEED)) {
       final String jobName =
-          (String) this.slaOption.getInfo().get(SlaOption.INFO_JOB_NAME);
-	  // FIXME The node path is used to obtain node information instead. The purpose is to solve the problem that subflow and subflow jobs cannot be alerted.
+              (String) this.slaOption.getInfo().get(SlaOption.INFO_JOB_NAME);
+      // FIXME The node path is used to obtain node information instead. The purpose is to solve the problem that subflow and subflow jobs cannot be alerted.
       final ExecutableNode node = flow.getExecutableNodePath(jobName);
       if (node.getStartTime() < 0) {
         return Boolean.FALSE;
       }
-      if (this.checkTime < node.getStartTime()) {
-        final ReadablePeriod duration =
-            Utils.parsePeriodString((String) this.slaOption.getInfo().get(
-                SlaOption.INFO_DURATION));
-        final DateTime startTime = new DateTime(node.getStartTime());
-        final DateTime nextCheckTime = startTime.plus(duration);
-        this.checkTime = nextCheckTime.getMillis();
-      }
+      calCheckTime(node.getStartTime());
       status = node.getStatus();
       return isJobSucceeded(status);
     }
@@ -272,7 +220,7 @@ public class SlaChecker implements ConditionChecker {
 
   @Override
   public String getType() {
-    return type;
+    return TYPE;
   }
 
   @Override
@@ -283,10 +231,11 @@ public class SlaChecker implements ConditionChecker {
   @Override
   public Object toJson() {
     final Map<String, Object> jsonObj = new HashMap<>();
-    jsonObj.put("type", type);
+    jsonObj.put("type", TYPE);
     jsonObj.put("id", this.id);
     jsonObj.put("slaOption", this.slaOption.toObject());
     jsonObj.put("execId", String.valueOf(this.execId));
+    jsonObj.put("duration", this.duration);
 
     return jsonObj;
   }
@@ -307,7 +256,7 @@ public class SlaChecker implements ConditionChecker {
 
   private boolean isFlowFinished(final Status status) {
     if (status.equals(Status.FAILED) || status.equals(Status.KILLED)
-        || status.equals(Status.SUCCEEDED)) {
+            || status.equals(Status.SUCCEEDED)) {
       return Boolean.TRUE;
     } else {
       return Boolean.FALSE;
@@ -319,9 +268,9 @@ public class SlaChecker implements ConditionChecker {
   }
 
   private boolean isJobFinished(final Status status) {
-  	// FIXME  The FAILED_WAITING status is completed. The completion alarm is also triggered when the task status is FAILED_WAITING.
+    // FIXME  The FAILED_WAITING status is completed. The completion alarm is also triggered when the task status is FAILED_WAITING.
     if (status.equals(Status.FAILED) || status.equals(Status.KILLED)
-        || Status.isSucceeded(status) || status.equals(Status.FAILED_WAITING)) {
+            || Status.isSucceeded(status) || status.equals(Status.FAILED_WAITING)) {
       return Boolean.TRUE;
     } else {
       return Boolean.FALSE;

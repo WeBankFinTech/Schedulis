@@ -28,7 +28,7 @@ import java.util.Set;
  * De-normalized version of the candidateFilter, which also contains the implementation of the
  * factor filters.
  */
-public final class ExecutorFilter extends CandidateFilter<Executor, ExecutableFlow> {
+public final class ExecutorFilter extends AbstractCandidateFilter<Executor, ExecutableFlow> {
 
   // factor filter names.
   private static final String STATICREMAININGFLOWSIZE_FILTER_NAME = "StaticRemainingFlowSize";

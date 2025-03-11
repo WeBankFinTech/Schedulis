@@ -7,8 +7,13 @@ $(function () {
     model: eventStatusModel
   });
 
-  $("#quickSearchEventStatus").click(function () {
-    $("#quickSearchForm").submit();
+    $("#quickSearchEventStatus").on("click", function() {
+        eventStatusModel.trigger("change:page");
+    });
+    $("#searchTextbox").on("keyup", function() {
+        if (e.keyCode === 13) {
+            eventStatusModel.trigger("change:page");
+        }
   });
 });
 
@@ -24,25 +29,18 @@ azkaban.EventStatusListView = Backbone.View.extend({
     this.model.bind('change:view', this.handleChangeView, this);
     this.model.bind('render', this.render, this);
     this.model.bind('change:page', this.handlePageChange, this);
-    var searchText = filterXSS($("#searchTextbox").val());
-    this.model.set({ search: searchText });
+    this.setMessageParams();
     this.model.set({ page: 1, pageSize: 20 });
     this.model.set('elDomId','eventStatusPageSelection'); 
     this.createResize();
-    // var hash = window.location.hash;
-    // if ("#page" === hash.substring(0, "#page".length)) {
-    //   var arr = hash.split("#");
-    //   var page;
-    //   if ("" !== this.model.get("search").trim() && 1 === this.model.get("pageNum")) {
-    //     page = 1;
-    //   } else {
-    //     page = arr[1].substring("#page".length - 1, arr[1].length);
-    //   }
-    //   this.model.set({ pageNum: parseInt(page) });
-    // } else {
-    //   this.model.set({ pageNum: 1 });
-    // }
-    // this.model.trigger("change:view");
+  },
+  setMessageParams: function() {
+    // topic 、 msgName包含特殊字符
+    const url = window.location.href;
+    const arr = url.split("?topic=");
+    const topicArr = arr[1].split("&msgName=");
+    const msgNameArr = topicArr[1].split("&type=");
+    this.model.set({ topic: topicArr[0], msgName: msgNameArr[0], type: msgNameArr[1] });
   },
   render: function () {
     var tbody = $("#eventStatusTbody");
@@ -91,18 +89,20 @@ azkaban.EventStatusListView = Backbone.View.extend({
   },
   ...commonPaginationFun(),
   handlePageChange: function () {
-    var pageNum = this.model.get("page");
-    var pageSize = this.model.get("pageSize");
-    var searchKey = this.model.get("search");
-    var requestURL = "/event/status";
-    var model = this.model;
+    const model = this.model;
+    const pageNum = model.get("page");
+    const pageSize = model.get("pageSize");
+    const searchKey = $("#searchTextbox").val();
+    const requestURL = "/event/status";
+    
     var requestData = {
       "ajax": "loadEventStatusData",
       "pageNum": pageNum,
       "pageSize": pageSize,
       "search": searchKey,
-      "topic": topic,
-      "msgName": msgName
+        "topic": model.get("topic"),
+        "msgName": model.get("msgName"),
+        authType: model.get("type") === "auth",
     };
     var successHandler = function (data) {
       model.set({

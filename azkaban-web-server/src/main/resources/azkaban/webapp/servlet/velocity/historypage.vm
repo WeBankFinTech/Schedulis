@@ -23,9 +23,9 @@
   #parse("azkaban/webapp/servlet/velocity/style.vm")
   #parse("azkaban/webapp/servlet/velocity/javascript.vm")
 
-  <link rel="stylesheet" type="text/css" href="${context}/css/bootstrap-datetimepicker.css?version=1.10.0"/>
+  <link rel="stylesheet" type="text/css" href="/css/bootstrap-datetimepicker.css?version=1.49.0"/>
+    <link href="/css/bootstrap-select.min.css?version=1.49.0" rel="stylesheet">
   <script type="text/javascript">
-    var contextURL = "${context}";
     var currentTime = ${currentTime};
     var timezone = "${timezone}";
     var errorMessage = null;
@@ -45,17 +45,18 @@
 
     var searchCondition = "";
   </script>
-  <script type="text/javascript" src="${context}/js/moment.min.js?version=1.10.0"></script>
-  <script type="text/javascript" src="${context}/js/bootstrap-datetimepicker.min.js?version=1.10.0"></script>
-  <script type="text/javascript" src="${context}/js/azkaban/i18n-config.js?version=1.10.0"></script>
-  <script type="text/javascript" src="${context}/js/azkaban/view/history.js?version=1.10.0"></script>
-  <script type="text/javascript" src="${context}/js/jquery/jquery.tablesorter.js?version=1.10.0"></script>
-  <script type="text/javascript" src="${context}/js/azkaban/util/job-status.js?version=1.10.0"></script>
-  <script type="text/javascript" src="${context}/js/azkaban/util/date.js?version=1.10.0"></script>
-  <script type="text/javascript" src="${context}/js/azkaban/view/table-sort.js?version=1.10.0"></script>
-  <script src="${context}/js/select2/select2.js?version=1.10.0"></script>
-  <link href="${context}/css/select2/select2.css?version=1.10.0" rel="stylesheet" />
+  <script type="text/javascript" src="/js/azkaban/util/utils.js?version=1.49.0"></script>
 
+  <script type="text/javascript" src="/js/moment-2.29.4.min.js?version=1.49.0"></script>
+  <script type="text/javascript" src="/js/bootstrap-datetimepicker.min.js?version=1.49.0"></script>
+  <script type="text/javascript" src="/js/azkaban/i18n-config.js?version=1.49.0"></script>
+  <script type="text/javascript" src="/js/azkaban/view/history.js?version=1.49.0"></script>
+  <script type="text/javascript" src="/js/jquery/jquery.tablesorter.js?version=1.49.0"></script>
+  <script type="text/javascript" src="/js/azkaban/util/job-status.js?version=1.49.0"></script>
+
+  <script type="text/javascript" src="/js/azkaban/view/table-sort.js?version=1.49.0"></script>
+  <script src="/js/select2/select2.js?version=1.49.0"></script>
+  <script type="text/javascript" src="/js/bootstrap-select.js?version=1.49.0"></script>
 </head>
 <body>
 
@@ -72,11 +73,9 @@
     <div class="container-full">
       <div class="row">
         <div class="header-title">
-          <h1><a href="${context}/history">$flowExecHistory</a></h1>
+          <h1><a href="/history">$flowExecHistory</a></h1>
         </div>
         <div class="header-control">
-          <form id="search-form" method="get" class="form-inline header-form" role="form">
-            <input type="hidden" name="search" value="true">
             <div class="form-group">
               <div class="input-group">
               <input type="text" id="searchtextbox"
@@ -84,11 +83,12 @@
                 "" #end class="form-control input-sm" name="searchterm">
                 <span class="input-group-btn">
                   <button id="quick-serach-btn" type="button" class="btn btn-primary btn-sm">$quickSearch</button>
-                  <button type="button" class="btn btn-success btn-sm" id="adv-filter-btn">$advancedFilter</button>
+                  <button type="button" class="btn btn-success btn-sm margin-l10 " id="adv-filter-btn">$advancedFilter</button>
+                  <button type="button" class="btn btn-success btn-sm margin-l10 " id="batch-reRun-btn">$batchrerun</button>
+                  <button type="button" class="btn btn-success btn-sm margin-l10 " id="batch-download-btn">$batchExport</button>
                 </span>
               </div>
             </div>
-          </form>
         </div>
       </div>
     </div>
@@ -96,7 +96,7 @@
 
   <div class="container-full" id="history-view-div">
 
-    #parse ("azkaban/webapp/servlet/velocity/alerts.vm")
+    ##parse ("azkaban/webapp/servlet/velocity/alerts.vm")
 
     <div class="row">
       <div class="col-xs-12">
@@ -105,6 +105,7 @@
                class="table table-striped table-bordered table-hover table-condensed executions-table">
           <thead>
           <tr>
+            <th class="checkbox-th"><div id="selectAllFlowBox" class="head-checkbox-box"> <input type="checkbox" id="selectAllFlowcheckbox" value="all"></div></th>
             <th>#</th>
             <th class="execid">$execId</th>
             <th>$flow</th>
@@ -113,12 +114,12 @@
             <th class="date">$startTime</th>
             <th class="date">$endTime</th>
             <th class="date">$runBatchDate</th>
-            <th class="elapse">$timeOfExec</th>
+            <th class="elapse checkbox-th" style="min-width: 70px;"><div id="executionTimeHeader" class="head-checkbox-box">$timeOfExec</div></th>
             <th class="status">$execstatus</th>
             <th class="col-xs-1">$flowexecType</th>
-            <th>$comment</th>
+            <th style="min-width: 40px;">$comment</th>
             <!--
-            <th class="col-xs-1">操作</th>-->
+            <th class="col-xs-1">$operation</th>-->
           </tr>
           </thead>
           <tbody id="historyTbody">
@@ -126,32 +127,7 @@
         </table>
         <div>
           <table id="pageTable">
-            <tr>
-              <td>
-                <select id="pageSizeSelect" class="form-control select2" style="margin-bottom:5px;height:34px;">
-                  <option value="20">$pp_20</option>
-                  <option value="50">$pp_50</option>
-                  <option value="100">$pp_100</option>
-                </select>
-              </td>
-              <td>
-                <ul id="projectPageSelection" class="pagination">
-                  <li id="previous" class="first"><a><span class="arrow">&larr;</span>$previousPage</a></li>
-                  <li id="page1"><a href="">1</a></li>
-                  <li id="page2"><a href="">2</a></li>
-                  <li id="page3"><a href="">3</a></li>
-                  <li id="page4"><a href="">4</a></li>
-                  <li id="page5"><a href="">5</a></li>
-                  <li id="next"><a>$nextPage<span class="arrow">&rarr;</span></a></li>
-                </ul>
-              </td>
-              <td>
-                <input id="pageNumInput" class="form-control" type="number" min="1" style="margin-bottom:5px;width:100px;"/>
-              </td>
-              <td>
-                <button id="pageNumJump" class="btn btn-default" style="margin-bottom:5px" >$to</button>
-              </td>
-            </tr>
+                #parse ("azkaban/webapp/servlet/velocity/commonPagination.vm")
           </table>
         </div>
       </div><!-- /col-xs-12 -->
@@ -199,6 +175,27 @@
                          value="" class="form-control" name="usercontain">
                 </div>
               </div>
+               <div class="form-group">
+                    <label for="subSystemQuery" class="col-sm-2 control-label">$subsystem</label>
+                    <div class="col-sm-10" id="subSystemQueryBox">
+                        <select id="subSystemQuery" class="form-control" style="width: 100%">
+                        </select>
+                    </div>
+                  </div>
+                  <div class="form-group">
+                    <label for="busPathQuery" class="col-sm-2 control-label">$busPath</label>
+                    <div class="col-sm-10" id="busPathQueryBox">
+                        <select id="busPathQuery" class="form-control" style="width: 100%">
+                        </select>
+                    </div>
+                  </div>
+                  <div class="form-group">
+                    <label for="departmentSelect" class="col-sm-2 control-label">$department</label>
+                    <div class="col-sm-10">
+                      <select id="departmentSelect" class="form-control selectpicker" data-live-search="true" title="$departmentName">
+                      </select>
+                    </div>
+                  </div>
               <div class="form-group">
                 <label for="status" class="col-sm-2 control-label">$statusI18n</label>
                 <div class="col-sm-10">
@@ -223,31 +220,61 @@
                       <option value=2>$historyReRun</option>
                       <option value=3>$sch</option>
                       <option value=4>$cycleExe</option>
+                      <option value=6>$eventSch</option>
                     </select>
                 </div>
               </div>
+              <div class="form-group" >
+                <label for="usercontain" class="col-sm-2 control-label">$flowremark</label>
+                <div class="col-sm-10">
+                  <input id="flowRemarks" type="text" placeholder="$enterflowremark"
+                         value="" class="form-control" name="usercontain">
+                </div>
+              </div>
               <div class="form-group">
-                <label for="datetimebegin" class="col-sm-2 control-label">Between</label>
-                <div class="col-sm-4">
-                  <input type="text" id="datetimebegin" value=""
+                <label for="runDate" class="col-sm-2 control-label">$runBatchDate</label>
+                <div class="col-sm-10">
+                  <input type="text" id="runDate" value=""
                          class="ui-datetime-container form-control">
                 </div>
-                <label for="datetimeend"
-                       class="col-sm-2 control-label control-label-center">and</label>
+              </div>
+              <div class="form-group">
+                <label for="startDatetimeBegin" class="col-sm-2 control-label">$startTime</label>
                 <div class="col-sm-4">
-                  <input type="text" id="datetimeend" value=""
-                         class="ui-datetime-container form-control">
+                  <input type="text" id="startDatetimeBegin" value=""
+                         class="ui-datetime-container form-control" autocomplete="off">
+                </div>
+                <label for="startDatetimeEnd"
+                       class="col-sm-2 control-label control-label-center">-</label>
+                <div class="col-sm-4">
+                  <input type="text" id="startDatetimeEnd" value=""
+                         class="ui-datetime-container form-control" autocomplete="off">
+                </div>
+              </div>
+              <div class="form-group">
+                <label for="endDatetimeBegin" class="col-sm-2 control-label">$endTime</label>
+                <div class="col-sm-4">
+                  <input type="text" id="endDatetimeBegin" value=""
+                         class="ui-datetime-container form-control" autocomplete="off">
+                </div>
+                <label for="endDatetimeEnd"
+                       class="col-sm-2 control-label control-label-center">-</label>
+                <div class="col-sm-4">
+                  <input type="text" id="endDatetimeEnd" value=""
+                         class="ui-datetime-container form-control" autocomplete="off">
                 </div>
               </div>
             </fieldset>
           </div>
           <div class="modal-footer">
             <button type="button" class="btn btn-default" data-dismiss="modal">$cancel</button>
-            <button class="btn btn-success" id="filter-btn">$commit</button>
+            <button class="btn btn-success" id="filter-btn">$fuzzyQuery</button>
+            <button class="btn btn-success" id="precise-filter-btn">$accurateQuery</button>
           </div>
         </div>
       </div>
     </div>
+
 
     #parse ("azkaban/webapp/servlet/velocity/invalidsessionmodal.vm")
   </div><!-- /container-full -->

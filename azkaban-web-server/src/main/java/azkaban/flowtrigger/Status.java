@@ -21,6 +21,7 @@ import java.util.Set;
 
 /**
  * Represents status for trigger/dependency
+ * @author WTSS
  */
 public enum Status {
   RUNNING, // dependency instance is running

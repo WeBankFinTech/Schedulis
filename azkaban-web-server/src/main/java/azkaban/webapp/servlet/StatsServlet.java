@@ -20,13 +20,14 @@ import azkaban.executor.ConnectorParams;
 import azkaban.executor.Executor;
 import azkaban.executor.ExecutorManagerAdapter;
 import azkaban.executor.ExecutorManagerException;
+import azkaban.i18n.utils.LoadJsonUtils;
 import azkaban.server.session.Session;
 import azkaban.user.User;
 import azkaban.utils.Pair;
 import azkaban.webapp.AzkabanWebServer;
 import org.slf4j.LoggerFactory;
 import org.slf4j.Logger;
-import com.webank.wedatasphere.schedulis.common.i18nutils.LoadJsonUtils;
+
 import java.io.IOException;
 import java.util.Collection;
 import java.util.HashMap;
@@ -42,7 +43,7 @@ import javax.servlet.http.HttpServletResponse;
 /**
  * User facing servlet for Azkaban default metric display
  */
-public class StatsServlet extends LoginAbstractAzkabanServlet {
+public class StatsServlet extends AbstractLoginAzkabanServlet {
 
   private static final Logger logger = LoggerFactory.getLogger(StatsServlet.class);
 

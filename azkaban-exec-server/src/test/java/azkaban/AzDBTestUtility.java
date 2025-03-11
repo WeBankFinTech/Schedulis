@@ -18,7 +18,7 @@ package azkaban;
 
 import java.io.File;
 
-import azkaban.db.AzkabanDataSource;
+import azkaban.db.AbstractAzkabanDataSource;
 import azkaban.db.DatabaseOperator;
 import azkaban.db.DatabaseSetup;
 import org.apache.commons.dbutils.QueryRunner;
@@ -26,7 +26,7 @@ import org.apache.commons.dbutils.QueryRunner;
 public class AzDBTestUtility {
 
   public static DatabaseOperator initQuartzDB() throws Exception {
-    final AzkabanDataSource dataSource = new EmbeddedH2BasicDataSource();
+    final AbstractAzkabanDataSource dataSource = new EmbeddedH2BasicDataSource();
 
     final String sqlScriptsDir = new File("../azkaban-web-server/src/test/resources/")
         .getCanonicalPath();
@@ -36,7 +36,7 @@ public class AzDBTestUtility {
     return new DatabaseOperator(new QueryRunner(dataSource));
   }
 
-  public static class EmbeddedH2BasicDataSource extends AzkabanDataSource {
+  public static class EmbeddedH2BasicDataSource extends AbstractAzkabanDataSource {
 
     public EmbeddedH2BasicDataSource() {
       super();

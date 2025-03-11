@@ -35,7 +35,11 @@ public interface TriggerManagerAdapter {
   List<Trigger> getTriggerUpdates(String triggerSource,
       long lastUpdateTime) throws TriggerManagerException;
 
+  List<Integer> getRemovedTriggerIds();
+
   List<Trigger> getTriggers(String triggerSource);
+
+  List<Trigger> getTriggers();
 
   public void start() throws TriggerManagerException;
 
@@ -48,6 +52,8 @@ public interface TriggerManagerAdapter {
       Class<? extends TriggerAction> action);
 
   public TriggerJMX getJMX();
+
+  long getTriggerInitTime();
 
   public interface TriggerJMX {
 

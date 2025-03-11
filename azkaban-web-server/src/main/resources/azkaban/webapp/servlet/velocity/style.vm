@@ -17,10 +17,11 @@
 <meta charset="utf-8">
 <title>#appname()</title>
 
-<link rel="shortcut icon" href="${context}/favicon.ico"/>
+<link rel="shortcut icon" href="/favicon.ico"/>
 <!-- Bootstrap core CSS -->
-<link href="/css/bootstrap.css?version=1.10.0" rel="stylesheet">
-<link href="/css/azkaban.css?version=1.10.0" rel="stylesheet">
+<link href="/css/bootstrap.css?version=1.49.0" rel="stylesheet">
+<link href="/css/select2/select2.css?version=1.49.0" rel="stylesheet" />
+<link href="/css/azkaban.css?version=1.49.0" rel="stylesheet">
 <style type="text/css">
   .navbar-enviro .navbar-enviro-name {
     color: ${azkaban_color};
@@ -37,6 +38,6 @@
 
 <!-- HTML5 shim and Respond.js IE8 support of HTML5 elements and media queries -->
 <!--[if lt IE 9]>
-  <script src="/js/html5shiv.js?version=1.10.0"></script>
-  <script src="/js/respond.min.js?version=1.10.0"></script>
+  <script src="/js/html5shiv.js?version=1.49.0"></script>
+  <script src="/js/respond.min.js?version=1.49.0"></script>
 <![endif]-->

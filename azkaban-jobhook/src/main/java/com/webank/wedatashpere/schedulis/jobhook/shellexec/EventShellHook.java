@@ -1,5 +1,13 @@
 package com.webank.wedatashpere.schedulis.jobhook.shellexec;
 
+import java.io.File;
+import java.util.Arrays;
+import java.util.Map;
+
+import azkaban.flow.CommonJobProperties;
+import org.apache.commons.lang3.StringUtils;
+import org.slf4j.Logger;
+
 import azkaban.executor.ExecutableNode;
 import azkaban.executor.ExecutorLoader;
 import azkaban.hookExecutor.ExecuteWithJobHook;
@@ -8,10 +16,6 @@ import azkaban.hookExecutor.HookContext;
 import azkaban.hookExecutor.HookContext.HookType;
 import azkaban.jobExecutor.ProcessJob;
 import azkaban.utils.Props;
-import org.apache.commons.lang3.StringUtils;
-import org.slf4j.Logger;
-
-import java.util.Arrays;
 
 /**
  * A hook with pre/post cmd feature for specify nodes
@@ -62,22 +66,22 @@ public class EventShellHook implements ExecuteWithJobHook {
 
 
             // default only for event/data checker
-            String nodeTypes = jobParams.getString(HookConstants.WTSS_JOB_HOOK_EVENT_NODE_TYPES, "eventchecker,datachecker");
+            String nodeTypes = jobParams.getString(HookConstants.WTSS_JOB_HOOK_EVENT_NODE_TYPES, "");
             if (!(Arrays.asList(StringUtils.split(nodeTypes, ",")).contains(node.getType()))) {
-                logger.info("{}-Hook setted,but skipped,Only for {} node!,BUT is:{}", node.getType(), nodeTypes,
-                        this.getClass().getCanonicalName());
+                logger.info("{}-Hook setted,but skipped,Only for {} node!,BUT is:{}",
+                        this.getClass().getCanonicalName(), node.getType(), nodeTypes);
                 return;
             }
 
-            /*-
-             -- some params/access not ready,so not now ,post currently
-             boolean isReceive = "RECEIVE".equals(node.getInputProps().get("msg.type"));
-             String hookCommandPre = jobParams.getString("job.hook.event.cmd.pre", "");
-            // before sender
-            if (!isReceive && HookType.PRE_EXEC_SYS_HOOK.equals(this.hooktype)
-                    && StringUtils.isNotBlank(hookCommandPre)) {
+
+            // workspace folder not created
+            // -- some params/access not ready,so not now ,post currently
+            // before
+            String hookCommandPre = jobParams.getString("wtss.job.hook.event.cmd.pre", "");
+            if (HookType.PRE_EXEC_SYS_HOOK.equals(this.hooktype) && StringUtils.isNotBlank(hookCommandPre)) {
                 exeCmd(jobParams, hookCommandPre);
-            }*/
+            }
+
 
             // after
             String hookCommandPost = jobParams.getString(HookConstants.WTSS_JOB_HOOK_EVENT_CMD_POST, "");
@@ -98,12 +102,25 @@ public class EventShellHook implements ExecuteWithJobHook {
         }
     }
 
+    private String get(String key) {
+        if (node.getInputProps() == null) {
+            return "";
+        }
+        return StringUtils.defaultString(node.getInputProps().get(key), "");
+    }
+
+    private String getOutput(String key) {
+        if (node.getOutputProps() == null) {
+            return "";
+        }
+        return StringUtils.defaultString(node.getOutputProps().get(key), "");
+    }
+
     protected void exeCmd(Props jobParams, String hookCommand) throws Exception {
         long start = System.currentTimeMillis();
         String nodeId = this.node.getId();
-        logger.info("{} - current nodeId: {},{},{},with:{}", this.getClass().getCanonicalName(), nodeId,
+        logger.info("{} - starting cmd, current nodeId: {},{},{},with:{}", this.getClass().getCanonicalName(), nodeId,
                 node.getType(), hooktype, hookCommand);
-        // jobParams.put("EventShellHook.nodeId", nodeId);
         String msgBody = getOutput("msg.body");
         String msgTopic = get("msg.topic");
         String msgSender = get("msg.sender");
@@ -113,21 +130,91 @@ public class EventShellHook implements ExecuteWithJobHook {
                 + " --msgReceiver=" + msgReceiver + " --nodeType=" + node.getType() + " --dataObject=" + dataObject;
         // write back info
         jobParams.put("EventShellHook.msg", msg);
-        String old = jobParams.getString("command", "");
-        jobParams.put("command", hookCommand);
 
-        ProcessJob processJob = new ProcessJob(node.getId() + "-hookCmd", pluginJobProps, jobParams, logger);
+        // init if cleaned
+        final String flowName = this.node.getParentFlow().getFlowId();
+        final int executionId = this.node.getParentFlow().getExecutionId();
+
+        Props jobProps = Props.clone(jobParams);
+        if (!jobProps.containsKey("azkaban.job.id")) {
+            jobProps.put("azkaban.job.id", nodeId);
+        }
+        jobProps.put("azkaban.job.innodes", "");// depend not required
+        if (!jobProps.containsKey("azkaban.job.execid")) {
+            jobProps.put("azkaban.job.execid", executionId);
+        }
+        if (!jobProps.containsKey("azkaban.flow.flowid")) {
+            jobProps.put("azkaban.flow.flowid", flowName);
+        }
+        jobProps.put(CommonJobProperties.IGNORE_PARSE_JOBSERVERID, "true");
+        EventShellProcessJob processJob =
+                new EventShellProcessJob(node.getId() + "-hookCmd", Props.clone(pluginJobProps), jobProps, logger);
+        jobProps.put("command", hookCommand);
         processJob.run();
-
-        jobParams.put("command", old);
+        jobProps.removeLocal(CommonJobProperties.IGNORE_PARSE_JOBSERVERID);
         logger.info("{}-Done with:{}ms", this.getClass().getCanonicalName(), (System.currentTimeMillis() - start));
     }
 
-    private String get(String key) {
-        return StringUtils.defaultString(node.getInputProps().get(key), "");
+
+    /**
+     * <pre>
+     * 实现新的ProcessJob，重写以下方法：
+    initPropsFiles： 返回空集合
+    initOverAllPropsFiles 返回空集合
+    generateProperties  实现空方法
+    getCommandList 返回想要执行的命令
+    
+    new ProcessJob时，job属性改为深度拷贝的方式，不使用同一个，防止processJob里面的替换导致问题
+    
+    hook出现异常退出时调用下ProcessJob的cancel方法
+     * </pre>
+     * 
+     * @author yonghxia
+     *
+     */
+    private class EventShellProcessJob extends ProcessJob {
+
+        public EventShellProcessJob(String jobId, Props sysProps, Props jobProps, Logger log) {
+            super(jobId, sysProps, jobProps, log);
+            Map<String, String> cmds = this.jobProps.getMapByPrefix(COMMAND_PREFIX);
+            for (String key : cmds.keySet()) {
+                // 不取command开头的其它
+                logger.info("remove command:{}", COMMAND_PREFIX + key);
+                jobProps.removeLocal(COMMAND_PREFIX + key);
+            }
+        }
+
+        @Override
+        public File[] initPropsFiles() {
+            File[] files = super.initPropsFiles();
+            this.jobProps.removeLocal(ENV_PREFIX + JOB_PROP_ENV);
+            this.jobProps.removeLocal(ENV_PREFIX + JOB_NAME_ENV);
+            this.jobProps.removeLocal(ENV_PREFIX + JOB_OUTPUT_PROP_FILE);
+            return files;
+        }
+
+        @Override
+        public File initOverAllPropsFiles() {
+            return null;
+        }
+
+        @Override
+        public void generateProperties(File outputFile) {
+            // nothing
     }
 
-    private String getOutput(String key) {
-        return StringUtils.defaultString(node.getOutputProps().get(key), "");
+        /*- @Override
+        protected List<String> getCommandList() {
+            final List<String> commands = new ArrayList<>();
+            if (this.jobProps.containsKey(COMMAND)) {
+                commands.add(this.jobProps.getString(COMMAND));
+            }
+            return commands;
+        }*/
+
+        @Override
+        public void cancel() throws InterruptedException {
+            super.cancel();
+        }
     }
 }

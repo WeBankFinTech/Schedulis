@@ -10,7 +10,7 @@
   <parent>
     <groupId>com.webank.wedatasphere.schedulis</groupId>
     <artifactId>schedulis</artifactId>
-    <version>0.9.0</version>
+    <version>1.50.0</version>
   </parent>
 
   <dependencies>
@@ -58,7 +58,7 @@
     <dependency>
       <groupId>org.json</groupId>
       <artifactId>json</artifactId>
-      <version>20070829</version>
+      <version>20231013</version>
     </dependency>
     <dependency>
       <groupId>commons-codec</groupId>

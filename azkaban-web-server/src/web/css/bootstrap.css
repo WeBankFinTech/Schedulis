@@ -2046,6 +2046,7 @@ legend {
   color: #333333;
   border: 0;
   border-bottom: 1px solid #e5e5e5;
+  position: relative;
 }
 
 label {
@@ -2598,6 +2599,18 @@ fieldset[disabled] .btn-warning.active {
 }
 
 .btn-danger {
+  color: #ffffff;
+  background-color: #d9534f;
+  border-color: #d43f3a;
+}
+
+.btn-danger-type1 {
+  color: #ffffff;
+  background-color: #d9534f;
+  border-color: #d43f3a;
+}
+
+.btn-danger-type2 {
   color: #ffffff;
   background-color: #d9534f;
   border-color: #d43f3a;
@@ -6477,6 +6490,18 @@ button.close {
 
 .popover.right {
   margin-left: 10px;
+}
+.login-help-ico{
+  float: right;
+    margin-top: 2px;
+    color: #3276b1;
+}
+.login-help-pop{
+  position: absolute;
+  left: 340px;
+  top: -50px;
+  font-size: 14px;
+  max-width: 400px;
 }
 
 .popover.bottom {

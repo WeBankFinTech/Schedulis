@@ -16,7 +16,7 @@ import java.util.List;
 import java.util.Properties;
 
 /**
- * Created by kirkzhou on 9/10/18.
+ * Created by johnnwang on 9/10/18.
  */
 public class HiveExport {
 

@@ -42,7 +42,10 @@
   }
 </style>
 <script type="text/javascript">
+  //window.wtssUserId="${user_id}"
   function navMenuClick(url) {
+    sessionStorage.setItem('pagePathName', window.location.pathname)
+    url=filterXSS(url)
     window.location.href = url;
   }
 
@@ -54,7 +57,7 @@
     $("#banner").slideUp();
   }
   function setLanguage(){
-    var requestURL = contextURL + "/manager?ajax=exchangeLanguage";
+    var requestURL =  "/manager?ajax=exchangeLanguage";
     $.ajax({
       url: requestURL,
       type: "get",
@@ -66,11 +69,19 @@
     });
   }
   $(function () {
+    if(window.location.pathname!=='/index'){
+      sessionStorage.clear('checkedProjectList')
+    }
     var dismissBanner = localStorage.getItem("dismissBanner");
     if (dismissBanner == "true") {
       return;
     }
-
+    setTimeout(function () {
+        if (sessionStorage.getItem('pagePathName') === '/schedule') {
+            $('.alert-dismissable').hide();
+            $('.alert-success-prompt').hide();
+        }
+    },200)
     if ($("#banner").data("id").indexOf('$') == -1 && $('#banner').is(':empty') == false) {
       $('#banner').attr('Target', '_blank');
       $("#banner").on("click", function () {
@@ -101,7 +112,7 @@
     }
   });
 </script>
-
+<div id='waterMark'></div>
 <div id='banner' data-id="$note_type" data-message="$note_message" data-url="$note_url">
   <div id="bannerText">
   </div>
@@ -111,7 +122,7 @@
   <div class="container-full">
     <div class="navbar-header">
       <div class="navbar-logo">
-        <a href="${context}/">
+        <a href="/">
         <img src="../../images/schedule.png" />
         </a>
         <div class="navbar-version">
@@ -126,62 +137,83 @@
     </div>
     <div class="navbar-collapse collapse">
       #if ($navbar_disabled != 1)
-        <ul class="nav navbar-nav">
+        <ul id="navbar-nav" class="nav navbar-nav">
           #foreach ($viewer in $viewers)
             #if ($viewer.pluginPath == 'homepage')
               <li#if($current_page == $viewer.pluginName) class="active"#end
                                                           onClick="navMenuClick('$!context/$viewer.pluginPath')">
-                <a href="$!context/$viewer.pluginPath" style="font-size: 16px;font-weight: bold">$homePagei18n</a></li>
+                <a href="javascript:void(0);" style="font-size: 16px;font-weight: bold">$homePagei18n</a></li>
             #end
           #end
           <li#if($current_page == 'all') class="active"#end onClick="navMenuClick('$!context/index')"><a
-                  href="$!context/index"  style="font-size: 16px;font-weight: bold">$programTag</a></li>
+                  href="javascript:void(0);" onclick="checkHrefUrlXss('$!context/index')"  style="font-size: 16px;font-weight: bold">$programTag</a></li>
           <li#if($current_page == 'schedule') class="active"#end
                                               onClick="navMenuClick('$!context/schedule')"><a
-                  href="$!context/schedule"  style="font-size: 16px;font-weight: bold">$sch</a></li>
+                  href="javascript:void(0);"  style="font-size: 16px;font-weight: bold">$schTag</a></li>
           <!--<li#if($current_page ==
-            'triggers') class="active"#end onClick="navMenuClick('$!context/triggers')"><a href="$!context/triggers">Triggers</a></li>-->
+            'triggers') class="active"#end onClick="navMenuClick('$!context/triggers')"><a href="javascript:void(0);">Triggers</a></li>-->
           <li#if($current_page == 'executing') class="active"#end
+                                               name="executor"
                                                onClick="navMenuClick('$!context/executor')">
-            <a href="$!context/executor"  style="font-size: 16px;font-weight: bold">$running</a></li>
+            <a href="javascript:void(0);"  style="font-size: 16px;font-weight: bold">$running</a></li>
           <li#if($current_page == 'history') class="active"#end
+                                             name="history"
                                              onClick="navMenuClick('$!context/history')"><a
-                  href="$!context/history" style="font-size: 16px;font-weight: bold">$exechistoryTag</a></li>
+                  href="javascript:void(0);" style="font-size: 16px;font-weight: bold">$exechistoryTag</a></li>
           <!--
           <li#if($current_page == 'flowtrigger') class="active"#end
                                                  onClick="navMenuClick('$!context/flowtrigger')">
 
             <a
-                href="$!context/flowtrigger" style="font-size: 16px;font-weight: bold">Flow Trigger Schedule</a></li>  -->
+                href="javascript:void(0);" style="font-size: 16px;font-weight: bold">Flow Trigger Schedule</a></li>  -->
 
           #if (!$viewers[0].hidden && $viewers[0].pluginPath != 'homepage')
           ##if (!$viewer.hidden)
             <li#if($current_page == $viewers[0].pluginName) class="active"#end
                                                             onClick="navMenuClick('$!context/$viewers[0].pluginPath')">
-              <a href="$!context/$viewers[0].pluginPath" style="font-size: 16px;font-weight: bold">$userTag</a></li>
+              <a href="javascript:void(0);" style="font-size: 16px;font-weight: bold">$singalTag</a></li>
+          #end
+
+          #if (!$viewers[2].hidden && $viewers[2].pluginPath != 'homepage')
+          ##if (!$viewer.hidden)
+            <li#if($current_page == $viewers[2].pluginName) class="active"#end
+                                                            onClick="navMenuClick('$!context/$viewers[2].pluginPath')">
+              <a href="javascript:void(0);" style="font-size: 16px;font-weight: bold">$userTag</a></li>
+          #end
+
+          #if (!$viewers[3].hidden && $viewers[3].pluginPath != 'homepage')
+          ##if (!$viewer.hidden)
+            <li#if($current_page == $viewers[3].pluginName) class="active"#end
+                                                            onClick="navMenuClick('$!context/$viewers[3].pluginPath')">
+              <a href="javascript:void(0);" style="font-size: 16px;font-weight: bold">$systemTag</a></li>
           #end
 
           #if (!$viewers[1].hidden && $viewers[1].pluginPath != 'homepage')
           ##if (!$viewer.hidden)
             <li#if($current_page == $viewers[1].pluginName) class="active"#end
                                                             onClick="navMenuClick('$!context/$viewers[1].pluginPath')">
-              <a href="$!context/$viewers[1].pluginPath" style="font-size: 16px;font-weight: bold">$systemTag</a></li>
+              <a href="javascript:void(0);" style="font-size: 16px;font-weight: bold">$batchTag</a></li>
           #end
 
           #foreach ($trigger in $triggerPlugins)
             #if (!$trigger.hidden)
               <li#if($current_page == $trigger.pluginName) class="active"#end
                                                            onClick="navMenuClick('$!context/$trigger.pluginPath')">
-                <a href="$!context/$trigger.pluginPath" style="font-size: 16px;font-weight: bold">$trigger.pluginName</a></li>
+                <a href="javascript:void(0);" style="font-size: 16px;font-weight: bold">$trigger.pluginName</a></li>
             #end
           #end
         </ul>
         <ul class="nav navbar-nav navbar-right">
-          <li class="dropdown">
+          <li>
+            <a class="helpDocs" href="/docs/docs.html" target="_bank" title="Help doc">
+              <span class="glyphicon glyphicon-question-sign"></span>
+            </a>
+          </li>
+          <li>
             <a href="#" class="dropdown-toggle" data-toggle="dropdown">${user_id} <b
                     class="caret"></b></a>
             <ul class="dropdown-menu">
-              <li><a href="$!context?logout">$loginout</a></li>
+              <li><a href="?logout">$loginout</a></li>
               <li><a href="#" id="setLanguageType"  onClick="setLanguage()">$exchangeLang</a></li>
             </ul>
           </li>
@@ -190,3 +222,8 @@
     </div><!--/.nav-collapse -->
   </div>
 </div>
+<script type="text/javascript" src="/js/azkaban/view/waterMark.js?version=1.49.0"></script>
+<script type="text/javascript">
+  //window.wtssUserId="${user_id}"
+  Watermark.Init('waterMark', "${user_id}")
+</script>

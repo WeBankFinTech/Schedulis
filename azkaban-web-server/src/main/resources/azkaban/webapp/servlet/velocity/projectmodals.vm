@@ -34,6 +34,16 @@
             <input type="file" id="file" name="file" style="position:absolute;clip:rect(0 0 0 0);">
             <span class="upload-file-name" id="fieldsNameBox" >$noFileUploaded</span>
           </div>
+            #if($itsmSwitch)
+              <div>
+                <label class="control-label" id="itsm-label">$itsm</label>
+                <div id="itsm-form-info-box">
+                 <select id="itsm-form-info" name="itsmId" class="form-control selectpicker" style="width: 100%"
+                          data-live-search="true">
+                  </select>
+                </div>
+              </div>
+            #end
             <!--<div class="form-group">
               <label for="file" class="col-sm-3 control-label">$jobPackageFilePath</label>
               <div class="col-sm-9">
@@ -44,7 +54,9 @@
               <div class="form-group">
                 <label for="fix" class="col-sm-3 control-label">
                   $validatorFixLabel.toString()
-                  <a href=$validatorFixLink.toString() target="_blank">
+                    <a href="javascript:void(0);"
+                       onclick="checkHrefUrlXss('$validatorFixLink.toString()',true)"
+                       target="_blank">
                     <span class="ui-icon ui-icon-info" style="display:inline-block;"></span>
                   </a>
                 </label>
@@ -64,6 +76,7 @@
         <div class="modal-footer">
           <input type="hidden" name="project" value="$project.name">
           <input type="hidden" name="action" value="upload">
+          <input type="hidden" name="csrfToken" value="$csrfToken">
           <button type="button" class="btn btn-default" data-dismiss="modal">$cancel</button>
           <button type="button" class="btn btn-primary" id="upload-project-btn">$upload</button>
         </div>
@@ -93,6 +106,76 @@
           <button type="button" class="btn btn-danger" id="delete-btn">$removePro</button>
         </form>
       </div>
+    </div>
+  </div>
+</div>
+
+## 上传应用信息
+<div class="modal" id="upload-business-modal">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <form id="upload-business-form" enctype="multipart/form-data" method="post"
+            action="$!context/manager">
+        <div class="modal-header">
+          <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;
+          </button>
+          <h4 class="modal-title">$uploadFile</h4>
+        </div>
+        <div class="modal-body">
+          <div class="alert alert-danger" id="upload-business-modal-error-msg">$error_msg</div>
+          <fieldset class="form-horizontal">
+            <div>
+              <label class="upload-button" for="businessfile">$uploadFile</label>
+              <input type="file" id="businessfile" name="businessfile"
+                     style="position:absolute;clip:rect(0 0 0 0);">
+              <span class="upload-file-name" id="businessfilefieldsNameBox">$noFileUploaded</span>
+            </div>
+          </fieldset>
+        </div>
+        <div class="modal-footer">
+          <input type="hidden" name="project" value="$project.name">
+          <input type="hidden" name="csrfToken" value="$csrfToken">
+          <input type="hidden" name="action" value="uploadBusinessInfo">
+          <input type="hidden" name="fileName" value="$noFileUploaded">
+          <button type="button" class="btn btn-default" data-dismiss="modal">$cancel</button>
+          <button type="button" class="btn btn-primary" id="upload-business-btn">$upload</button>
+
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+## 上传定时调度
+<div class="modal" id="upload-sch-modal" >
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <form id="upload-sch-form" enctype="multipart/form-data" method="post"
+            action="$!context/schedule">
+        <div class="modal-header">
+          <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;
+          </button>
+          <h4 class="modal-title">$uploadFile</h4>
+        </div>
+        <div class="modal-body">
+          <fieldset class="form-horizontal">
+            <div>
+              <label class="upload-button" for="schfile">$uploadFile</label>
+              <input type="file" id="schfile" name="schfile"
+                     style="position:absolute;clip:rect(0 0 0 0);">
+              <span class="upload-file-name" id="schfilefieldsNameBox">$noFileUploaded</span>
+            </div>
+          </fieldset>
+        </div>
+        <div class="modal-footer">
+          <input type="hidden" name="project" value="$project.name">
+          <input type="hidden" name="csrfToken" value="$csrfToken">
+          <input type="hidden" name="action" value="scheduleFileUpload">
+          <input type="hidden" name="fileName" value="$noFileUploaded">
+          <button type="button" class="btn btn-default" data-dismiss="modal">$cancel</button>
+          <button type="button" class="btn btn-primary" id="upload-sch-btn">$upload</button>
+        </div>
+      </form>
     </div>
   </div>
 </div>
@@ -232,6 +315,198 @@
         <form id="button-user-temp-operator-permit-close">
           <button type="button" class="btn btn-default" data-dismiss="modal">$close</button>
         </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+## 应用信息填写框
+<div class="modal" id="merge-business-panel">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;
+        </button>
+        <h4 class="modal-title">$mergeBusinessTitle</h4>
+      </div>
+      <div class="modal-body">
+        <div class="alert alert-danger" id="merge-business-error-msg"
+             style="word-break:break-all;"></div>
+        <div class="alert alert-info" id="merge-business-info-msg"
+             style="word-break:break-all;"></div>
+        <input id="itsm-number"  type="hidden" value="" >
+        <fieldset class="form-horizontal" style="height:600px;overflow-y:scroll;overflow-x:hidden;padding-top:10px;">
+          <div class="form-group">
+            <label for="batch-group-select" class="col-sm-4 control-label">$batchGroup</label>
+            <div class="col-sm-7">
+              <select id="batch-group-select" class="form-control" style="width: 100%"></select>
+            </div>
+          </div>
+          <div class="form-group">
+            <label for="bus-path-select" class="col-sm-4 control-label">$busPath</label>
+            <div class="col-sm-7">
+              <select id="bus-path-select"  class="form-control" style="width: 100%"></select>
+            </div>
+          </div>
+          <div class="form-group">
+            <label for="bus-domain-select" class="col-sm-4 control-label"><span class="required">*</span>$busDomain</label>
+            <div class="col-sm-7">
+              <select id="bus-domain-select"  class="form-control" style="width: 100%"></select>
+            </div>
+          </div>
+          <div class="form-group">
+            <label for="subsystem-select" class="col-sm-4 control-label"><span class="required">*</span>$subsystem</label>
+            <div class="col-sm-7">
+              <select id="subsystem-select" class="form-control" style="width: 100%"></select>
+            </div>
+          </div>
+          <div class="form-group">
+            <label for="bus-res-lvl-select" class="col-sm-4 control-label"><span class="required">*</span>$busResLvl</label>
+            <div class="col-sm-7">
+              <select id="bus-res-lvl-select" class="form-control selectpicker" title="${selectBusResLvl}">
+                <option value="S">S （RTO <= 2h, RPO <= 1h, 不可运行在BDP, 迁移优先级高）</option>
+                <option value="A">A （RTO <= 4h, RPO <= 2h, 不可运行在BDP, 迁移优先级中）</option>
+                <option value="B">B （RTO <= 10h, RPO <= 6h, 不可运行在BDP, 迁移优先级低）</option>
+                <option value="C">C （RTO <= 37h, RPO <= 24h, 可运行在BDP）</option>
+              </select>
+            </div>
+          </div>
+          <div class="form-group">
+            <label for="plan-start-time" class="col-sm-4 control-label"><span class="required">*</span>$planStartTime</label>
+            <div class="col-sm-7">
+              <input id="plan-start-time" type="text" class="ui-datetime-container form-control">
+            </div>
+          </div>
+          <div class="form-group">
+            <label for="plan-finish-time" class="col-sm-4 control-label"><span class="required">*</span>$planFinishTime</label>
+            <div class="col-sm-7">
+              <input id="plan-finish-time" type="text" class="ui-datetime-container form-control">
+            </div>
+          </div>
+          <div class="form-group">
+              <label for="last-start-time" class="col-sm-4 control-label"><span class="required">*</span>$lastStartTime</label>
+              <div class="col-sm-7">
+                  <input id="last-start-time" type="text" class="ui-datetime-container form-control">
+              </div>
+          </div>
+          <div class="form-group">
+            <label for="last-finish-time" class="col-sm-4 control-label"><span class="required">*</span>$lastFinishTime</label>
+            <div class="col-sm-7">
+              <input id="last-finish-time" type="text" class="ui-datetime-container form-control">
+            </div>
+          </div>
+         <!-- <div class="form-group">
+            <label for="alert-level" class="col-sm-4 control-label">$alertLevel</label>
+            <div class="col-sm-7">
+              <select id="alert-level" class="form-control selectpicker" title="${selectAlertLevel}">
+                <option value="1">critical</option>
+                <option value="2">major</option>
+                <option value="3">minor</option>
+                <option value="4">warn</option>
+              </select>
+            </div>
+          </div>
+          <div class="form-group">
+            <label for="dcn-number" class="col-sm-4 control-label">$dcnNumber</label>
+            <div class="col-sm-7">
+              <input id="dcn-number" type="text" class="form-control" maxlength="500">
+            </div>
+          </div>
+          <div class="form-group">
+            <label for="ims-updater-select" class="col-sm-4 control-label">$imsUpdater</label>
+            <div class="col-sm-7">
+              <select id="ims-updater-select" class="form-control selectpicker" data-live-search="true" title="${selectImsUpdater}" data-size="8" multiple></select>
+            </div>
+          </div>
+          <div class="form-group">
+            <label for="ims-remark" class="col-sm-4 control-label">$imsRemark</label>
+            <div class="col-sm-7">
+              <div class="alert-warning" style="margin:5px">$imsRemarkTips</div>
+              <input id="ims-remark" type="text" class="form-control" maxlength="500">
+            </div>
+          </div>-->
+          <div class="form-group">
+            <label for="bus-type-first-select" class="col-sm-4 control-label">$busTypeFirst</label>
+            <div class="col-sm-7">
+              <select id="bus-type-first-select" class="form-control" style="width: 100%"></select>
+            </div>
+          </div>
+          <div class="form-group">
+            <label for="bus-type-second-select" class="col-sm-4 control-label">$busTypeSecond</label>
+            <div class="col-sm-7">
+              <select id="bus-type-second-select" class="form-control" style="width: 100%"></select>
+            </div>
+          </div>
+          <div class="form-group">
+            <label for="bus-desc" class="col-sm-4 control-label">$busDesc</label>
+            <div class="col-sm-7">
+              <input id="bus-desc" type="text" class="form-control" maxlength="500">
+            </div>
+          </div>
+          <div class="form-group">
+            <label for="bus-dev-dept-select" class="col-sm-4 control-label"><span class="required">*</span>$devDept</label>
+            <div class="col-sm-7">
+              <select id="bus-dev-dept-select" class="form-control selectpicker" data-live-search="true" title="${selectDevDept}" data-size="8"></select>
+            </div>
+          </div>
+          <div class="form-group">
+            <label for="bus-ops-dept-select" class="col-sm-4 control-label"><span class="required">*</span>$opsDept</label>
+            <div class="col-sm-7">
+              <select id="bus-ops-dept-select" class="form-control selectpicker" data-live-search="true" title="${selectOpsDept}" data-size="8"></select>
+            </div>
+          </div>
+          <div class="form-group">
+            <label for="scan-partition-num" class="col-sm-4 control-label"><span class="required">*</span>$scanPartitionNum</label>
+            <div class="col-sm-7">
+              <input id="scan-partition-num" type="text" class="form-control" maxlength="500">
+            </div>
+          </div>
+          <div class="form-group">
+            <label for="scan-data-size" class="col-sm-4 control-label"><span class="required">*</span>$scanDataSize</label>
+            <div class="col-sm-7">
+              <input id="scan-data-size" type="text" class="form-control" maxlength="500">
+            </div>
+          </div>
+
+          #*
+          <div class="form-group">
+            <label for="batch-time-quat" class="col-sm-4 control-label">$batchTimeQuat</label>
+            <div class="col-sm-7">
+              <input id="batch-time-quat" type="text" class="form-control" maxlength="120">
+            </div>
+          </div>
+          <div class="form-group">
+            <label for="bus-err-inf" class="col-sm-4 control-label">$busErrInf</label>
+            <div class="col-sm-7">
+              <input id="bus-err-inf" type="text" class="form-control" maxlength="180">
+            </div>
+          </div>
+          <div class="form-group">
+            <label for="upper-dep" class="col-sm-4 control-label">$upperDep</label>
+            <div class="col-sm-7">
+              <input id="upper-dep" type="text" class="form-control" maxlength="120">
+            </div>
+          </div>
+          <div class="form-group">
+            <label for="lower-dep" class="col-sm-4 control-label">$lowerDep</label>
+            <div class="col-sm-7">
+              <input id="lower-dep" type="text" class="form-control" maxlength="120">
+            </div>
+          </div>
+          <div class="form-group">
+            <label for="related_product" class="col-sm-4 control-label">$relatedProduct</label>
+            <div class="col-sm-7">
+              <input id="related_product" type="text" class="form-control" maxlength="120">
+            </div>
+          </div>
+          *#
+        </fieldset>
+      </div>
+      <div class="modal-footer">
+        <input type="hidden" id="flow-business-id" value="">
+        <input type="hidden" id="job-business-id" value="">
+        <button type="button" class="btn btn-default" data-dismiss="modal">$cancel</button>
+        <button type="button" class="btn btn-primary" id="business-merge-btn">$merge</button>
       </div>
     </div>
   </div>

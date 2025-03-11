@@ -1,13 +1,6 @@
 package azkaban.utils;
 
 import azkaban.flow.CommonJobProperties;
-import okhttp3.*;
-import org.apache.commons.io.IOUtils;
-import org.apache.commons.lang.RandomStringUtils;
-import org.apache.commons.lang.StringUtils;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import java.io.IOException;
 import java.net.URISyntaxException;
 import java.security.NoSuchAlgorithmException;
@@ -16,6 +9,17 @@ import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 import java.util.concurrent.TimeUnit;
+import okhttp3.Call;
+import okhttp3.MediaType;
+import okhttp3.OkHttpClient;
+import okhttp3.Request;
+import okhttp3.RequestBody;
+import okhttp3.Response;
+import org.apache.commons.io.IOUtils;
+import org.apache.commons.lang.RandomStringUtils;
+import org.apache.commons.lang.StringUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Tools for qualitis
@@ -79,7 +83,7 @@ public class QualitisUtil {
    * @return
    * @throws IOException
    */
-  public String submitTask(long groupId, String createUser, String executionUser)
+  public String submitTask(long groupId, String createUser, String executionUser, String runDate)
       throws Exception {
 
     logger.info("Submitting Qualitis task(groupId: " + groupId + ") ... ");
@@ -96,6 +100,7 @@ public class QualitisUtil {
     param.put("group_id", groupId);
     param.put("create_user", createUser);
     param.put("execution_user", executionUser);
+    param.put("execution_param", "run_date:" + runDate);
 
     String json = GsonUtils.toJson(param);
     logger.info("Request Json: " + json);
@@ -155,7 +160,8 @@ public class QualitisUtil {
         .append(String.format(properties.getProperty("qualitis.rule.metric"),
             properties.getProperty(CommonJobProperties.JOB_ID).replace("_", "-")))
         .append("\", false, false, false).fixValueNotEqual(0)");
-    System.out.println(sb);
+   // System.out.println(sb);
+    logger.info(sb+"");
     param.put("template_function", sb.toString());
     param.put("project_name", properties.getProperty("azkaban.flow.projectname"));
     param.put("rule_name", properties.getProperty("azkaban.flow.projectname") + properties

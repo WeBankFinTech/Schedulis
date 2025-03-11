@@ -18,13 +18,78 @@ $.namespace('azkaban');
 
 var handleJobMenuClick = function(action, el, pos) {
     var jobid = el[0].jobid;
-    var requestURL = contextURL + "/manager?project=" + projectName + "&flow=" +
-        flowName + "&job=" + jobid;
+    var requestURL = filterXSS("/manager?project=" + projectName + "&flow=" +
+        flowName + "&job=" + jobid);
     if (action == "open") {
         window.location.href = requestURL;
     } else if (action == "openwindow") {
         window.open(requestURL);
     }
+}
+
+var showDialog = function(title, message, canForceKill = false) {
+    $('#message-dialog-superkillbtn').hide()
+    $('#messageTitle').text(title);
+    $('#messageBox').text(message);
+    if(canForceKill) {
+        $('#message-dialog-superkillbtn').show()
+        $('#message-dialog-superkillbtn').click(function() {
+            var requestURL = "/executor";
+            var requestData = { "execid": execId, "ajax": "cancelFlow", forceCancel: true };
+            console.log("Click message-dialog-superkillbtn ");
+            var successHandler = function(data) {
+                console.log("cancel clicked");
+                if (data.error) {
+                    $('#messageBox').text('强制停止失败：\n'+data.error);
+                } else {
+                    $('#shutdown-flow-modal').modal().hide();
+                    setTimeout(function() {
+                        updateStatus();
+                    }, 1100);
+
+                    setTimeout(function() {
+                        window.location.reload();
+                    }, 1000);
+                }
+            };
+            ajaxCall(requestURL, requestData, successHandler);
+        })
+
+    }
+    $('#messageDialog').modal();
+}
+
+var failedNodeList = []
+
+var getLeafNodes = function(nodes){
+    if(!Array.isArray(nodes) || 0 == nodes.length){
+        return [];
+    }
+    var leafNodes = [];
+    for(var i = 0; i < nodes.length; i++){
+        var node = nodes[i];
+        if(!node.nodes || 0 == node.nodes.length){
+            leafNodes.push(node);
+        }else{
+            leafNodes = leafNodes.concat(getLeafNodes(node.nodes));
+        }
+    }
+    return leafNodes;
+}
+
+// 减枝，如果某个节点已经失败，但他的所有子节点都还没有失败，那么这个节点的所有子节点全部抛弃，将改节点变为了叶子节点
+var pruneTree = function(root){
+    if(!root){
+        return null;
+    }
+    if(Array.isArray(root.nodes) && root.nodes.length!==0){
+        root.nodes = root.nodes.map(pruneTree).filter(node => node !== null);
+    }
+    if(( root.status === "FAILED" || root.status === "FAILED_WAITING") && Array.isArray(root.nodes) && root.nodes.length !== 0 && root.nodes.every(node => node.status !== "FAILED" && node.status !== "FAILED_WAITING")){
+       root.nodes= null;
+    }
+    console.log(root)
+    return root
 }
 
 var statusView;
@@ -60,7 +125,7 @@ azkaban.StatusView = Backbone.View.extend({
             $("#startTime").text("-");
         } else {
             var date = new Date(startTime);
-            $("#startTime").text(getDateFormat(date));
+            $("#startTime").text(getProjectModifyDateFormat(date));
 
             var lastTime = endTime;
             if (endTime == -1) {
@@ -76,7 +141,7 @@ azkaban.StatusView = Backbone.View.extend({
             $("#endTime").text("-");
         } else {
             var date = new Date(endTime);
-            $("#endTime").text(getDateFormat(date));
+            $("#endTime").text(getProjectModifyDateFormat(date));
         }
     }
 });
@@ -97,8 +162,13 @@ azkaban.PausedTipsView = Backbone.View.extend({
     },
 
     handlePause: function() {
-        var requestURL = contextURL + "/executor";
-        var requestData = { "execid": execId, "ajax": "pauseFlow" };
+        var requestURL = "/executor";
+        var timeoutHour = $('#pauseInput').val();
+        if(!/^(0|[1-9]\d*)(\.\d{1})?$/.test(timeoutHour)){
+            alert('请输入正确的时长，大于零的整数或小数，小数精确至一位');
+            return;
+        }
+        var requestData = { "execid": execId, "ajax": "pauseFlow", "timeoutHour": timeoutHour };
         var successHandler = function(data) {
             console.log("pause clicked");
             if (data.error) {
@@ -108,6 +178,7 @@ azkaban.PausedTipsView = Backbone.View.extend({
                 setTimeout(function() {
                     updateStatus();
                 }, 1100);
+
             }
         };
         ajaxCall(requestURL, requestData, successHandler);
@@ -125,23 +196,25 @@ azkaban.FlowTabView = Backbone.View.extend({
         "click #operationParameterLink": "handleOperationParameterLinkClick",
         "click #statsViewLink": "handleStatsLinkClick",
         "click #cancelbtn": "handleCancelClick",
+        "click #superkillbtn": "handleSuperKillClick",
         "click #shutdown-selected-flow-btn": "handleShutdownSelectedFlowClick",
         "click #executebtn": "handleRestartClick",
         "click #pausebtn": "handlePauseClick",
         "click #resumebtn": "handleResumeClick",
         "click #retrybtn": "handleRetryClick",
         "click #skipAllFailedJobBtn": "handleSkipAllFailedJobClick",
-        "click #superkillbtn": "handleSuperKillClick",
+        "click #backup-rerun-btn": "handleBackupReRunClick"
     },
 
     initialize: function(settings) {
         $("#cancelbtn").hide();
+        $("#superkillbtn").hide();
         $("#executebtn").hide();
         $("#pausebtn").hide();
         $("#resumebtn").hide();
         $("#retrybtn").hide();
         $("#skipAllFailedJobBtn").hide();
-        $("#superkillbtn").hide();
+
         this.model.bind('change:graph', this.handleFlowStatusChange, this);
         this.model.bind('change:update', this.handleFlowStatusChange, this);
 
@@ -158,6 +231,12 @@ azkaban.FlowTabView = Backbone.View.extend({
     },
 
     handleGraphLinkClick: function() {
+        $("#statusFilterList").hide()
+        $("#statusFilterList").next('span').hide()
+        $("#jobsFilterList").hide()
+        $("#jobsFilterList").next('span').hide()
+        $("#excuteTimeFilterList").hide()
+        $("#excuteTimeFilterList").next('span').hide()
         $("#jobslistViewLink").removeClass("active");
         $("#graphViewLink").addClass("active");
         $("#flowLogViewLink").removeClass("active");
@@ -192,6 +271,12 @@ azkaban.FlowTabView = Backbone.View.extend({
     },
 
     handleJobslistLinkClick: function() {
+        $("#statusFilterList").show()
+        $("#statusFilterList").next('span').show()
+        $("#jobsFilterList").show()
+        $("#jobsFilterList").next('span').show()
+        $("#excuteTimeFilterList").show()
+        $("#excuteTimeFilterList").next('span').show()
         $("#graphViewLink").removeClass("active");
         $("#jobslistViewLink").addClass("active");
         $("#flowLogViewLink").removeClass("active");
@@ -211,6 +296,12 @@ azkaban.FlowTabView = Backbone.View.extend({
 
 
     handleLogLinkClick: function() {
+        $("#statusFilterList").hide()
+        $("#statusFilterList").next('span').hide()
+        $("#jobsFilterList").hide()
+        $("#jobsFilterList").next('span').hide()
+        $("#excuteTimeFilterList").hide()
+        $("#excuteTimeFilterList").next('span').hide()
         $("#graphViewLink").removeClass("active");
         $("#flowTriggerlistViewLink").removeClass("active");
         $("#jobslistViewLink").removeClass("active");
@@ -229,6 +320,12 @@ azkaban.FlowTabView = Backbone.View.extend({
     },
 
     handleOperationParameterLinkClick: function() {
+        $("#statusFilterList").hide()
+        $("#statusFilterList").next('span').hide()
+        $("#jobsFilterList").hide()
+        $("#jobsFilterList").next('span').hide()
+        $("#excuteTimeFilterList").hide()
+        $("#excuteTimeFilterList").next('span').hide()
         $("#graphViewLink").removeClass("active");
         $("#flowTriggerlistViewLink").removeClass("active");
         $("#jobslistViewLink").removeClass("active");
@@ -247,6 +344,13 @@ azkaban.FlowTabView = Backbone.View.extend({
     },
 
     handleStatsLinkClick: function() {
+        $("#statusFilterList").hide()
+        $("#statusFilterList").next('span').hide()
+        $("#jobsFilterList").hide()
+        $("#jobsFilterList").next('span').hide()
+        $("#excuteTimeFilterList").hide()
+        $("#excuteTimeFilterList").next('span').hide()
+
         $("#graphViewLink").removeClass("active");
         $("#flowTriggerlistViewLink").removeClass("active");
         $("#jobslistViewLink").removeClass("active");
@@ -265,12 +369,13 @@ azkaban.FlowTabView = Backbone.View.extend({
         var data = this.model.get("data");
         var getHideHead = sessionStorage.getItem('hideHead');
         $("#cancelbtn").hide();
+        $("#superkillbtn").hide();
         $("#executebtn").hide();
         $("#pausebtn").hide();
         $("#resumebtn").hide();
         $("#retrybtn").hide();
         $("#skipAllFailedJobBtn").hide();
-        $("#superkillbtn").hide();
+
         if (data.status == "SUCCEEDED" && getHideHead !== 'true') {
             $("#executebtn").show();
         } else if (data.status == "PREPARING") {
@@ -300,6 +405,62 @@ azkaban.FlowTabView = Backbone.View.extend({
         }
     },
 
+
+    handleCancelClick: function(evt) {
+
+        // 需要校验是否具有修改项目调度权限 1:允许, 2:不允许
+        var requestURL = "/manager?ajax=checkKillFlowPermission&project=" + projectName;
+        $.ajax({
+            url: requestURL,
+            type: "get",
+            async: false,
+            dataType: "json",
+            success: function(data) {
+                if (data["killFlowFlag"] == 1) {
+
+                    // 弹出对话框
+                    $('#shutdown-flow-modal').modal();
+                    console.log("flowId=" + flowId);
+                    // 截取过长的字符串
+                    var trimFlowId = flowId;
+                    if (flowId.length > 20) {
+                        trimFlowId = flowId.substring(0, 20) + "...";
+                    }
+                    $('#shutdown-flow-title').text(data["endExecutenProcess"] + trimFlowId);
+
+                    $(document).ready(function() {
+                        $("#shutdown-selected-flow-btn").click(function() {
+                            var requestURL = "/executor";
+                            var requestData = { "execid": execId, "ajax": "cancelFlow" };
+                            console.log("Click shutdownSelectedFlowClick ");
+                            var successHandler = function(data) {
+                                console.log("cancel clicked");
+                                if (data.error) {
+                                    showDialog("Error", data.error, data.supportForceCancel);
+                                } else {
+                                    $('#shutdown-flow-modal').modal().hide();
+                                    setTimeout(function() {
+                                        updateStatus();
+                                    }, 1100);
+
+                                    setTimeout(function() {
+                                        window.location.reload();
+                                    }, 1000);
+                                }
+                            };
+                            ajaxCall(requestURL, requestData, successHandler);
+                        });
+                    });
+
+                } else if (data["killFlowFlag"] == 2) {
+                    $('#user-retry-execute-flow-permit-panel').modal();
+                    $('#title-user-retry-execute-flow-permit').text(data["killExecutePermissions"]);
+                    $('#body-user-retry-execute-flow-permit').html(filterXSS(data["killExecutePermissionsDesc"]));
+                }
+            }
+        });
+    },
+
     handleSuperKillClick: function(evt) {
 
         // 需要校验是否具有修改项目调度权限 1:允许, 2:不允许
@@ -327,6 +488,7 @@ azkaban.FlowTabView = Backbone.View.extend({
                                     setTimeout(function() {
                                         updateStatus();
                                     }, 1100);
+
                                     setTimeout(function() {
                                         window.location.reload();
                                     }, 1000);
@@ -344,78 +506,30 @@ azkaban.FlowTabView = Backbone.View.extend({
             }
         });
     },
-    handleCancelClick: function(evt) {
 
-        // 需要校验是否具有修改项目调度权限 1:允许, 2:不允许
-        var requestURL = contextURL + "/manager?ajax=checkKillFlowPermission&project=" + projectName;
-        $.ajax({
-            url: requestURL,
-            type: "get",
-            async: false,
-            dataType: "json",
-            success: function(data) {
-                if (data["killFlowFlag"] == 1) {
-
-                    // 弹出对话框
-                    $('#shutdown-flow-modal').modal();
-                    console.log("flowId=" + flowId);
-                    // 截取过长的字符串
-                    var trimFlowId = flowId;
-                    if (flowId.length > 20) {
-                        trimFlowId = flowId.substring(0, 20) + "...";
-                    }
-                    $('#shutdown-flow-title').text(data["endExecutenProcess"] + trimFlowId);
-
-                    $(document).ready(function() {
-                        $("#shutdown-selected-flow-btn").click(function() {
-                            var requestURL = contextURL + "/executor";
-                            var requestData = { "execid": execId, "ajax": "cancelFlow" };
-                            console.log("Click shutdownSelectedFlowClick ");
-                            var successHandler = function(data) {
-                                console.log("cancel clicked");
-                                if (data.error) {
-                                    showDialog("Error", data.error);
-                                } else {
-                                    $('#shutdown-flow-modal').modal().hide();
-                                    setTimeout(function() {
-                                        updateStatus();
-                                    }, 1100);
-                                    setTimeout(function() {
-                                        window.location.reload();
-                                    }, 1000);
-                                }
-                            };
-                            ajaxCall(requestURL, requestData, successHandler);
-                        });
-                    });
-
-                } else if (data["killFlowFlag"] == 2) {
-                    $('#user-retry-execute-flow-permit-panel').modal();
-                    $('#title-user-retry-execute-flow-permit').text(data["killExecutePermissions"]);
-                    $('#body-user-retry-execute-flow-permit').html(data["killExecutePermissionsDesc"]);
-                }
-            }
-        });
-    },
-
-    handleShutdownSelectedFlowClick: function(evt) {
-        var requestURL = contextURL + "/executor";
+    handleShutdownSelectedFlowClick: function(evt, forceKill = false) {
+        var requestURL = "/executor";
         var requestData = { "execid": execId, "ajax": "cancelFlow" };
+        if(forceKill){
+            requestData.forceCancel = true
+        }
         console.log("Click shutdownSelectedFlowClick ");
         var successHandler = function(data) {
             console.log("cancel clicked");
             if (data.error) {
-                showDialog("Error", data.error);
+                showDialog("Error", data.error, data.supportForceCancel);
             } else {
                 $('#shutdown-flow-modal').modal().hide();
                 showDialog(wtssI18n.view.cancel, wtssI18n.view.workflowCanceled);
                 setTimeout(function() {
                     updateStatus();
                 }, 1100);
+
             }
         };
         ajaxCall(requestURL, requestData, successHandler);
     },
+
 
     handleRetryClick: function(evt) {
 
@@ -423,9 +537,14 @@ azkaban.FlowTabView = Backbone.View.extend({
         $('#onekey-retry-failed-flow-modal').modal();
         $(document).ready(function() {
             $("#onekey-retry-failed-flow-btn").click(function() {
+                // var checkedCheckboxes = document.querySelectorAll('input[name="retry-failed-flow"]:checked');
+                // var retryFailedJobs = Array.from(checkedCheckboxes).map(checkbox => checkbox.value);
                 var graphData = graphModel.get("data");
-                var requestURL = contextURL + "/executor";
-                var requestData = { "execid": execId, "ajax": "retryFailedJobs" };
+                var rerunJobs = []
+                var operateStatus = getFailedFinishStatus()
+                recursiveRerunNode(graphData.nodes, rerunJobs, operateStatus)
+                var requestURL = "/executor?execid=" + execId + "&ajax=retryFailedJobs";
+                var requestData = { "retryFailedJobs": rerunJobs };
                 var successHandler = function(data) {
                     console.log("cancel clicked");
                     if (data.error) {
@@ -436,12 +555,23 @@ azkaban.FlowTabView = Backbone.View.extend({
                         setTimeout(function() {
                             updateStatus();
                         }, 1100);
+
                         setTimeout(function() {
                             window.location.reload();
                         }, 1000);
                     }
                 };
-                ajaxCall(requestURL, requestData, successHandler);
+                $.ajax({
+                    url: requestURL,
+                    type: "POST",
+                    contentType: "application/json; charset=utf-8",
+                    data: JSON.stringify(requestData),
+                    dataType: "json",
+                    error: function(data) {
+                        console.log(data);
+                    },
+                    success: successHandler
+                });
             });
         });
     },
@@ -450,11 +580,45 @@ azkaban.FlowTabView = Backbone.View.extend({
     handleSkipAllFailedJobClick: function(evt) {
         // 弹出对话框
         $('#onekey-skip-failed-job-modal').modal();
+        // 定义包含复选框选项的列表
+        var options = failedNodeList.map(item=>item.nestedId)
+
+        // 获取容器元素
+        var container = document.getElementById('skip-failed-flow-checkbox-container');
+        container.innerHTML=''
+
+        // 动态生成复选框列表
+        options.forEach(option => {
+            // 创建一个标签元素
+            var label = document.createElement('label');
+
+            // 创建一个复选框元素
+            var checkbox = document.createElement('input');
+            checkbox.type = 'checkbox';
+            checkbox.name = 'skip-failed-flow';
+            checkbox.value = option;
+            checkbox.checked = true
+
+            // 将复选框添加到标签中
+            label.appendChild(checkbox);
+
+            // 添加选项文本
+            label.appendChild(document.createTextNode(option));
+
+            // 将标签添加到容器中
+            container.appendChild(label);
+
+            // 添加一个换行符
+            container.appendChild(document.createElement('br'));
+        });
         $(document).ready(function() {
             $("#onekey-skip-failed-job-btn").click(function() {
+                var checkedCheckboxes = document.querySelectorAll('input[name="skip-failed-flow"]:checked');
+                var skipFailedJobs = Array.from(checkedCheckboxes).map(checkbox => checkbox.value);
+                console.log('skipFailedJobs',skipFailedJobs);
                 var graphData = graphModel.get("data");
-                var requestURL = contextURL + "/executor";
-                var requestData = { "execid": execId, "ajax": "skipAllFailedJobs" };
+                var requestURL = "/executor?execid=" + execId + "&ajax=ajaxSkipFailedJobs";
+                var requestData = { skipFailedJobs  };
                 var successHandler = function(data) {
                     console.log("skip all FAILED_WAITING job.");
                     if (data.error) {
@@ -465,22 +629,67 @@ azkaban.FlowTabView = Backbone.View.extend({
                         setTimeout(function() {
                             updateStatus();
                         }, 1100);
+
                         setTimeout(function() {
                             window.location.reload();
                         }, 1000);
                     }
                 };
-                ajaxCall(requestURL, requestData, successHandler);
+                $.ajax({
+                    url: requestURL,
+                    type: "POST",
+                    contentType: "application/json; charset=utf-8",
+                    data: JSON.stringify(requestData),
+                    dataType: "json",
+                    error: function(data) {
+                        console.log(data);
+                    },
+                    success: successHandler
+                });
             });
         });
 
     },
 
+    handleBackupReRunClick: function(evt) {
+        console.log("backup rerun")
+        // 需要校验是否具有执行工作流权限 1:允许, 2:不允许
+        var requestURL = "/manager?ajax=checkUserExecuteFlowPermission&project=" + projectName;
+        $.ajax({
+            url: requestURL,
+            type: "get",
+            async: false,
+            dataType: "json",
+            success: function(data) {
+                if (data["executeFlowFlag"] == 1) {
+                    console.log("handleRestartClick");
+                    localStorage.setItem('isBackupRerun', "true"); // 标记容灾重跑
+                    var dataValue = graphModel.get("data");
+
+                    var executingData = {
+                        project: projectName,
+                        ajax: "executeFlow",
+                        flow: flowId,
+                        execid: execId,
+                        exgraph: dataValue,
+                        executeFlowTitle: data["executeFlowTitle"]
+                    };
+                    flowExecuteDialogView.show(executingData);
+                } else if (data["executeFlowFlag"] == 2) {
+                    $('#user-retry-execute-flow-permit-panel').modal();
+                    $('#title-user-retry-execute-flow-permit').text(data["executePermission"]);
+                    $('#body-user-retry-execute-flow-permit').html(filterXSS(data["noexecuteFlowPermission"]));
+                }
+            }
+        });
+    },
+
+
     // 准备执行
     handleRestartClick: function(evt) {
 
         // 需要校验是否具有执行工作流权限 1:允许, 2:不允许
-        var requestURL = contextURL + "/manager?ajax=checkUserExecuteFlowPermission&project=" + projectName;
+        var requestURL = "/manager?ajax=checkUserExecuteFlowPermission&project=" + projectName;
         $.ajax({
             url: requestURL,
             type: "get",
@@ -499,11 +708,12 @@ azkaban.FlowTabView = Backbone.View.extend({
                         exgraph: dataValue,
                         executeFlowTitle: data["executeFlowTitle"]
                     };
+                    localStorage.setItem('isBackupRerun', "false"); // 清除容灾重跑
                     flowExecuteDialogView.show(executingData);
                 } else if (data["executeFlowFlag"] == 2) {
                     $('#user-retry-execute-flow-permit-panel').modal();
                     $('#title-user-retry-execute-flow-permit').text(data["executePermission"]);
-                    $('#body-user-retry-execute-flow-permit').html(data["noexecuteFlowPermission"]);
+                    $('#body-user-retry-execute-flow-permit').html(filterXSS(data["noexecuteFlowPermission"]));
                 }
             }
         });
@@ -514,7 +724,7 @@ azkaban.FlowTabView = Backbone.View.extend({
     },
 
     handleResumeClick: function(evt) {
-        var requestURL = contextURL + "/executor";
+        var requestURL = "/executor";
         var requestData = { "execid": execId, "ajax": "resumeFlow" };
         var successHandler = function(data) {
             console.log("pause clicked");
@@ -525,16 +735,28 @@ azkaban.FlowTabView = Backbone.View.extend({
                 setTimeout(function() {
                     updateStatus();
                 }, 1100);
+
             }
         };
         ajaxCall(requestURL, requestData, successHandler);
     }
 });
-
-var showDialog = function(title, message) {
-    $('#messageTitle').text(title);
-    $('#messageBox').text(message);
-    $('#messageDialog').modal();
+// 失败暂停这五个状态可以打开关闭
+function getFailedFinishStatus() {
+    return ['RETRIED_SUCCEEDED', 'SUCCEEDED', 'SKIPPED', 'FAILED_SKIPPED', 'FAILED_SKIPPED_DISABLED']
+}
+// 任务重跑、重试失败 打开节点处理
+function recursiveRerunNode(nodeData, rerunJobs, operateStatus) {
+    for (let i = 0; i < nodeData.length; i++) {
+        var temNode = nodeData[i]
+        if (temNode.type === 'flow') { // type flow节点不传到后端
+            recursiveRerunNode(temNode.nodes, rerunJobs, operateStatus)
+        } else {
+            if (operateStatus.indexOf(temNode.originStatus) > -1 && temNode.status === 'READY') {
+                rerunJobs.push(temNode.nestedId)
+            }
+        }
+    }
 }
 
 var jobListView;
@@ -553,7 +775,7 @@ azkaban.FlowLogView = Backbone.View.extend({
     },
     handleUpdate: function(evt) {
         var offset = this.model.get("offset");
-        var requestURL = contextURL + "/executor";
+        var requestURL = "/executor";
         var model = this.model;
         console.log("fetchLogs offset is " + offset)
 
@@ -571,16 +793,16 @@ azkaban.FlowLogView = Backbone.View.extend({
                 if (data.error) {
                     console.log(data.error);
                 } else {
-                    var log = $("#logSection").text();
-                    if (!log) {
-                        log = data.data;
-                    } else {
-                        log += data.data;
+                    var log = document.getElementById('logSection').innerHTML;
+                    var logArr = data.data.split('\n')
+                    for (let i = 0; i < logArr.length; i++) {
+                        log += '<code>' + logArr[i] + '</code>'
                     }
+
 
                     var newOffset = data.offset + data.length;
 
-                    $("#logSection").text(log);
+                    document.getElementById('logSection').innerHTML = log;
                     model.set({ "offset": newOffset, "log": log });
                     $(".logViewer").scrollTop(newOffset);
                 }
@@ -604,7 +826,7 @@ azkaban.FlowLogView = Backbone.View.extend({
         var self = this;
         this.time = setInterval(function() {
             var offset = data.get("offset");
-            var requestURL = contextURL + "/executor";
+            var requestURL = "/executor";
             var model = data;
             console.log("fetchLogs offset is " + offset)
 
@@ -622,16 +844,15 @@ azkaban.FlowLogView = Backbone.View.extend({
                     if (data.error) {
                         console.log(data.error);
                     } else {
-                        var log = $("#logSection").text();
-                        if (!log) {
-                            log = data.data;
-                        } else {
-                            log += data.data;
+                        var log = document.getElementById('logSection').innerHTML;
+                        var logArr = data.data.split('\n')
+                        for (let i = 0; i < logArr.length; i++) {
+                            log += '<code>' + logArr[i] + '</code>'
                         }
 
                         var newOffset = data.offset + data.length;
 
-                        $("#logSection").text(log);
+                        document.getElementById('logSection').innerHTML = log;
                         model.set({ "offset": newOffset, "log": log });
                         $(".logViewer").scrollTop(newOffset);
                         if ("Finish" == data.status) {
@@ -654,7 +875,7 @@ azkaban.OperationParameterView = Backbone.View.extend({
     },
     getOperationParameter: function() {
         console.log("operation parameter view.");
-        var requestURL = contextURL + "/executor";
+        var requestURL = "/executor";
         $.ajax({
             async: false,
             url: requestURL,
@@ -685,6 +906,11 @@ azkaban.OperationParameterView = Backbone.View.extend({
                     var outputParamTbody = $("#job-output-param-tbody");
                     outputParamTbody.empty();
                     var jobOutputGlobalParams = data.jobOutputGlobalParams;
+                    if (jobOutputGlobalParams.userDefined) {
+                        var flowDescript = document.getElementById('flowDescript')
+                        flowDescript.innerHTML = jobOutputGlobalParams.userDefined
+                        flowDescript.setAttribute('class', 'flowDescript')
+                    }
                     for (var i in jobOutputGlobalParams) {
                         var row = document.createElement("tr");
                         //组装执行参数名行
@@ -759,7 +985,7 @@ var matchData = function(id, newData, ret) {
 }
 
 var updateStatus = function(updateTime) {
-    var requestURL = contextURL + "/executor";
+    var requestURL = "/executor";
     var oldData = graphModel.get("data");
     var nodeMap = graphModel.get("nodeMap");
 
@@ -777,6 +1003,19 @@ var updateStatus = function(updateTime) {
         console.log("data updated");
         if (data.updateTime) {
             var ret = {};
+            var nodes = data.nodes
+                // 判断节点是否存在 RETRIED_SUCCESS FAILED_SKIPPED状态切父节点状态是SUCCEEDED，将子节点状态同步到父节点
+            if (nodes instanceof Array) {
+                for (var j = 0; j < nodes.length; j++) {
+                    var flag = { isChange: false, changeStatus: '' }
+                    if (nodes[j].type === 'flow') {
+                        changeParentStatus(nodes[j].nodes, nodes[j], flag)
+                        if (flag.isChange && nodes[j].status === 'SUCCEEDED') {
+                            nodes[j].status = flag.changeStatus
+                        }
+                    }
+                }
+            }
             matchData(oldData.id, data, ret);
             if (ret['0']) {
                 data = ret['0'];
@@ -851,7 +1090,6 @@ var updaterFunction = function() {
 
     if (keepRunning) {
         updateStatus();
-
         var data = graphModel.get("data");
         if (data.status == "UNKNOWN" ||
             data.status == "WAITING" ||
@@ -875,12 +1113,13 @@ var updaterFunction = function() {
             setTimeout(function() {
                 updateStatus(0);
             }, 500);
+
         }
     } else {
         console.log("Flow finished, so no more updates");
+
     }
 }
-
 var logUpdaterFunction = function() {
     var oldData = graphModel.get("data");
     var keepRunning =
@@ -901,10 +1140,10 @@ var logUpdaterFunction = function() {
 var exNodeClickCallback = function(event) {
     console.log("Node clicked callback");
     var jobId = event.currentTarget.jobid;
-    var requestURL = contextURL + "/manager?project=" + projectName + "&flow=" +
-        flowId + "&job=" + jobId;
-    var visualizerURL = contextURL + "/pigvisualizer?execid=" + execId + "&jobid=" +
-        jobId;
+    var requestURL = filterXSS("/manager?project=" + projectName + "&flow=" +
+        flowId + "&job=" + jobId);
+    var visualizerURL = filterXSS("/pigvisualizer?execid=" + execId + "&jobid=" +
+        jobId);
 
     var menu = [{
             title: "Open Job...",
@@ -932,10 +1171,10 @@ var exNodeClickCallback = function(event) {
 var exJobClickCallback = function(event) {
     console.log("Node clicked callback");
     var jobId = event.currentTarget.jobid;
-    var requestURL = contextURL + "/manager?project=" + projectName + "&flow=" +
-        flowId + "&job=" + jobId;
-    var visualizerURL = contextURL + "/pigvisualizer?execid=" + execId + "&jobid=" +
-        jobId;
+    var requestURL = filterXSS("/manager?project=" + projectName + "&flow=" +
+        flowId + "&job=" + jobId);
+    var visualizerURL = filterXSS("/pigvisualizer?execid=" + execId + "&jobid=" +
+        jobId);
 
     var menu = [{
             title: "Open Job...",
@@ -966,8 +1205,8 @@ var exEdgeClickCallback = function(event) {
 
 var exGraphClickCallback = function(event) {
     console.log("Graph clicked callback");
-    var requestURL = contextURL + "/manager?project=" + projectName + "&flow=" +
-        flowId;
+    var requestURL = filterXSS("/manager?project=" + projectName + "&flow=" +
+        flowId);
 
     var menu = [{
             title: wtssI18n.common.openFlow,
@@ -1071,10 +1310,10 @@ $(function() {
     var requestURL;
     var requestData;
     if (execId != "-1" && execId != "-2") {
-        requestURL = contextURL + "/executor";
+        requestURL = "/executor";
         requestData = { "execid": execId, "ajax": "fetchexecflow", "nodeNestedId": nodeNestedId };
     } else {
-        requestURL = contextURL + "/manager";
+        requestURL = "/manager";
         requestData = {
             "project": projectName,
             "ajax": "fetchflowgraph",
@@ -1084,15 +1323,77 @@ $(function() {
 
     var successHandler = function(data) {
         console.log("data fetched");
+        var nodes = data.nodes
+        var cloneNodes = JSON.parse(JSON.stringify(nodes));
+        pruneTree({status:"FAILED", nodes:cloneNodes})
+        failedNodeList =getLeafNodes(cloneNodes || []).filter(function(node) {
+            return node.status === "FAILED" || node.status === "FAILED_WAITING";
+        })
+        console.log('failedNodeList',failedNodeList)
+            // 判断节点是否存在 RETRIED_SUCCESS FAILED_SKIPPED状态切父节点状态是SUCCEEDED，将子节点状态同步到父节点
+        for (var j = 0; j < nodes.length; j++) {
+            var flag = { isChange: false, changeStatus: '' }
+            if (nodes[j].type === 'flow') {
+                changeParentStatus(nodes[j].nodes, flag)
+                if (flag.isChange && nodes[j].status === 'SUCCEEDED') {
+                    nodes[j].status = flag.changeStatus
+                }
+            }
+        }
+
+        if (data.executionStrategy === "FAILED_PAUSE" && data.status === "FAILED_FINISHING") {
+            setstatus(nodes)
+
+            function setstatus(nodes) {
+                for (let i = 0; i < nodes.length; i++) {
+                    let node = nodes[i]
+                    node.originStatus = node.status
+                    if (node.type === 'flow') {
+                        setstatus(node.nodes)
+                    }
+                }
+            }
+        }
         graphModel.addFlow(data);
         graphModel.trigger("change:graph");
+        if ($('#jobsFilterList')[0]) {
+            var optionHtml = '<option value="filter_job_name">' + wtssI18n.view.filterJobName + '</option>'
+            recursiveNode(data.nodes)
 
+            function recursiveNode(nodes) {
+                for (var i = 0; i < nodes.length; i++) {
+                    optionHtml += '<option value=' + nodes[i].id + '>' + nodes[i].id + '</option>'
+                    // if (nodes[i].status !== 'READY') {
+                    //     optionHtml += '<option value=' + nodes[i].id + '>' + nodes[i].id + '</option>'
+                    // }
+                    if (nodes[i].nodes) {
+                        recursiveNode(nodes[i].nodes)
+                    }
+                }
+            }
+            $('#jobsFilterList').html(optionHtml)
+        }
         updateTime = Math.max(updateTime, data.submitTime);
         updateTime = Math.max(updateTime, data.startTime);
         updateTime = Math.max(updateTime, data.endTime);
 
         if (window.location.hash) {
             var hash = window.location.hash;
+            if (hash == "#jobslist") {
+                $("#statusFilterList").show()
+                $("#statusFilterList").next('span').show()
+                $("#jobsFilterList").show()
+                $("#jobsFilterList").next('span').show()
+                $("#excuteTimeFilterList").show()
+                $("#excuteTimeFilterList").next('span').show()
+            } else {
+                $("#statusFilterList").hide()
+                $("#statusFilterList").next('span').hide()
+                $("#jobsFilterList").hide()
+                $("#jobsFilterList").next('span').hide()
+                $("#excuteTimeFilterList").hide()
+                $("#excuteTimeFilterList").next('span').hide()
+            }
             if (hash == "#jobslist") {
                 flowTabView.handleJobslistLinkClick();
             } else if (hash == "#log") {
@@ -1107,10 +1408,12 @@ $(function() {
         }
         updaterFunction();
         logUpdaterFunction();
+
+        // $("#executeJobTable").tablesorter();
     };
     ajaxCall(requestURL, requestData, successHandler);
 
-    requestURL = contextURL + "/flowtriggerinstance";
+    requestURL = "/flowtriggerinstance";
     if (execId != "-1" && execId != "-2") {
         requestData = { "execid": execId, "ajax": "fetchTriggerStatus" };
     } else if (triggerInstanceId != "-1") {
@@ -1134,4 +1437,348 @@ $(function() {
         $(mainSvgGraphView.mainG).empty() //清空流程图
         mainSvgGraphView.renderGraph(data, mainSvgGraphView.mainG)
     })
+
+    function getfiterExceteTime(excuteTime, node) {
+        var excuteTime = $("#excuteTimeFilterList").val()
+        var timeFilter = false
+        var endTime = node.endTime == -1 ? (new Date()).getTime() :
+            node.endTime;
+        var runTime = endTime - node.startTime
+        switch (excuteTime) {
+            case '1h':
+                if (runTime <= 60 * 60 * 1000) {
+                    timeFilter = true
+                }
+                break;
+            case '2h':
+                if (node.startTime > 0 && runTime > 60 * 60 * 1000 && runTime <= 2 * 60 * 60 * 1000) {
+                    timeFilter = true
+                }
+                break;
+            case '3h':
+                if (node.startTime > 0 && runTime > 2 * 60 * 60 * 1000 && runTime <= 3 * 60 * 60 * 1000) {
+                    timeFilter = true
+                }
+                break;
+            case '>3h':
+                if (node.startTime > 0 && runTime > 3 * 60 * 60 * 1000) {
+                    timeFilter = true
+                }
+                break;
+        }
+        return timeFilter
+    }
+    function initHeaderAsc () {
+        jobsListView.executionTimeAsc = undefined;
+        jobsListView.startTimeAsc = undefined;
+        jobsListView.endTimeAsc = undefined;
+        jobsListView.runDateAsc = undefined;
+    }
+    function handleFilterJobList() {
+        var status = $("#statusFilterList").val()
+        var job = $("#jobsFilterList").val()
+        var time = $("#excuteTimeFilterList").val()
+        var data = [];
+        var jobLostData = executionListView.model.get('data');
+        var executingBody = $("#executableBody");
+        var nodes = _.cloneDeep(jobLostData.nodes);
+        JobListNodesSort(nodes)
+        executingBody.html('');
+        initHeaderAsc();
+        if (status === 'filter_job_status' && job === 'filter_job_name' && time === '0') {
+            recursionNodeDeleteRow(nodes)
+
+            function recursionNodeDeleteRow(nodes) { // 递归删除joblistrow
+                for (var j = nodes.length - 1; j >= 0; j--) {
+                    delete nodes[j].joblistrow
+                    if (nodes[j].type === 'flow') {
+                        recursionNodeDeleteRow(nodes[j].nodes)
+                    }
+                }
+            }
+            data = nodes
+        } else {
+            // 标记最后一个包含过滤状态的对象
+            var currentFilter = null
+                // 要删除不包含过滤状态的数据，避免删除后数据错位从后面开始遍历
+            for (var i = nodes.length - 1; i >= 0; i--) {
+                // 删除该对象子工作流，不包含过滤状态数据
+                if (currentFilter && currentFilter.nodes) {
+                    delete currentFilter.nodes
+                }
+                // 下一个节点时先初始化
+                currentFilter = null
+                    //删除存的joblistrow
+                delete nodes[i].joblistrow
+                recursionNode(nodes[i], nodes, i)
+            }
+        }
+
+        function recursionNode(subNode, nodeList, index) {
+            var statusFilter = false
+            var jobFilter = false
+            var timeFilter = false
+                //删除存的joblistrow
+            delete subNode.joblistrow
+            if (status === 'filter_job_status' || subNode.status === status) {
+                statusFilter = true
+            }
+            if (job === 'filter_job_name' || job === subNode.id) {
+                jobFilter = true
+            }
+            if (time === '0') {
+                timeFilter = true
+            } else {
+                timeFilter = getfiterExceteTime(time, subNode)
+            }
+            if (statusFilter && jobFilter && timeFilter) {
+                // 如果currentFilter为空证明该节点或该节点的父节点没有push到data
+                if (!currentFilter) {
+                    data.unshift(nodes[i])
+                }
+                currentFilter = subNode
+            } else {
+                if (!subNode.nodes || (Array.isArray(subNode.nodes) && subNode.nodes.length < 1)) {
+                    nodeList.splice(index, 1)
+                }
+            }
+            if (subNode.nodes) {
+                for (var j = subNode.nodes.length - 1; j >= 0; j--) {
+                    recursionNode(subNode.nodes[j], subNode.nodes, j)
+                }
+            }
+        }
+        if (data.length > 0) {
+            executionListView.updateJobRow(data, executingBody, {}, true); // true 过滤默认展开
+            executionListView.expandFailedOrKilledJobs(data);
+            var flowLastTime = jobLostData.endTime == -1 ? (new Date()).getTime() :
+                jobLostData.endTime;
+            var flowStartTime = jobLostData.startTime;
+            executionListView.updateProgressBar(jobLostData, flowStartTime, flowLastTime, data);
+            $("#executeJobTable").trigger("update");
+            $("#executeJobTable").trigger("sorton", "");
+        }
+    }
+    // $('#jobsFilterList').attr('placeholder', wtssI18n.view.filterJobPro)
+    // 通过状态过滤表格数据
+    $('#statusFilterList').select2({
+        width: '250',
+        placeholder: wtssI18n.view.filterStatusPro,
+        matcher: function(term, option) {
+            var search = term.term ? term.term.toLocaleUpperCase() : ''
+            return !search ? option : (option.id.indexOf(search) > -1 ? option : false)
+        },
+        data: [{
+            id: 'filter_job_status',
+            text: wtssI18n.view.filterJobStatus,
+        }, {
+            id: 'READY',
+            text: 'Ready'
+        }, {
+            id: 'PREPARING',
+            text: 'Preparing'
+        }, {
+            id: 'RUNNING',
+            text: 'Running'
+        }, {
+            id: 'PAUSED',
+            text: 'Paused'
+        }, {
+            id: 'SUCCEEDED',
+            text: 'Success'
+        }, {
+            id: 'KILLING',
+            text: 'Killing'
+        }, {
+            id: 'KILLED',
+            text: 'Killed'
+        }, {
+            id: 'FAILED',
+            text: 'Failed'
+        }, {
+            id: 'SKIPPED',
+            text: 'Skipped'
+        }, {
+            id: 'DISABLED',
+            text: 'Disabled'
+        }, {
+            id: 'CANCELLED',
+            text: 'Cancelled'
+        }, {
+            id: 'QUEUED',
+            text: 'Queued'
+        }, {
+            id: 'FAILED_SKIPPED',
+            text: 'Failed skipped'
+        }, {
+            id: 'FAILED_WAITING',
+            text: 'Failed waiting'
+        }, {
+            id: 'RETRIED_SUCCEEDED',
+            text: 'Retried succeeded'
+        }, {
+            id: 'FAILED_FINISHING',
+            text: 'Running w/Failure'
+        }, {
+            id: 'FAILED_RETRYING',
+            text: 'Failed retrying'
+        }, {
+            id: 'FAILED_SUCCEEDED',
+            text: 'Failed, treated as success'
+        }]
+    })
+    $("#statusFilterList").on('change', function() {
+            handleFilterJobList()
+        })
+        // 通过任务过滤表格数据
+    $("#jobsFilterList").on('change', function() {
+            handleFilterJobList()
+        })
+        // 过滤下拉
+    $('#jobsFilterList').select2({
+        width: '250',
+        placeholder: wtssI18n.view.filterJobPro,
+        matcher: function(term, option) {
+            var search = term.term ? term.term.toLowerCase() : ''
+            return !search ? option : (option.id.indexOf(search) > -1 ? option : false)
+        }
+    })
+    $('#excuteTimeFilterList').select2({
+        width: '250',
+        data: [{
+            id: '0',
+            text: wtssI18n.view.filterExecutionDuration
+        }, {
+            id: '1h',
+            text: '<= 1h'
+        }, {
+            id: '2h',
+            text: '> 1h && <= 2h'
+        }, {
+            id: '3h',
+            text: '> 2h && <= 3h'
+        }, {
+            id: '>3h',
+            text: '> 3h'
+        }, ]
+    })
+    $("#excuteTimeFilterList").on('change', function() {
+        handleFilterJobList()
+    })
+    // 获取第一列数据
+    var colIndexObject = {
+        executionTime: 6,
+        startTime: 3,
+        endTime: 4,
+        runDate: 5
+    }
+    function sortJonTableTr (trList, oldJobTbody, isLevel1 , type) {
+        if (!trList.length) {
+            return;
+        }
+        var ascName = type + 'Asc';
+        var flowTrList = []
+        var subflowTrList = [];
+        trList.forEach(tr => {
+            tr.getAttribute('class')? flowTrList.push(tr) : subflowTrList.push(tr);
+        });
+        var sublowTrLen = subflowTrList.length;
+        if (sublowTrLen) {
+            subflowTrList.forEach(function(subTr){
+                var oldJobTbody = subTr.children[0].children[0]; // .children[0]
+                var subTrList = Array.from(oldJobTbody.children);
+                sortJonTableTr(subTrList, oldJobTbody, false, type);
+            });
+        }
+        var colIndex = colIndexObject[type];
+        flowTrList.sort(function(a, b){
+            var aVal, bVal, aText = a.children[colIndex].innerText, BText = b.children[colIndex].innerText;
+            if (type === 'executionTime') {
+                aVal =  aText !== "-" && aText ? handleExecutionTime(aText): 0;
+                bVal = BText !== "-" && BText ? handleExecutionTime(BText) : 0;
+            }else if (type === 'runDate') {
+                aVal = aText !== "-" && aText ? parseInt(aText) : 0;
+                bVal = BText !== "-" && BText ? parseInt(BText) : 0;
+            } else{
+                aVal = aText !== "-" && aText ? new Date(aText).getTime() : 0;
+                bVal = BText !== "-" && BText ? new Date(BText).getTime() : 0;
+            }
+            return  jobsListView[ascName] ? bVal - aVal : aVal -bVal;
+        })
+
+        var newJobTbody = document.createElement('tbody');
+        if (isLevel1) {
+            newJobTbody.setAttribute('id', 'executableBody');
+        }
+
+        for (var i = 0; i < flowTrList.length; ++i) {
+            newJobTbody.appendChild(flowTrList[i]);
+            var flowName = flowTrList[i].getAttribute('name');
+            if (sublowTrLen && flowName) {
+                var subflow = subflowTrList.find(function(ele) {
+                    return ele.getAttribute('name') === flowName;
+                });
+                subflow && newJobTbody.appendChild(subflow);
+            }
+        }
+        oldJobTbody.parentNode.replaceChild(newJobTbody, oldJobTbody);
+    }
+    function getExecutableBodyTr (type) {
+        var oldJobTbody = document.getElementById('executableBody');
+        var trList = Array.from(oldJobTbody.children) ;
+        var ascName = type + 'Asc';
+        jobsListView[ascName] = jobsListView[ascName] === undefined ? false : !jobsListView[ascName];
+        if (!trList.length) {
+            return;
+        }
+        sortJonTableTr(trList, oldJobTbody, true, type);
+    }
+    $("#executionTimeHeader").click(function(e) {
+        e.stopPropagation();
+        getExecutableBodyTr('executionTime');
+    });
+
+    $("#startTimeHeader").click(function(e) {
+        e.stopPropagation();
+        getExecutableBodyTr('startTime');
+    });
+    $("#endTimeHeader").click(function(e) {
+        e.stopPropagation();
+        getExecutableBodyTr('endTime');
+    });
+    $("#runBatchDateHeader").click(function(e) {
+        e.stopPropagation();
+        getExecutableBodyTr('runDate');
+    });
+
 });
+
+// 任务列表节点显示项目初始化显示顺序一致
+function JobListNodesSort(nodes) {
+    for (var i = 0; i < nodes.length; i++) {
+        var node = nodes[i]
+        if (node.type == 'flow') {
+            node.nodes.sort(idSort);
+            JobListNodesSort(node.nodes)
+        }
+    }
+}
+
+//判断节点是否存在 RETRIED_SUCCESS FAILED_SKIPPED状态切父节点状态是SUCCEEDED，将子节点状态同步到父节点 parentArr父节点数组
+function changeParentStatus(nodes, flag) {
+    for (let i = 0; i < nodes.length; i++) {
+        var subFlag = { isChange: false, changeStatus: '' }
+        if (nodes[i].type === 'flow') {
+            changeParentStatus(nodes[i].nodes, subFlag)
+            if (subFlag.isChange && nodes[i].status === 'SUCCEEDED') {
+                nodes[i].status = subFlag.changeStatus
+            }
+        }
+        if ((nodes[i].status === 'RETRIED_SUCCESS' || nodes[i].status === 'FAILED_SKIPPED')) {
+            if (!flag.isChange) {
+                flag.isChange = true
+                flag.changeStatus = nodes[i].status
+            }
+        }
+    }
+}

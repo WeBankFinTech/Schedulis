@@ -19,13 +19,6 @@ package azkaban.database;
 import azkaban.database.DataSourceUtils.PropertyType;
 import azkaban.utils.FileIOUtils;
 import azkaban.utils.Props;
-import org.apache.commons.dbutils.DbUtils;
-import org.apache.commons.dbutils.QueryRunner;
-import org.apache.commons.dbutils.ResultSetHandler;
-import org.apache.commons.io.IOUtils;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import java.io.BufferedInputStream;
 import java.io.File;
 import java.io.FileInputStream;
@@ -33,7 +26,19 @@ import java.io.IOException;
 import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import org.apache.commons.dbutils.DbUtils;
+import org.apache.commons.dbutils.QueryRunner;
+import org.apache.commons.dbutils.ResultSetHandler;
+import org.apache.commons.io.IOUtils;
+import org.slf4j.LoggerFactory;
+import org.slf4j.Logger;
 
 /**
  * @deprecated in favor of {@link azkaban.db.DatabaseSetup}.
@@ -59,7 +64,7 @@ public class AzkabanDatabaseSetup {
   private static final String UPDATE_DB_PROPERTY =
       "UPDATE properties SET value=?,modified_time=? WHERE name=? AND type=?";
 
-  private final AzkabanDataSource dataSource;
+  private final AbstractAzkabanDataSource dataSource;
   private Map<String, String> tables;
   private Map<String, String> installedVersions;
   private Set<String> missingTables;
@@ -75,7 +80,7 @@ public class AzkabanDatabaseSetup {
         props.getString(DATABASE_SQL_SCRIPT_DIR, DEFAULT_SCRIPT_PATH);
   }
 
-  public AzkabanDatabaseSetup(final AzkabanDataSource ds) {
+  public AzkabanDatabaseSetup(final AbstractAzkabanDataSource ds) {
     this.dataSource = ds;
     if (this.scriptPath == null) {
       this.scriptPath = DEFAULT_SCRIPT_PATH;
@@ -83,7 +88,7 @@ public class AzkabanDatabaseSetup {
   }
 
   // TODO kunkun-tang: Refactor this class. loadTableInfo method should sit inside constructor
-  public AzkabanDatabaseSetup(final AzkabanDataSource ds, final Props props) {
+  public AzkabanDatabaseSetup(final AbstractAzkabanDataSource ds, final Props props) {
     this.dataSource = ds;
     this.scriptPath = props.getString(DATABASE_SQL_SCRIPT_DIR, DEFAULT_SCRIPT_PATH);
   }
@@ -313,7 +318,7 @@ public class AzkabanDatabaseSetup {
             false);
       }
       for (final String table : this.missingTables) {
-        if (!table.equals("properties")) {
+        if (!"properties".equals(table)) {
           runTableScripts(conn, table, this.version, this.dataSource.getDBType(), false);
           // update version as we have create a new table
           this.installedVersions.put(table, this.version);
@@ -336,7 +341,7 @@ public class AzkabanDatabaseSetup {
         }
       }
       for (final String table : this.upgradeList.keySet()) {
-        if (!table.equals("properties")) {
+        if (!"properties".equals(table)) {
           for (final String version : this.upgradeList.get(table)) {
             runTableScripts(conn, table, version, this.dataSource.getDBType(), true);
           }
@@ -385,19 +390,19 @@ public class AzkabanDatabaseSetup {
 
       // If it's properties, then we want to commit the table before we update
       // it
-      if (table.equals("properties")) {
+      if ("properties".equals(table)) {
         conn.commit();
       }
 
       final String propertyName = table + ".version";
       if (!this.installedVersions.containsKey(table)) {
         runner.update(conn, INSERT_DB_PROPERTY, propertyName,
-            PropertyType.DB.getNumVal(), version,
+            DataSourceUtils.PropertyType.DB.getNumVal(), version,
             System.currentTimeMillis());
       } else {
         runner.update(conn, UPDATE_DB_PROPERTY, version,
             System.currentTimeMillis(), propertyName,
-            PropertyType.DB.getNumVal());
+            DataSourceUtils.PropertyType.DB.getNumVal());
       }
       conn.commit();
     } finally {

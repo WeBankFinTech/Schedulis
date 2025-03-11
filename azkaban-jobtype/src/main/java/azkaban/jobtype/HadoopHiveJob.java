@@ -16,18 +16,23 @@
 
 package azkaban.jobtype;
 
+import static org.apache.hadoop.security.UserGroupInformation.HADOOP_TOKEN_FILE_LOCATION;
+
+import java.io.File;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.List;
+import java.util.Map;
+import java.util.StringTokenizer;
+
+
 import azkaban.flow.CommonJobProperties;
 import azkaban.jobExecutor.JavaProcessJob;
 import azkaban.security.commons.AbstractHadoopSecurityManager;
 import azkaban.utils.Props;
 import azkaban.utils.StringUtils;
 import org.slf4j.Logger;
-
-import java.io.File;
-import java.io.IOException;
-import java.util.*;
-
-import static org.apache.hadoop.security.UserGroupInformation.HADOOP_TOKEN_FILE_LOCATION;
 
 public class HadoopHiveJob extends JavaProcessJob {
 

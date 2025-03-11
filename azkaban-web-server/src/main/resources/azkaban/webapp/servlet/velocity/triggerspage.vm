@@ -23,22 +23,21 @@
   #parse("azkaban/webapp/servlet/velocity/style.vm")
   #parse("azkaban/webapp/servlet/velocity/javascript.vm")
 
-  <link rel="stylesheet" type="text/css" href="${context}/css/jquery-ui-1.10.1.custom.css?version=1.10.0"/>
-  <link rel="stylesheet" type="text/css" href="${context}/css/jquery-ui.css?version=1.10.0"/>
+  <link rel="stylesheet" type="text/css" href="/css/jquery-ui-1.10.1.custom.css?version=1.49.0"/>
+  <link rel="stylesheet" type="text/css" href="/css/jquery-ui.css?version=1.49.0"/>
   <script type="text/javascript">
-    var contextURL = "${context}";
     var currentTime = ${currentTime};
     var timezone = "${timezone}";
     var errorMessage = null;
     var successMessage = null;
     var langType = "${currentlangType}";
   </script>
-  <script type="text/javascript" src="${context}/js/jqueryui/jquery-ui-1.10.1.custom.js?version=1.10.0"></script>
+  <script type="text/javascript" src="/js/jqueryui/jquery-ui-1.10.1.custom.js?version=1.49.0"></script>
   <script type="text/javascript"
-          src="${context}/js/jqueryui/jquery-ui-timepicker-addon.js?version=1.10.0"></script>
-  <script type="text/javascript" src="${context}/js/jqueryui/jquery-ui-sliderAccess.js?version=1.10.0"></script>
-  <script type="text/javascript" src="${context}/js/azkaban/view/table-sort.js?version=1.10.0"></script>
-  <script type="text/javascript" src="${context}/js/azkaban/view/triggers.js?version=1.10.0"></script>
+          src="/js/jqueryui/jquery-ui-timepicker-addon.js?version=1.49.0"></script>
+  <script type="text/javascript" src="/js/jqueryui/jquery-ui-sliderAccess.js?version=1.49.0"></script>
+  <script type="text/javascript" src="/js/azkaban/view/table-sort.js?version=1.49.0"></script>
+  <script type="text/javascript" src="/js/azkaban/view/triggers.js?version=1.49.0"></script>
   
 </head>
 <body>

@@ -16,24 +16,33 @@
 
 package azkaban.execapp;
 
-import static azkaban.Constants.*;
+import static azkaban.Constants.DEFAULT_FLOW_PAUSED_MAX_TIME;
+import static azkaban.Constants.FLOW_PAUSED_MAX_TIME_MS;
 import static java.util.Objects.requireNonNull;
 
 import azkaban.Constants;
 import azkaban.Constants.ConfigurationKeys;
+import azkaban.ServiceProvider;
+import azkaban.alert.Alerter;
+import azkaban.batch.HoldBatchAlert;
+import azkaban.batch.HoldBatchContext;
+import azkaban.batch.HoldBatchOperate;
 import azkaban.event.Event;
 import azkaban.event.EventListener;
-import azkaban.execapp.event.FlowWatcher;
+import azkaban.execapp.event.AbstractFlowWatcher;
 import azkaban.execapp.event.LocalFlowWatcher;
 import azkaban.execapp.event.RemoteFlowWatcher;
 import azkaban.execapp.metric.NumFailedFlowMetric;
 import azkaban.executor.AlerterHolder;
 import azkaban.executor.ExecutableFlow;
+import azkaban.executor.ExecutionControllerUtils;
+import azkaban.executor.ExecutionCycleDao;
 import azkaban.executor.ExecutionOptions;
 import azkaban.executor.Executor;
 import azkaban.executor.ExecutorLoader;
 import azkaban.executor.ExecutorManagerException;
 import azkaban.executor.Status;
+import azkaban.jobhook.JobHookManager;
 import azkaban.jobtype.JobTypeManager;
 import azkaban.jobtype.JobTypeManagerException;
 import azkaban.metric.MetricReportManager;
@@ -41,6 +50,7 @@ import azkaban.metrics.CommonMetrics;
 import azkaban.project.ProjectLoader;
 import azkaban.project.ProjectWhitelist;
 import azkaban.project.ProjectWhitelist.WhitelistType;
+import azkaban.server.AbstractAzkabanServer;
 import azkaban.sla.SlaOption;
 import azkaban.spi.AzkabanEventReporter;
 import azkaban.spi.EventType;
@@ -56,9 +66,10 @@ import azkaban.utils.TrackingThreadPool;
 import azkaban.utils.UndefinedPropertyException;
 import com.codahale.metrics.Timer;
 import com.google.common.base.Preconditions;
-import com.webank.wedatasphere.schedulis.common.executor.ExecutionCycleDao;
-import com.webank.wedatasphere.schedulis.exec.execapp.CycleFlowRunnerEventListener;
+import com.google.gson.JsonObject;
 import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.lang.Thread.State;
 import java.time.Duration;
@@ -77,14 +88,20 @@ import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.Collectors;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipOutputStream;
 import javax.annotation.Nullable;
 import javax.inject.Inject;
 import javax.inject.Singleton;
-
-import com.google.gson.JsonObject;
+import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.io.FileUtils;
-import org.slf4j.LoggerFactory;
+import org.apache.commons.io.FilenameUtils;
+import org.apache.commons.io.IOUtils;
+import org.apache.commons.lang.ArrayUtils;
+import org.apache.commons.lang.StringUtils;
 import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Execution manager for the server side execution.
@@ -106,7 +123,7 @@ import org.slf4j.Logger;
  */
 @Singleton
 public class FlowRunnerManager implements EventListener,
-    ThreadPoolExecutingListener {
+        ThreadPoolExecutingListener {
 
   private static final Logger logger = LoggerFactory.getLogger(FlowRunnerManager.class);
 
@@ -115,11 +132,15 @@ public class FlowRunnerManager implements EventListener,
   private static final String EXECUTOR_FLOW_THREADS = "executor.flow.threads";
   private static final String FLOW_NUM_JOB_THREADS = "flow.num.job.threads";
 
+  private static final String SIGN_NUM_JOB_THREADS = "sign.num.job.threads";
+
   // recently finished secs to clean up. 1 minute
   private static final int RECENTLY_FINISHED_TIME_TO_LIVE = 60 * 1000;
 
   private static final int DEFAULT_NUM_EXECUTING_FLOWS = 30;
   private static final int DEFAULT_FLOW_NUM_JOB_TREADS = 10;
+
+  private static final int DEFAULT_SIGN_NUM_JOB_TREADS = 5;
   private static final int DEFAULT_POLLING_INTERVAL_MS = 1000;
 
   // this map is used to store the flows that have been submitted to
@@ -135,12 +156,13 @@ public class FlowRunnerManager implements EventListener,
   private final ExecutorLoader executorLoader;
   private final ProjectLoader projectLoader;
   private final JobTypeManager jobtypeManager;
+  private final JobHookManager jobhookManager;
   private final FlowPreparer flowPreparer;
   private final TriggerManager triggerManager;
   private final AlerterHolder alerterHolder;
   private final AzkabanEventReporter azkabanEventReporter;
   private final ExecutionCycleDao executionCycleDao;
-  private final Props azkabanProps;
+  private Props azkabanProps;
   private final File executionDirectory;
   private final File projectDirectory;
   private final Object executionDirDeletionSync = new Object();
@@ -148,6 +170,8 @@ public class FlowRunnerManager implements EventListener,
 
   private final int numThreads;
   private final int numJobThreadPerFlow;
+
+  private final int signJobThreadsPerFlow;
   // We want to limit the log sizes to about 20 megs
   private final String jobLogChunkSize;
   private final int jobLogNumFiles;
@@ -157,27 +181,38 @@ public class FlowRunnerManager implements EventListener,
   private int threadPoolQueueSize = -1;
   private Props globalProps;
   private long lastCleanerThreadCheckTime = -1;
-  private long executionDirRetention = 1 * 24 * 60 * 60 * 1000; // 1 Day
+  /**
+   * execution 目录保留时间 ms，默认 1 day
+   */
+  private long executionDirRetention;
   // date time of the the last flow submitted.
   private long lastFlowSubmittedDate = 0;
   // Indicate if the executor is set to active.
   private volatile boolean active;
+  // sla alerter when executor shutdown.
+  private volatile boolean slaAlerter = false;
+  private HoldBatchThread holdBatchThread;
+  private HoldBatchContext holdBatchContext;
+  private boolean executionsLogRetention;
+  private String executionsLogRetentionDir;
+  private final AtomicInteger failedFlowNum = new AtomicInteger(0);
 
   @Inject
   public FlowRunnerManager(final Props props,
-      final ExecutorLoader executorLoader,
-      final ProjectLoader projectLoader,
-      final StorageManager storageManager,
-      final TriggerManager triggerManager,
-      final AlerterHolder alerterHolder,
-      final CommonMetrics commonMetrics,
-      final ExecutionCycleDao executionCycleDao,
-      @Nullable final AzkabanEventReporter azkabanEventReporter) throws IOException, ExecutorManagerException {
+                           final ExecutorLoader executorLoader,
+                           final ProjectLoader projectLoader,
+                           final StorageManager storageManager,
+                           final TriggerManager triggerManager,
+                           final AlerterHolder alerterHolder,
+                           final CommonMetrics commonMetrics,
+                           final ExecutionCycleDao executionCycleDao,
+                           @Nullable final AzkabanEventReporter azkabanEventReporter) throws IOException, ExecutorManagerException {
     this.azkabanProps = props;
 
-    this.executionDirRetention = props.getLong("execution.dir.retention",
-        this.executionDirRetention);
+    this.executionDirRetention = props.getLong(ConfigurationKeys.EXECUTION_DIR_RETENTION_MS,
+            12 * 60 * 60 * 1000);
     this.azkabanEventReporter = azkabanEventReporter;
+    this.signJobThreadsPerFlow = props.getInt(SIGN_NUM_JOB_THREADS, DEFAULT_SIGN_NUM_JOB_TREADS);
     logger.info("Execution dir retention set to " + this.executionDirRetention + " ms");
 
     this.executionDirectory = new File(props.getString("azkaban.execution.dir", "executions"));
@@ -205,6 +240,9 @@ public class FlowRunnerManager implements EventListener,
     this.jobLogChunkSize = this.azkabanProps.getString("job.log.chunk.size", "5MB");
     this.jobLogNumFiles = this.azkabanProps.getInt("job.log.backup.index", 4);
 
+    this.executionsLogRetention = this.azkabanProps.getBoolean("executions.log.retention", false);
+    this.executionsLogRetentionDir = this.azkabanProps.getString("executions.log.retention.dir", "/data/logs/schedulis");
+
     this.validateProxyUser = this.azkabanProps.getBoolean("proxy.user.lock.down", false);
 
     final String globalPropsPath = props.getString("executor.global.properties", null);
@@ -213,10 +251,16 @@ public class FlowRunnerManager implements EventListener,
     }
 
     this.jobtypeManager =
-        new JobTypeManager(props.getString(
-            AzkabanExecutorServer.JOBTYPE_PLUGIN_DIR,
-            JobTypeManager.DEFAULT_JOBTYPEPLUGINDIR), this.globalProps,
-            getClass().getClassLoader());
+            new JobTypeManager(props.getString(
+                    AzkabanExecutorServer.JOBTYPE_PLUGIN_DIR,
+                    JobTypeManager.DEFAULT_JOBTYPEPLUGINDIR), this.globalProps,
+                    getClass().getClassLoader());
+
+    this.jobhookManager =
+            new JobHookManager(props.getString(
+                    AzkabanExecutorServer.JOBHOOK_PLUGIN_DIR,
+                    JobHookManager.DEFAULT_JOBHOOKPLUGINDIR), this.globalProps,
+                    getClass().getClassLoader());
 
     Long projectDirMaxSize = null;
     ProjectCacheCleaner cleaner = null;
@@ -228,7 +272,7 @@ public class FlowRunnerManager implements EventListener,
 
     // Create a flow preparer
     this.flowPreparer = new FlowPreparer(storageManager, this.executionDirectory,
-        this.projectDirectory, cleaner);
+            this.projectDirectory, cleaner);
 
     this.cleanerThread = new CleanerThread();
     this.cleanerThread.start();
@@ -236,9 +280,15 @@ public class FlowRunnerManager implements EventListener,
     if (this.azkabanProps.getBoolean(ConfigurationKeys.AZKABAN_POLL_MODEL, false)) {
       logger.info("Starting polling service.");
       this.pollingService = new PollingService(this.azkabanProps.getLong
-          (ConfigurationKeys.AZKABAN_POLLING_INTERVAL_MS, DEFAULT_POLLING_INTERVAL_MS));
+              (ConfigurationKeys.AZKABAN_POLLING_INTERVAL_MS, DEFAULT_POLLING_INTERVAL_MS));
       this.pollingService.start();
     }
+    if (this.azkabanProps.getBoolean("azkaban.holdbatch.switch", false)) {
+      this.holdBatchThread = new HoldBatchThread();
+      this.holdBatchThread.start();
+    }
+
+    this.holdBatchContext = ServiceProvider.SERVICE_PROVIDER.getInstance(HoldBatchContext.class);
   }
 
   public double getProjectDirCacheHitRatio() {
@@ -259,25 +309,30 @@ public class FlowRunnerManager implements EventListener,
    */
   private void setgidPermissionOnExecutionDirectory() throws IOException {
     logger.info("Creating subprocess to run shell command: chmod g+s "
-        + this.executionDirectory.toString());
+            + this.executionDirectory.toString());
     Runtime.getRuntime().exec("chmod g+s " + this.executionDirectory.toString());
+  }
+
+  private void setgidPermissionOnExecutionBackUpDirectory(File file) throws IOException {
+    logger.info("Creating subprocess to run shell command: chmod g+s " + file.toString());
+    Runtime.getRuntime().exec("chmod g+s " + file.toString());
   }
 
   private TrackingThreadPool createExecutorService(final int nThreads) {
     final boolean useNewThreadPool =
-        this.azkabanProps.getBoolean(EXECUTOR_USE_BOUNDED_THREADPOOL_QUEUE, false);
+            this.azkabanProps.getBoolean(EXECUTOR_USE_BOUNDED_THREADPOOL_QUEUE, false);
     logger.info("useNewThreadPool: " + useNewThreadPool);
 
     if (useNewThreadPool) {
       this.threadPoolQueueSize =
-          this.azkabanProps.getInt(EXECUTOR_THREADPOOL_WORKQUEUE_SIZE, nThreads);
+              this.azkabanProps.getInt(EXECUTOR_THREADPOOL_WORKQUEUE_SIZE, nThreads);
       logger.info("workQueueSize: " + this.threadPoolQueueSize);
 
       // using a bounded queue for the work queue. The default rejection policy
       // {@ThreadPoolExecutor.AbortPolicy} is used
       final TrackingThreadPool executor =
-          new TrackingThreadPool(nThreads, nThreads, 0L, TimeUnit.MILLISECONDS,
-              new LinkedBlockingQueue<>(this.threadPoolQueueSize), this);
+              new TrackingThreadPool(nThreads, nThreads, 0L, TimeUnit.MILLISECONDS,
+                      new LinkedBlockingQueue<>(this.threadPoolQueueSize), this);
 
       return executor;
     } else {
@@ -285,12 +340,12 @@ public class FlowRunnerManager implements EventListener,
       // if the running tasks are taking a long time or stuck, this queue
       // will be very very long.
       return new TrackingThreadPool(nThreads, nThreads, 0L,
-          TimeUnit.MILLISECONDS, new LinkedBlockingQueue<>(), this);
+              TimeUnit.MILLISECONDS, new LinkedBlockingQueue<>(), this);
     }
   }
 
   public void setExecutorActive(final boolean isActive, final String host, final int port)
-      throws ExecutorManagerException, InterruptedException {
+          throws ExecutorManagerException, InterruptedException {
     final Executor executor = this.executorLoader.fetchExecutor(host, port);
     Preconditions.checkState(executor != null, "Unable to obtain self entry in DB");
     if (executor.isActive() != isActive) {
@@ -298,7 +353,7 @@ public class FlowRunnerManager implements EventListener,
       this.executorLoader.updateExecutor(executor);
     } else {
       logger.info(
-          "Set active action ignored. Executor is already " + (isActive ? "active" : "inactive"));
+              "Set active action ignored. Executor is already " + (isActive ? "active" : "inactive"));
     }
     this.active = isActive;
     if (!this.active) {
@@ -320,7 +375,7 @@ public class FlowRunnerManager implements EventListener,
     final Duration SLEEP_INTERVAL = Duration.ofSeconds(5);
     while (this.preparingFlowCount.intValue() != 0) {
       logger.info(this.preparingFlowCount + " flow(s) is/are still being setup before complete "
-          + "deactivation.");
+              + "deactivation.");
       Thread.sleep(SLEEP_INTERVAL.toMillis());
     }
   }
@@ -348,7 +403,7 @@ public class FlowRunnerManager implements EventListener,
     final FlowRunner runner = createFlowRunner(execId);
 
     // Check again.
-    if (isAlreadyRunning(execId)) {
+    if (isAlreadyRunning(execId) || runner == null) {
       return;
     }
     submitFlowRunner(runner);
@@ -362,7 +417,7 @@ public class FlowRunnerManager implements EventListener,
         // Return a response with error: this is a cue for the dispatcher to retry or finalize the
         // execution as failed.
         throw new ExecutorManagerException("Execution " + execId +
-            " is in runningFlows but not in submittedFlows. Most likely submission had failed.");
+                " is in runningFlows but not in submittedFlows. Most likely submission had failed.");
       }
       // Already running, everything seems fine. Report as a successful submission.
       return true;
@@ -376,7 +431,7 @@ public class FlowRunnerManager implements EventListener,
    */
   private boolean isExecutorSpecified(final ExecutableFlow flow) {
     return flow.getExecutionOptions().getFlowParameters()
-        .containsKey(ExecutionOptions.USE_EXECUTOR);
+            .containsKey(ExecutionOptions.USE_EXECUTOR);
   }
 
   private FlowRunner createFlowRunner(final int execId) throws ExecutorManagerException {
@@ -384,7 +439,9 @@ public class FlowRunnerManager implements EventListener,
     flow = this.executorLoader.fetchExecutableFlow(execId);
     if (flow == null) {
       throw new ExecutorManagerException("Error loading flow with exec "
-          + execId);
+              + execId);
+    } else if (Status.isStatusFinished(flow.getStatus())) {
+      return null;
     }
 
     // Sets up the project files and execution directory.
@@ -393,7 +450,7 @@ public class FlowRunnerManager implements EventListener,
     // Note that since submit time is recorded on the web server, while flow preparation is on
     // the executor, there could be some inaccuracies due to clock skew.
     commonMetrics.addQueueWait(System.currentTimeMillis() -
-        flow.getExecutableFlow().getSubmitTime());
+            flow.getExecutableFlow().getSubmitTime());
 
     final Timer.Context flowPrepTimerContext = commonMetrics.getFlowSetupTimerContext();
 
@@ -404,7 +461,7 @@ public class FlowRunnerManager implements EventListener,
         // Unset the executor.
         this.executorLoader.unsetExecutorIdForExecution(execId);
         throw new ExecutorManagerException("executor became inactive before setting up the "
-            + "flow " + execId);
+                + "flow " + execId);
       }
     } finally {
       this.preparingFlowCount.decrementAndGet();
@@ -412,7 +469,7 @@ public class FlowRunnerManager implements EventListener,
     }
 
     // Setup flow runner
-    FlowWatcher watcher = null;
+    AbstractFlowWatcher watcher = null;
     final ExecutionOptions options = flow.getExecutionOptions();
     if (options.getPipelineExecutionId() != null) {
       final Integer pipelineExecId = options.getPipelineExecutionId();
@@ -431,30 +488,46 @@ public class FlowRunnerManager implements EventListener,
     if (options.getFlowParameters().containsKey(FLOW_NUM_JOB_THREADS)) {
       try {
         final int numJobs =
-            Integer.valueOf(options.getFlowParameters().get(
-                FLOW_NUM_JOB_THREADS));
+                Integer.valueOf(options.getFlowParameters().get(
+                        FLOW_NUM_JOB_THREADS));
         if (numJobs > 0 && (numJobs <= numJobThreads || ProjectWhitelist
-            .isProjectWhitelisted(flow.getProjectId(),
-                WhitelistType.NumJobPerFlow))) {
+                .isProjectWhitelisted(flow.getProjectId(),
+                        WhitelistType.NumJobPerFlow))) {
           numJobThreads = numJobs;
         }
       } catch (final Exception e) {
         throw new ExecutorManagerException(
-            "Failed to set the number of job threads "
-                + options.getFlowParameters().get(FLOW_NUM_JOB_THREADS)
-                + " for flow " + execId, e);
+                "Failed to set the number of job threads "
+                        + options.getFlowParameters().get(FLOW_NUM_JOB_THREADS)
+                        + " for flow " + execId, e);
+      }
+    }
+
+    int signJobThreads = this.signJobThreadsPerFlow;
+    if (options.getFlowParameters().containsKey(SIGN_NUM_JOB_THREADS)) {
+      try {
+        final int numJobs =
+                Integer.valueOf(options.getFlowParameters().get(
+                        SIGN_NUM_JOB_THREADS));
+        signJobThreads = numJobs;
+      } catch (final Exception e) {
+        throw new ExecutorManagerException(
+                "Failed to set the number of sign threads "
+                        + options.getFlowParameters().get(SIGN_NUM_JOB_THREADS)
+                        + " for flow " + execId, e);
       }
     }
 
     final FlowRunner runner =
-        new FlowRunner(flow, this.executorLoader, this.projectLoader, this.jobtypeManager,
-            this.azkabanProps, this.azkabanEventReporter, this.alerterHolder);
+            new FlowRunner(flow, this.executorLoader, this.projectLoader, this.jobtypeManager,this.jobhookManager,
+                    this.azkabanProps, this.azkabanEventReporter, this.alerterHolder);
     runner.setFlowWatcher(watcher)
-        .setJobLogSettings(this.jobLogChunkSize, this.jobLogNumFiles)
-        .setValidateProxyUser(this.validateProxyUser)
-        .setNumJobThreads(numJobThreads)
-        .setMaxPausedTime(getMaxPausedTime())
-        .addListener(this);
+            .setJobLogSettings(this.jobLogChunkSize, this.jobLogNumFiles)
+            .setValidateProxyUser(this.validateProxyUser)
+            .setNumJobThreads(numJobThreads)
+            .setSignJobThreads(signJobThreads)
+            .setMaxPausedTime(getMaxPausedTime())
+            .addListener(this);
 
     // FIXME Add a listener for loop execution, and continue to submit new tasks when the job stream execution is complete.
     EventListener cycleFlowRunnerEventListener = new CycleFlowRunnerEventListener(executionCycleDao, azkabanProps, alerterHolder);
@@ -490,7 +563,7 @@ public class FlowRunnerManager implements EventListener,
     } catch (final RejectedExecutionException re) {
       this.runningFlows.remove(runner.getExecutionId());
       final StringBuffer errorMsg = new StringBuffer(
-          "Azkaban executor can't execute any more flows. ");
+              "Azkaban executor can't execute any more flows. ");
       if (this.executorService.isShutdown()) {
         errorMsg.append("The executor is being shut down.");
       }
@@ -508,19 +581,19 @@ public class FlowRunnerManager implements EventListener,
       final MetricReportManager metricManager = MetricReportManager.getInstance();
       // Adding NumFailedFlow Metric listener
       flowRunner.addListener((NumFailedFlowMetric) metricManager
-          .getMetricFromName(NumFailedFlowMetric.NUM_FAILED_FLOW_METRIC_NAME));
+              .getMetricFromName(NumFailedFlowMetric.NUM_FAILED_FLOW_METRIC_NAME));
     }
 
   }
 
 
   public void cancelJobBySLA(final int execId, final String jobId)
-      throws ExecutorManagerException {
+          throws ExecutorManagerException {
     final FlowRunner flowRunner = this.runningFlows.get(execId);
 
     if (flowRunner == null) {
       throw new ExecutorManagerException("Execution " + execId
-          + " is not running.");
+              + " is not running.");
     }
     // FIXME Added support for killing subflow and subflow jobs.
     for (final JobRunner jobRunner : flowRunner.getActiveJobRunners()) {
@@ -536,35 +609,45 @@ public class FlowRunnerManager implements EventListener,
   }
 
   public void cancelFlow(final int execId, final String user)
-      throws ExecutorManagerException {
+          throws ExecutorManagerException {
     final FlowRunner runner = this.runningFlows.get(execId);
     if (runner == null) {
       throw new ExecutorManagerException("Execution " + execId
-          + " is not running.");
+              + " is not running.");
     }
     runner.kill(user);
   }
 
-  public void superKill(final int execId, final String user)
-      throws ExecutorManagerException {
+  public void resumeBatchFlow(final int execId)
+          throws ExecutorManagerException {
     final FlowRunner runner = this.runningFlows.get(execId);
     if (runner == null) {
       throw new ExecutorManagerException("Execution " + execId
-          + " is not running.");
+              + " is not running.");
+    }
+    runner.resumeBatchFlow();
+  }
+
+  public void superKill(final int execId, final String user)
+          throws ExecutorManagerException {
+    final FlowRunner runner = this.runningFlows.get(execId);
+    if (runner == null) {
+      throw new ExecutorManagerException("Execution " + execId
+              + " is not running.");
     }
     runner.superKill(user);
   }
 
-  public void pauseFlow(final int execId, final String user)
-      throws ExecutorManagerException {
+  public void pauseFlow(final int execId, final String user, long timeoutMs)
+          throws ExecutorManagerException {
     final FlowRunner runner = this.runningFlows.get(execId);
 
     if (runner == null) {
       throw new ExecutorManagerException("Execution " + execId
-          + " is not running.");
+              + " is not running.");
     }
 
-    runner.pause(user);
+    runner.pause(user, timeoutMs);
   }
 
   public void setFlowFailed(final int execId, final JsonObject json) throws ExecutorManagerException {
@@ -589,6 +672,27 @@ public class FlowRunnerManager implements EventListener,
     runner.setJobDisabled(disableJob, respMap, user);
   }
 
+  public void setJobFailed(int execid, String setJob, Map<String, Object> respMap, String user)
+          throws ExecutorManagerException {
+    final FlowRunner runner = this.runningFlows.get(execid);
+
+    if (runner == null) {
+      throw new ExecutorManagerException("Execution " + execid
+              + " is not running.");
+    }
+    runner.setJobFailed(setJob, respMap, user);
+  }
+
+  public void setJobOpen(int execid, String openJob, Map<String, Object> respMap, String user) throws ExecutorManagerException {
+    final FlowRunner runner = this.runningFlows.get(execid);
+
+    if (runner == null) {
+      throw new ExecutorManagerException("Execution " + execid
+              + " is not running.");
+    }
+    runner.setJobReady(openJob, respMap, user);
+  }
+
   /**
    * 设置失败重试job
    * @param execId
@@ -603,28 +707,51 @@ public class FlowRunnerManager implements EventListener,
               + " is not running.");
     }
     String message = null;
-    try{
+    try {
       message = runner.retryFailedJobs(retryFailedJobs);
-    } catch (Exception e){
-      throw new ExecutorManagerException(e.getMessage());
+    } catch (Exception e) {
+      throw new ExecutorManagerException(e.getMessage(), e);
     }
-    if(message != null){
+    if (message != null) {
       throw new ExecutorManagerException(message);
     }
 
   }
 
-  public void skipFailedJobs(final int execId, List<String> skipFailedJobs) throws ExecutorManagerException {
+  public void retryHangJobs(int execId, List<String> jobs, String user)
+          throws ExecutorManagerException {
+    FlowRunner runner = this.runningFlows.get(execId);
+
+    if (runner == null) {
+      throw new ExecutorManagerException("Execution " + execId
+              + " is not running.");
+    }
+    String message = null;
+    try {
+      message = runner.retryHangJobs(jobs, user);
+    } catch (Exception e) {
+      throw new ExecutorManagerException("Failed to retryHangJobs", e);
+    }
+    if (message != null) {
+      throw new ExecutorManagerException(message);
+    }
+  }
+
+  public Map<String, String> skipFailedJobs(final int execId, List<String> skipFailedJobs)
+          throws ExecutorManagerException {
+    Map<String, String> retMap;
     final FlowRunner runner = this.runningFlows.get(execId);
 
     if (runner == null) {
       throw new ExecutorManagerException("Execution " + execId
               + " is not running.");
     }
-    String message =  runner.setSkipFailedJob(skipFailedJobs);
-    if(message != null){
-      throw new ExecutorManagerException(message);
+    retMap = runner.setSkipFailedJob(skipFailedJobs);
+    if (retMap != null && retMap.containsKey("error")) {
+      throw new ExecutorManagerException(retMap.get("error"));
     }
+
+    return retMap;
   }
 
   /**
@@ -646,27 +773,27 @@ public class FlowRunnerManager implements EventListener,
   }
 
   public void resumeFlow(final int execId, final String user)
-      throws ExecutorManagerException {
+          throws ExecutorManagerException {
     final FlowRunner runner = this.runningFlows.get(execId);
 
     if (runner == null) {
       throw new ExecutorManagerException("Execution " + execId
-          + " is not running.");
+              + " is not running.");
     }
 
     runner.resume(user);
   }
 
-  public void retryFailures(final int execId, final String user)
-      throws ExecutorManagerException {
+  public void retryFailures(final int execId, final String user, final List<String> retryFailedJobs)
+          throws ExecutorManagerException {
     final FlowRunner runner = this.runningFlows.get(execId);
 
     if (runner == null) {
       throw new ExecutorManagerException("Execution " + execId
-          + " is not running.");
+              + " is not running.");
     }
 
-    runner.retryFailures(user);
+    runner.retryFailures(user,retryFailedJobs);
   }
 
   /**
@@ -676,12 +803,12 @@ public class FlowRunnerManager implements EventListener,
    * @throws ExecutorManagerException
    */
   public String skippedAllFailures(final int execId, final String user)
-      throws ExecutorManagerException {
+          throws ExecutorManagerException {
     final FlowRunner runner = this.runningFlows.get(execId);
 
     if (runner == null) {
       throw new ExecutorManagerException("Execution " + execId
-          + " is not running.");
+              + " is not running.");
     }
 
     return runner.skippedAllFailures(user);
@@ -703,23 +830,30 @@ public class FlowRunnerManager implements EventListener,
 
       if (event.getType() == EventType.FLOW_FINISHED) {
         this.recentlyFinishedFlows.put(flow.getExecutionId(), flow);
+        if (Status.isFailed(flow.getStatus())) {
+          failedFlowNum.getAndIncrement();
+        }
         logger.info("Flow " + flow.getExecutionId()
-            + " is finished. Adding it to recently finished flows list.");
+                + " is finished. Adding it to recently finished flows list.");
         this.runningFlows.remove(flow.getExecutionId());
+        if(slaAlerter) {
+          logger.info("executor shutdown sla alerter");
+          ExecutionControllerUtils.handleFlowFinishAlert(flow, alerterHolder);
+        }
       } else if (event.getType() == EventType.FLOW_STARTED) {
         // add flow level SLA checker flow 超时告警
         this.triggerManager
-            .addTrigger(flow.getExecutionId(), SlaOption.getFlowLevelSLAOptions(flow));
+                .addTrigger(flow.getExecutionId(), SlaOption.getFlowLevelSLAOptions(flow));
       }
     }
   }
 
   public LogData readFlowLogs(final int execId, final int startByte, final int length)
-      throws ExecutorManagerException {
+          throws ExecutorManagerException {
     final FlowRunner runner = this.runningFlows.get(execId);
     if (runner == null) {
       throw new ExecutorManagerException("Running flow " + execId
-          + " not found.");
+              + " not found.");
     }
 
     final File dir = runner.getExecutionDir();
@@ -728,7 +862,7 @@ public class FlowRunnerManager implements EventListener,
         synchronized (this.executionDirDeletionSync) {
           if (!dir.exists()) {
             throw new ExecutorManagerException(
-                "Execution dir file doesn't exist. Probably has been deleted");
+                    "Execution dir file doesn't exist. Probably has been deleted");
           }
 
           final File logFile = runner.getFlowLogFile();
@@ -744,21 +878,21 @@ public class FlowRunnerManager implements EventListener,
     }
 
     throw new ExecutorManagerException(
-        "Error reading file. Log directory doesn't exist.");
+            "Error reading file. Log directory doesn't exist.");
   }
 
   public long getJobFileSize(final int execId, final String jobId, final int attempt) throws ExecutorManagerException {
     final FlowRunner runner = this.runningFlows.get(execId);
     if (runner == null) {
       throw new ExecutorManagerException("Running flow " + execId
-          + " not found.");
+              + " not found.");
     }
     final File dir = runner.getExecutionDir();
     if (dir != null && dir.exists()) {
       synchronized (this.executionDirDeletionSync) {
         if (!dir.exists()) {
           throw new ExecutorManagerException(
-              "Execution dir file doesn't exist. Probably has beend deleted");
+                  "Execution dir file doesn't exist. Probably has beend deleted");
         }
         final File logFile = runner.getJobLogFile(jobId, attempt);
         if (logFile != null && logFile.exists()) {
@@ -772,11 +906,11 @@ public class FlowRunnerManager implements EventListener,
   }
 
   public LogData readJobLogs(final int execId, final String jobId, final int attempt,
-      final int startByte, final int length) throws ExecutorManagerException {
+                             final int startByte, final int length) throws ExecutorManagerException {
     final FlowRunner runner = this.runningFlows.get(execId);
     if (runner == null) {
       throw new ExecutorManagerException("Running flow " + execId
-          + " not found.");
+              + " not found.");
     }
 
     final File dir = runner.getExecutionDir();
@@ -785,11 +919,11 @@ public class FlowRunnerManager implements EventListener,
         synchronized (this.executionDirDeletionSync) {
           if (!dir.exists()) {
             throw new ExecutorManagerException(
-                "Execution dir file doesn't exist. Probably has beend deleted");
+                    "Execution dir file doesn't exist. Probably has beend deleted");
           }
           final File logFile = runner.getJobLogFile(jobId, attempt);
           if (logFile != null && logFile.exists()) {
-            return FileIOUtils.readUtf8File(logFile, startByte, length);
+            return FileIOUtils.readUtf8File(logFile, startByte, length < 0 ? (int) logFile.length() : length);
           } else {
             throw new ExecutorManagerException("Job log file doesn't exist.");
           }
@@ -800,28 +934,28 @@ public class FlowRunnerManager implements EventListener,
     }
 
     throw new ExecutorManagerException(
-        "Error reading file. Log directory doesn't exist.");
+            "Error reading file. Log directory doesn't exist.");
   }
 
   public List<Object> readJobAttachments(final int execId, final String jobId, final int attempt)
-      throws ExecutorManagerException {
+          throws ExecutorManagerException {
     final FlowRunner runner = this.runningFlows.get(execId);
     if (runner == null) {
       throw new ExecutorManagerException("Running flow " + execId
-          + " not found.");
+              + " not found.");
     }
 
     final File dir = runner.getExecutionDir();
     if (dir == null || !dir.exists()) {
       throw new ExecutorManagerException(
-          "Error reading file. Log directory doesn't exist.");
+              "Error reading file. Log directory doesn't exist.");
     }
 
     try {
       synchronized (this.executionDirDeletionSync) {
         if (!dir.exists()) {
           throw new ExecutorManagerException(
-              "Execution dir file doesn't exist. Probably has beend deleted");
+                  "Execution dir file doesn't exist. Probably has beend deleted");
         }
 
         final File attachmentFile = runner.getJobAttachmentFile(jobId, attempt);
@@ -830,7 +964,7 @@ public class FlowRunnerManager implements EventListener,
         }
 
         final List<Object> jobAttachments =
-            (ArrayList<Object>) JSONUtils.parseJSONFromFile(attachmentFile);
+                (ArrayList<Object>) JSONUtils.parseJSONFromFile(attachmentFile);
 
         return jobAttachments;
       }
@@ -840,11 +974,11 @@ public class FlowRunnerManager implements EventListener,
   }
 
   public JobMetaData readJobMetaData(final int execId, final String jobId, final int attempt,
-      final int startByte, final int length) throws ExecutorManagerException {
+                                     final int startByte, final int length) throws ExecutorManagerException {
     final FlowRunner runner = this.runningFlows.get(execId);
     if (runner == null) {
       throw new ExecutorManagerException("Running flow " + execId
-          + " not found.");
+              + " not found.");
     }
 
     final File dir = runner.getExecutionDir();
@@ -853,12 +987,12 @@ public class FlowRunnerManager implements EventListener,
         synchronized (this.executionDirDeletionSync) {
           if (!dir.exists()) {
             throw new ExecutorManagerException(
-                "Execution dir file doesn't exist. Probably has beend deleted");
+                    "Execution dir file doesn't exist. Probably has beend deleted");
           }
           final File metaDataFile = runner.getJobMetaDataFile(jobId, attempt);
           if (metaDataFile != null && metaDataFile.exists()) {
             return FileIOUtils.readUtf8MetaDataFile(metaDataFile, startByte,
-                length);
+                    length);
           } else {
             throw new ExecutorManagerException("Job log file doesn't exist.");
           }
@@ -869,7 +1003,7 @@ public class FlowRunnerManager implements EventListener,
     }
 
     throw new ExecutorManagerException(
-        "Error reading file. Log directory doesn't exist.");
+            "Error reading file. Log directory doesn't exist.");
   }
 
   public long getLastCleanerThreadCheckTime() {
@@ -901,7 +1035,7 @@ public class FlowRunnerManager implements EventListener,
     final Set<Runnable> inProgressTasks = this.executorService.getInProgressTasks();
 
     final List<Integer> runningFlowIds =
-        new ArrayList<>(inProgressTasks.size());
+            new ArrayList<>(inProgressTasks.size());
 
     for (final Runnable task : inProgressTasks) {
       // add casting here to ensure it matches the expected type in
@@ -920,7 +1054,7 @@ public class FlowRunnerManager implements EventListener,
 
   public String getQueuedFlowIds() {
     final List<Integer> flowIdList =
-        new ArrayList<>(this.executorService.getQueue().size());
+            new ArrayList<>(this.executorService.getQueue().size());
 
     for (final Runnable task : this.executorService.getQueue()) {
       final Integer execId = this.submittedFlows.get(task);
@@ -928,7 +1062,7 @@ public class FlowRunnerManager implements EventListener,
         flowIdList.add(execId);
       } else {
         logger
-            .warn("getQueuedFlowIds: got null execId for queuedTask: " + task);
+                .warn("getQueuedFlowIds: got null execId for queuedTask: " + task);
       }
     }
     Collections.sort(flowIdList);
@@ -945,6 +1079,12 @@ public class FlowRunnerManager implements EventListener,
 
   public void reloadJobTypePlugins() throws JobTypeManagerException {
     this.jobtypeManager.loadPlugins();
+  }
+
+  public void reloadExecProps() {
+    this.azkabanProps = AbstractAzkabanServer
+            .loadProps(azkabanProps.getString("schedulis.exec.conf.dir",
+                    "bin/internal/../../conf"));
   }
 
   public int getTotalNumExecutedFlows() {
@@ -969,6 +1109,10 @@ public class FlowRunnerManager implements EventListener,
       this.pollingService.shutdown();
     }
     this.executorService.shutdown();
+    if (this.azkabanProps.getBoolean("azkaban.holdbatch.switch", false)) {
+      this.holdBatchThread.shutdown();
+    }
+
     boolean result = false;
     while (!result) {
       logger.info("Awaiting Shutdown. # of executing flows: " + getNumRunningFlows());
@@ -984,14 +1128,15 @@ public class FlowRunnerManager implements EventListener,
   /**
    * This attempts shuts down the flow runner immediately (unsafe). This doesn't wait for jobs to
    * finish but interrupts all threads.
-   * 
+   *
    */
   public void shutdownNow() {
     logger.warn("Shutting down FlowRunnerManager now...");
     if (this.azkabanProps.getBoolean(ConfigurationKeys.AZKABAN_POLL_MODEL, false)) {
       this.pollingService.shutdown();
     }
-	// FIXME New feature: Before closing the executor thread pool, you need to actively kill all running tasks.
+    this.slaAlerter = true;
+    // FIXME New feature: Before closing the executor thread pool, you need to actively kill all running tasks.
     for (FlowRunner flowRunner : runningFlows.values()) {
       logger.info("killing flow execId:" + flowRunner.getExecutionId());
       try {
@@ -1006,7 +1151,7 @@ public class FlowRunnerManager implements EventListener,
     this.triggerManager.shutdown();
 
     boolean result = false;
-    for(int i = 0; i < 5; i++) {
+    for(int i = 0; i < 8; i++) {
       logger.info("Awaiting Shutdown. # of executing flows: " + getNumRunningFlows());
       try {
         result = this.executorService.awaitTermination(30, TimeUnit.SECONDS);
@@ -1027,6 +1172,20 @@ public class FlowRunnerManager implements EventListener,
   public void deleteExecutionDirectory() {
     logger.warn("Deleting execution dir: " + this.executionDirectory.getAbsolutePath());
     try {
+
+      File execBackupDir;
+      // 读取自定义备份数据目录
+      String configDirName = azkabanProps.getString("execution.log.backup.dir");
+      if (StringUtils.isNotBlank(configDirName)) {
+        execBackupDir = new File(azkabanProps.getString("execution.log.backup.dir"));
+      } else {
+        // 如果没有定义目录,则创建一个默认的目录
+        execBackupDir = new File(azkabanProps.getString("azkaban.execution.dir", "executions_backup"));
+      }
+      execBackupDir.mkdirs();
+      setgidPermissionOnExecutionBackUpDirectory(execBackupDir);
+
+      FileIOUtils.copy(this.executionDirectory, execBackupDir);
       FileUtils.deleteDirectory(this.executionDirectory);
     } catch (final IOException e) {
       logger.error("", e);
@@ -1038,22 +1197,29 @@ public class FlowRunnerManager implements EventListener,
     for (final FlowRunner runner : FlowRunnerManager.this.runningFlows.values()) {
       final ExecutableFlow flow = runner.getExecutableFlow();
       activeProjectVersions.add(new Pair<>(flow
-          .getProjectId(), flow.getVersion()));
+              .getProjectId(), flow.getVersion()));
     }
     return activeProjectVersions;
+  }
+
+  public int getFailedFlowNum() {
+    return failedFlowNum.get();
   }
 
 
   private class CleanerThread extends Thread {
 
-    // Every hour, clean execution dir.
-    private static final long EXECUTION_DIR_CLEAN_INTERVAL_MS = 60 * 60 * 1000;
+    /**
+     * execution 目录清理间隔，默认 1 h
+     */
+    private final long executionDirCleanIntervalMs = FlowRunnerManager.this.azkabanProps.getLong(
+            ConfigurationKeys.EXECUTION_DIR_CLEAN_INTERVAL_MS, 60 * 60 * 1000);
     // Every 2 mins clean the recently finished list
     private static final long RECENTLY_FINISHED_INTERVAL_MS = 2 * 60 * 1000;
     // Every 5 mins kill flows running longer than allowed max running time
     private static final long LONG_RUNNING_FLOW_KILLING_INTERVAL_MS = 5 * 60 * 1000;
     private final long flowMaxRunningTimeInMins = FlowRunnerManager.this.azkabanProps.getInt(
-        ConfigurationKeys.AZKABAN_MAX_FLOW_RUNNING_MINS, -1);
+            Constants.ConfigurationKeys.AZKABAN_MAX_FLOW_RUNNING_MINS, -1);
     private boolean shutdown = false;
     private long lastExecutionDirCleanTime = -1;
     private long lastRecentlyFinishedCleanTime = -1;
@@ -1070,12 +1236,12 @@ public class FlowRunnerManager implements EventListener,
     }
 
     private boolean isFlowRunningLongerThan(final ExecutableFlow flow,
-        final long flowMaxRunningTimeInMins) {
+                                            final long flowMaxRunningTimeInMins) {
       final Set<Status> nonFinishingStatusAfterFlowStarts = new HashSet<>(
-          Arrays.asList(Status.RUNNING, Status.QUEUED, Status.PAUSED, Status.FAILED_FINISHING));
+              Arrays.asList(Status.RUNNING, Status.QUEUED, Status.PAUSED, Status.FAILED_FINISHING));
       return nonFinishingStatusAfterFlowStarts.contains(flow.getStatus()) && flow.getStartTime() > 0
-          && TimeUnit.MILLISECONDS.toMinutes(System.currentTimeMillis() - flow.getStartTime())
-          >= flowMaxRunningTimeInMins;
+              && TimeUnit.MILLISECONDS.toMinutes(System.currentTimeMillis() - flow.getStartTime())
+              >= flowMaxRunningTimeInMins;
     }
 
     @Override
@@ -1094,27 +1260,29 @@ public class FlowRunnerManager implements EventListener,
               this.lastRecentlyFinishedCleanTime = currentTime;
             }
 
-            if (currentTime - EXECUTION_DIR_CLEAN_INTERVAL_MS > this.lastExecutionDirCleanTime) {
-              FlowRunnerManager.logger.info("Cleaning old execution dirs");
+            if (currentTime - executionDirCleanIntervalMs > this.lastExecutionDirCleanTime) {
+              FlowRunnerManager.logger.info("Cleaning old execution dirs, last clean time: {}, "
+                              + "clean interval: {} ms, retention: {} ms ", this.lastExecutionDirCleanTime,
+                      executionDirCleanIntervalMs, FlowRunnerManager.this.executionDirRetention);
               cleanOlderExecutionDirs();
               this.lastExecutionDirCleanTime = currentTime;
             }
 
             if (this.flowMaxRunningTimeInMins > 0
-                && currentTime - LONG_RUNNING_FLOW_KILLING_INTERVAL_MS
-                > this.lastLongRunningFlowCleanTime) {
+                    && currentTime - LONG_RUNNING_FLOW_KILLING_INTERVAL_MS
+                    > this.lastLongRunningFlowCleanTime) {
               FlowRunnerManager.logger
-                  .info(String.format("Killing long jobs running longer than %s mins",
-                      this.flowMaxRunningTimeInMins));
+                      .info(String.format("Killing long jobs running longer than %s mins",
+                              this.flowMaxRunningTimeInMins));
               for (final FlowRunner flowRunner : FlowRunnerManager.this.runningFlows.values()) {
                 if (isFlowRunningLongerThan(flowRunner.getExecutableFlow(),
-                    this.flowMaxRunningTimeInMins)) {
+                        this.flowMaxRunningTimeInMins)) {
                   FlowRunnerManager.logger.info(String
-                      .format("Killing job [id: %s, status: %s]. It has been running for %s mins",
-                          flowRunner.getExecutableFlow().getId(),
-                          flowRunner.getExecutableFlow().getStatus(), TimeUnit.MILLISECONDS
-                              .toMinutes(System.currentTimeMillis() - flowRunner.getExecutableFlow()
-                                  .getStartTime())));
+                          .format("Killing job [id: %s, status: %s]. It has been running for %s mins",
+                                  flowRunner.getExecutableFlow().getId(),
+                                  flowRunner.getExecutableFlow().getStatus(), TimeUnit.MILLISECONDS
+                                          .toMinutes(System.currentTimeMillis() - flowRunner.getExecutableFlow()
+                                                  .getStartTime())));
                   flowRunner.kill();
                 }
               }
@@ -1126,7 +1294,7 @@ public class FlowRunnerManager implements EventListener,
             FlowRunnerManager.logger.info("Interrupted. Probably to shut down.");
           } catch (final Throwable t) {
             FlowRunnerManager.logger.warn(
-                "Uncaught throwable, please look into why it is not caught", t);
+                    "Uncaught throwable, please look into why it is not caught", t);
           }
         }
       }
@@ -1136,25 +1304,32 @@ public class FlowRunnerManager implements EventListener,
       final File dir = FlowRunnerManager.this.executionDirectory;
 
       final long pastTimeThreshold =
-          System.currentTimeMillis() - FlowRunnerManager.this.executionDirRetention;
+              System.currentTimeMillis() - FlowRunnerManager.this.executionDirRetention;
       final File[] executionDirs = dir
-          .listFiles(path -> path.isDirectory() && path.lastModified() < pastTimeThreshold);
+              .listFiles(path -> path.isDirectory() && path.lastModified() < pastTimeThreshold);
+
+      FlowRunnerManager.logger.info("Cleaning execution dirs last modified time < {}",
+              pastTimeThreshold);
 
       for (final File exDir : executionDirs) {
         try {
           final int execId = Integer.valueOf(exDir.getName());
           if (FlowRunnerManager.this.runningFlows.containsKey(execId)
-              || FlowRunnerManager.this.recentlyFinishedFlows.containsKey(execId)) {
+                  || FlowRunnerManager.this.recentlyFinishedFlows.containsKey(execId)) {
             continue;
           }
         } catch (final NumberFormatException e) {
           FlowRunnerManager.logger.error("Can't delete exec dir " + exDir.getName()
-              + " it is not a number");
+                  + " it is not a number");
           continue;
         }
 
         synchronized (FlowRunnerManager.this.executionDirDeletionSync) {
           try {
+            if (FlowRunnerManager.this.executionsLogRetention) {
+              File executionsLogRetentionDir = new File(FlowRunnerManager.this.executionsLogRetentionDir);
+              zipDirectory(exDir, executionsLogRetentionDir);
+            }
             FileUtils.deleteDirectory(exDir);
           } catch (final IOException e) {
             FlowRunnerManager.logger.error("Error cleaning execution dir " + exDir.getPath(), e);
@@ -1163,9 +1338,79 @@ public class FlowRunnerManager implements EventListener,
       }
     }
 
+    private void zipDirectory(File exDir, File executionsLogRetentionDir) {
+      if (!executionsLogRetentionDir.exists()) {
+        executionsLogRetentionDir.mkdirs();
+      }
+      ZipOutputStream zos = null;
+      try {
+        String fileName = generateFileName(exDir);
+        File zipFile = new File(executionsLogRetentionDir.getCanonicalPath(), fileName + ".zip");
+        zos = new ZipOutputStream(new FileOutputStream(zipFile));
+        zip(exDir.getName(), zos, exDir);
+      } catch (IOException e) {
+        FlowRunnerManager.logger.error("Error zip execution dir " + exDir.getPath(), e);
+      }finally {
+        IOUtils.closeQuietly(zos);
+      }
+    }
+
+    private String generateFileName(File exDir) {
+      StringBuilder fileName = new StringBuilder(exDir.getName());
+      File[] files = exDir.listFiles();
+      for (File file : files) {
+        if (file.isFile() && file.getName().endsWith(".log") && file.getName().startsWith("_flow")) {
+          String[] split = file.getName().split("\\.");
+          fileName.append("-" + split[split.length - 3]).append("-" + split[split.length - 2]);
+          break;
+        }
+      }
+      return fileName.toString();
+    }
+
+    private void zip(String path, ZipOutputStream zos, File exDir){
+      if (exDir.isFile() && exDir.getName().endsWith(".log")) {
+        try (FileInputStream input = new FileInputStream(exDir)) {
+          zos.putNextEntry(new ZipEntry(path + File.separator + exDir.getName()));
+          IOUtils.copy(input, zos);
+          zos.flush();
+          zos.closeEntry();
+        } catch (IOException e) {
+          FlowRunnerManager.logger.error("Error zip execution dir " + exDir.getPath(), e);
+        }
+      } else {
+        File[] files = exDir.listFiles();
+        if (ArrayUtils.isNotEmpty(files)) {
+          for (File file : files) {
+            if (file.isDirectory()) {
+              zip(FilenameUtils.normalizeNoEndSeparator(path + File.separator + file.getName()), zos, file);
+            } else {
+              if (file.getName().endsWith(".log")) {
+                try (FileInputStream input = new FileInputStream(file)) {
+                  zos.putNextEntry(new ZipEntry(path + File.separator + file.getName()));
+                  IOUtils.copy(input, zos);
+                  zos.flush();
+                  zos.closeEntry();
+                } catch (IOException e) {
+                  FlowRunnerManager.logger.error("Error zip execution dir " + exDir.getPath(), e);
+                }
+              }
+            }
+          }
+        } else {
+          try {
+            zos.putNextEntry(new ZipEntry(path + File.separator));
+            zos.closeEntry();
+          } catch (IOException e) {
+            FlowRunnerManager.logger.error("Error zip execution dir " + exDir.getPath(), e);
+          }
+        }
+      }
+    }
+
     private void cleanRecentlyFinished() {
       final long cleanupThreshold =
-          System.currentTimeMillis() - FlowRunnerManager.RECENTLY_FINISHED_TIME_TO_LIVE;
+              System.currentTimeMillis() - FlowRunnerManager.RECENTLY_FINISHED_TIME_TO_LIVE;
       final ArrayList<Integer> executionToKill = new ArrayList<>();
       for (final ExecutableFlow flow : FlowRunnerManager.this.recentlyFinishedFlows.values()) {
         if (flow.getEndTime() < cleanupThreshold) {
@@ -1175,9 +1420,136 @@ public class FlowRunnerManager implements EventListener,
 
       for (final Integer id : executionToKill) {
         FlowRunnerManager.logger.info("Cleaning execution " + id
-            + " from recently finished flows list.");
+                + " from recently finished flows list.");
         FlowRunnerManager.this.recentlyFinishedFlows.remove(id);
       }
+    }
+  }
+
+  /*
+   * read hold batch context
+   */
+  private class HoldBatchThread extends Thread {
+
+    private boolean shutdown = false;
+
+    public HoldBatchThread() {
+      this.setName("AzkabanExecutorServer-HoldBatch-Thread");
+    }
+
+    public void shutdown() {
+      this.shutdown = true;
+      this.interrupt();
+    }
+
+    @Override
+    public void run() {
+      while (!this.shutdown) {
+        synchronized (this) {
+          try {
+            FlowRunnerManager.this.executorLoader.getLocalHoldBatchOpr().stream().forEach(
+                    operate -> FlowRunnerManager.this.holdBatchContext.getBatchMap()
+                            .putIfAbsent(operate.getBatchId(), operate));
+
+            List<HoldBatchOperate> operateList = FlowRunnerManager.this.holdBatchContext
+                    .getBatchMap().values().stream().filter(operate -> operate.getOperateLevel() == 0)
+                    .collect(Collectors.toList());
+            if (CollectionUtils.isNotEmpty(operateList)) {
+              FlowRunnerManager.this.holdBatchContext.getBatchMap().clear();
+              FlowRunnerManager.this.holdBatchContext.getBatchMap()
+                      .put(operateList.get(0).getBatchId(), operateList.get(0));
+            }
+
+            for (HoldBatchOperate operate : FlowRunnerManager.this.holdBatchContext.getBatchMap()
+                    .values()) {
+              String resumeJson = FlowRunnerManager.this.executorLoader
+                      .getLocalHoldBatchResume(operate.getBatchId());
+              if (StringUtils.isNotEmpty(resumeJson)) {
+                FlowRunnerManager.this.holdBatchContext.getBatchMap().remove(operate.getBatchId());
+                FlowRunnerManager.this.executorLoader
+                        .updateHoldBatchStatus(operate.getBatchId(), 1);
+                operate.setStrategy(resumeJson);
+                this.resume(operate);
+              } else {
+                for (FlowRunner flowRunner : FlowRunnerManager.this.runningFlows.values()) {
+                  ExecutableFlow executableFlow = flowRunner.getExecutableFlow();
+                  String batchId = FlowRunnerManager.this.holdBatchContext
+                          .isInBatch(executableFlow.getProjectName(), executableFlow.getId(),
+                                  executableFlow.getSubmitUser());
+                  if (StringUtils.isNotEmpty(batchId)) {
+                    flowRunner.changePreparing2SystemPaused();
+                    flowRunner.changePaused2SystemPaused();
+                  }
+                }
+              }
+            }
+
+            FlowRunnerManager.this.executorLoader.getMissResumeBatch().stream()
+                    .forEach(operate -> this.resume(operate));
+
+            wait(FlowRunnerManager.this.azkabanProps.getLong("azkaban.holdbatch.thread.ms", 10000));
+          } catch (final InterruptedException e) {
+            FlowRunnerManager.logger.info("Interrupted. Probably to shut down.");
+          } catch (Exception e) {
+            FlowRunnerManager.logger.error("check hold batch context error", e);
+          }
+        }
+      }
+    }
+
+    private void resume(HoldBatchOperate holdBatchOperate) {
+      new Thread(() -> {
+        String batchKey = Constants.HOLD_BATCH_RESUME_LOCK_KEY + holdBatchOperate.getBatchId();
+        synchronized (batchKey.intern()) {
+          try {
+            Alerter mailAlerter = ServiceProvider.SERVICE_PROVIDER.getInstance(AlerterHolder.class)
+                    .get("email");
+
+            List<HoldBatchAlert> execList = FlowRunnerManager.this.executorLoader
+                    .queryExecingByBatch(holdBatchOperate.getBatchId());
+            for (HoldBatchAlert exec : execList) {
+              FlowRunner flowRunner = FlowRunnerManager.this.runningFlows.get(exec.getExecId());
+              if (flowRunner == null) {
+                continue;
+              }
+              boolean alertFlag = true;
+              if (holdBatchOperate.isBlack(exec)) {
+                exec.setBlack(1);
+                exec.setResume(2);
+              } else if (holdBatchOperate.isNotResume(exec)) {
+                exec.setBlack(0);
+                exec.setResume(2);
+              } else {
+                String key = (StringUtils.isEmpty(flowRunner.getLastBatchId()) ? holdBatchOperate
+                        .getBatchId() : flowRunner.getLastBatchId() + "-" + exec.getExecId()).intern();
+                synchronized (key) {
+                  key.notifyAll();
+                }
+                exec.setBlack(0);
+                exec.setResume(1);
+                exec.setResumeTime(System.currentTimeMillis());
+                alertFlag = false;
+              }
+              FlowRunnerManager.this.executorLoader.updateHoldBatchResumeStatus(exec);
+              if (alertFlag) {
+                if (flowRunner != null) {
+                  flowRunner.kill();
+                }
+                if (mailAlerter != null) {
+                  mailAlerter.alertOnHoldBatch(exec, FlowRunnerManager.this.executorLoader, false);
+                }
+              }
+            }
+            //唤醒循环执行
+            String cycleKey = ("cycleFlow-" + holdBatchOperate.getBatchId()).intern();
+            synchronized (cycleKey) {
+              cycleKey.notifyAll();
+            }
+          } catch (Exception e) {
+            logger.error("batch resume error: " + holdBatchOperate.getBatchId(), e);
+          }
+        }
+      }).start();
     }
   }
 
@@ -1198,7 +1570,7 @@ public class FlowRunnerManager implements EventListener,
 
     public void start() {
       this.scheduler.scheduleAtFixedRate(() -> pollExecution(), 0L, this.pollingIntervalMs,
-          TimeUnit.MILLISECONDS);
+              TimeUnit.MILLISECONDS);
     }
 
     private void pollExecution() {
@@ -1206,8 +1578,8 @@ public class FlowRunnerManager implements EventListener,
         if (AzkabanExecutorServer.getApp() != null) {
           try {
             final Executor executor = requireNonNull(FlowRunnerManager.this.executorLoader
-                .fetchExecutor(AzkabanExecutorServer.getApp().getHost(),
-                    AzkabanExecutorServer.getApp().getPort()), "The executor can not be null");
+                    .fetchExecutor(AzkabanExecutorServer.getApp().getHost(),
+                            AzkabanExecutorServer.getApp().getPort()), "The executor can not be null");
             this.executorId = executor.getId();
           } catch (final Exception e) {
             FlowRunnerManager.logger.error("Failed to fetch executor ", e);
@@ -1217,7 +1589,7 @@ public class FlowRunnerManager implements EventListener,
         try {
           // Todo jamiesjc: check executor capacity before polling from DB
           final int execId = FlowRunnerManager.this.executorLoader
-              .selectAndUpdateExecution(this.executorId, FlowRunnerManager.this.active);
+                  .selectAndUpdateExecution(this.executorId, FlowRunnerManager.this.active);
           if (execId != -1) {
             FlowRunnerManager.logger.info("Submitting flow " + execId);
             submitFlow(execId);

@@ -1,6 +1,7 @@
 package azkaban.event.dao;
 
 import azkaban.db.DatabaseOperator;
+import azkaban.event.entity.EventQueue;
 import azkaban.event.entity.EventStatus;
 
 import javax.inject.Inject;
@@ -39,9 +40,10 @@ public class JdbcEventStatusImpl implements EventLoader<EventStatus> {
     }
 
     @Override
-    public int getEventTotal(String searchValue, String... filterValue) throws SQLException {
+    public int getEventTotal(String searchValue, boolean authType, String... filterValue) throws SQLException {
         String querySQL = GET_EVENT_STATUS_TOTAL
                 + whereAndSQL(EVENT_STATUS_FILTER_KEYS)
+                + (authType ? " AND source_type = \"wemq\"" : " AND source_type is null ")
                 + andOrSQL(EVENT_STATUS_SEARCH_KEYS, searchValue);
         List<Object> params = andParams(filterValue)
                 .andThen(orParams(EVENT_STATUS_SEARCH_KEYS, searchValue))
@@ -50,7 +52,7 @@ public class JdbcEventStatusImpl implements EventLoader<EventStatus> {
     }
 
     @Override
-    public int getEventTotal4Page(String searchValue, int index, int sum, String... filterValue) throws SQLException {
+    public int getEventTotal4Page(String searchValue, boolean authType, int index, int sum, String... filterValue) throws SQLException {
         return 0;
     }
 
@@ -64,9 +66,10 @@ public class JdbcEventStatusImpl implements EventLoader<EventStatus> {
     }
 
     @Override
-    public List<EventStatus> findEventList(String searchValue, int startIndex, int count, String... filterValue) throws SQLException {
+    public List<EventStatus> findEventList(String searchValue, boolean authType, int startIndex, int count, String... filterValue) throws SQLException {
         String querySQL = FIND_EVENT_STATUS_LIST
                 + whereAndSQL(EVENT_STATUS_FILTER_KEYS)
+                + (authType ? " AND source_type = \"wemq\"" : " AND source_type is null ")
                 + andOrSQL(EVENT_STATUS_SEARCH_KEYS, searchValue)
                 + sortDescSQl(EVENT_STATUS_SORT_KEY)
                 + limitSQL();
@@ -80,6 +83,11 @@ public class JdbcEventStatusImpl implements EventLoader<EventStatus> {
     @Override
     public int queryMessageNum(String... filterValue) throws SQLException {
         return 0;
+    }
+
+    @Override
+    public List<EventQueue> queryMessage(String topic,String sender,String msgName,String msgBody,String isLike,Integer pageNo,Integer pageSize) throws SQLException {
+        return null;
     }
 
     @Override
@@ -99,7 +107,7 @@ public class JdbcEventStatusImpl implements EventLoader<EventStatus> {
     }
 
     @Override
-    public List<EventStatus> getEventAuth(String topic, String sender, String msgName) throws SQLException {
+    public List<EventStatus> getEvent(String topic, String sender, String msgName) throws SQLException {
         return null;
     }
 

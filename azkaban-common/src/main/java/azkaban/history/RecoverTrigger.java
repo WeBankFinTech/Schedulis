@@ -3,10 +3,12 @@ package azkaban.history;
 import azkaban.alert.Alerter;
 import azkaban.executor.*;
 import azkaban.project.Project;
+import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -33,13 +35,21 @@ public class RecoverTrigger{
     public RecoverTrigger(ExecutionRecover executionRecover){
         this.repeatList = (List<Map<String, String>>) executionRecover.getRepeatOption().get("repeatTimeList");
         this.taskSize = executionRecover.getTaskSize();
-        this.group = new ArrayList<>(taskSize);
         this.errorContinue = "errorCountion".equals(executionRecover.getRecoverErrorOption());
         this.triggerId = executionRecover.getRecoverId();
         this.projectId = executionRecover.getProjectId();
         this.flowId = executionRecover.getFlowId();
         this.executionRecover = executionRecover;
-        createGroupTask();
+        if (!executionRecover.getGroup().isEmpty()) {
+            this.group = executionRecover.getGroup();
+            repeatList.clear();
+            for (GroupTask groupTask : group) {
+                repeatList.addAll(groupTask.getTaskList());
+            }
+        } else {
+            this.group = new LinkedList<>();
+            createGroupTask();
+        }
     }
 
     public int getTriggerId() {
@@ -47,22 +57,48 @@ public class RecoverTrigger{
     }
 
     private void createGroupTask(){
+        String taskDistributeMethod = this.executionRecover.getTaskDistributeMethod();
         int repeatSize = this.repeatList.size();
         if(repeatSize < taskSize){
             this.group.add(new GroupTask(repeatList, this.errorContinue));
         } else {
-            int len = repeatList.size() / taskSize;
-            int remainder = repeatList.size() % taskSize;
-            int lastIndex = 0;
-            for (int i = 0; i < this.taskSize; i++) {
-                if(i < this.taskSize - 1) {
-                    this.group.add(new GroupTask(repeatList.subList(lastIndex, lastIndex + len), this.errorContinue));
-                    lastIndex += len;
-                } else {
-                    this.group.add(new GroupTask(repeatList.subList(lastIndex, lastIndex + len + remainder), this.errorContinue));
-                }
-
+            if (StringUtils.equals(taskDistributeMethod, ExecutionRecover.TASK_UNIFORMLY_DISTRIBUTE)) {
+                distributeTasksUniformly();
+            } else if (StringUtils.equals(taskDistributeMethod, ExecutionRecover.TASK_SEQUENTIALLY_DISTRIBUTE)) {
+                distributeTasksSequentially();
+            } else {
+                logger.warn("Illegal input: {}. Assume uniformly distributed", taskDistributeMethod);
+                distributeTasksUniformly();
             }
+        }
+    }
+
+    private void distributeTasksUniformly() {
+        int len = repeatList.size() / taskSize;
+        int remainder = repeatList.size() % taskSize;
+        int lastIndex = 0;
+        for (int i = 0; i < this.taskSize; i++) {
+            if(i < this.taskSize - 1) {
+                this.group.add(new GroupTask(repeatList.subList(lastIndex, lastIndex + len), this.errorContinue));
+                lastIndex += len;
+            } else {
+                this.group.add(new GroupTask(repeatList.subList(lastIndex, lastIndex + len + remainder), this.errorContinue));
+            }
+        }
+    }
+
+    private void distributeTasksSequentially() {
+        List<List<Map<String, String>>> l = new ArrayList<>();
+        for (int i =0 ; i < taskSize; i++) {
+            l.add(new ArrayList<>());
+        }
+        int idx = 0;
+        for (Map<String, String> m : repeatList) {
+            l.get(idx).add(m);
+            idx = (idx + 1) % taskSize;
+        }
+        for (List<Map<String, String>> ll : l) {
+            this.group.add(new GroupTask(ll, this.errorContinue));
         }
     }
 
@@ -74,6 +110,13 @@ public class RecoverTrigger{
         this.group = group;
     }
 
+    public List<Map<String, String>> getRepeatList() {
+        return repeatList;
+    }
+
+    public int getTaskSize() {
+        return taskSize;
+    }
 
     public boolean expireConditionMet(){
         if(this.hasTaskFailed && !errorContinue){
@@ -118,7 +161,7 @@ public class RecoverTrigger{
 
     private void updateRecoverStatus(){
         List<Map<String, String>> failedTask = repeatList.stream().filter(x -> !"50"
-            .equals(x.get("recoverStatus"))).collect(Collectors.toList());
+                .equals(x.get("recoverStatus"))).collect(Collectors.toList());
         if(failedTask.size() == 0){
             logger.info("set history recover status to SUCCEEDED");
             executionRecover.setRecoverStatus(Status.SUCCEEDED);
@@ -131,10 +174,22 @@ public class RecoverTrigger{
         }
     }
 
+    public void updateGroupTask(int group1 , int group2) {
+        if (group1 == group2) {
+            return;
+        }
+        Map<String, String> task = group.get(group1).nextNoSubmitTask();
+        if (null != task) {
+            logger.info("change group {} task : {} to group {}", group1, task, group2);
+            group.get(group1).removeTask(task);
+            group.get(group2).addTask(task);
+        }
+    }
+
     public void updateTaskStatus(){
         List<Map<String, String>> tasks = repeatList.stream().filter(item -> {
             return (item.containsKey("isSubmit") && "20".equals(item.get("recoverStatus"))) || "30"
-                .equals(item.get("recoverStatus")) ;
+                    .equals(item.get("recoverStatus")) ;
         }).collect(Collectors.toList());
         for(Map<String, String> task: tasks){
             try {
@@ -196,10 +251,10 @@ public class RecoverTrigger{
     @Override
     public String toString() {
         return "RecoverTrigger{" +
-            "triggerId=" + triggerId +
-            ", taskSize=" + taskSize +
-            ", projectId=" + projectId +
-            ", flowId='" + flowId + '\'' +
-            '}';
+                "triggerId=" + triggerId +
+                ", taskSize=" + taskSize +
+                ", projectId=" + projectId +
+                ", flowId='" + flowId + '\'' +
+                '}';
     }
 }

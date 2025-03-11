@@ -1,12 +1,18 @@
 package azkaban.utils;
 
 import azkaban.jobExecutor.utils.Date;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
+import java.util.Calendar;
+import java.util.HashSet;
+import java.util.Set;
 import org.apache.commons.lang3.StringUtils;
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
 import org.joda.time.LocalDateTime;
 import org.joda.time.format.DateTimeFormat;
 import org.joda.time.format.DateTimeFormatter;
+import org.quartz.CronExpression;
 
 public class DateUtils {
 
@@ -225,4 +231,72 @@ public class DateUtils {
       return null;
     }
   }
+
+  /**
+   * .获取当天凌晨0点毫秒数
+   * @return
+   */
+  public static long getStartOfTodayInMills() {
+    Calendar calendar = Calendar.getInstance();
+    //获取当天凌晨毫秒数
+    calendar.set(Calendar.HOUR_OF_DAY, 0);
+    calendar.set(Calendar.MINUTE, 0);
+    calendar.set(Calendar.SECOND, 0);
+    calendar.set(Calendar.MILLISECOND, 1);
+    return calendar.getTimeInMillis();
+  }
+
+
+  public static boolean willRunBetween(String cronExpression, int startHour, int endHour)
+      throws ParseException {
+
+    CronExpression expression = new CronExpression(cronExpression);
+
+    // 解析小时部分
+    String[] hourParts = expression.getCronExpression().split(" ")[2].split(",");
+    Set<Integer> hours = new HashSet<>();
+
+    for (String part : hourParts) {
+      if ("*".equals(part)) {
+        // 如果小时字段为 *，表示所有小时值
+        for (int i = 0; i < 24; i++) {
+          hours.add(i);
+        }
+      } else if (part.contains("/")) {
+        String[] rangeAndStep = part.split("/");
+        int start = "*".equals(rangeAndStep[0]) ? 0 : Integer.parseInt(rangeAndStep[0]);
+        int step = Integer.parseInt(rangeAndStep[1]);
+        for (int i = start; i < 24; i += step) {
+          hours.add(i);
+        }
+      } else if (part.contains("-")) {
+        String[] range = part.split("-");
+        int start = Integer.parseInt(range[0]);
+        int end = Integer.parseInt(range[1]);
+        for (int i = start; i <= end; i++) {
+          hours.add(i);
+        }
+      } else {
+        hours.add(Integer.parseInt(part));
+      }
+    }
+
+    // 检查小时部分是否在指定的时间段内
+    for (int hour : hours) {
+      if (hour >= startHour && hour < endHour) {
+        return true;
+      }
+    }
+
+    return false;
+  }
+
+  public static boolean isSameDay(Long time1,Long time2){
+    SimpleDateFormat format = new SimpleDateFormat("yyyyMMdd");
+    String day1 = format.format(new java.util.Date(time1));
+    String day2 = format.format(new java.util.Date(time2));
+
+    return day1.equals(day2);
+  }
+
 }

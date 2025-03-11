@@ -45,8 +45,10 @@ public class GZIPUtils {
     gzipStream = new GZIPOutputStream(byteOutputStream);
 
     gzipStream.write(bytes, offset, length);
-    gzipStream.close();
-    return byteOutputStream.toByteArray();
+    IOUtils.closeQuietly(gzipStream);
+    byte[] resBytes = byteOutputStream.toByteArray();
+    IOUtils.closeQuietly(byteOutputStream);
+    return resBytes;
   }
 
   public static byte[] unGzipBytes(final byte[] bytes) throws IOException {
@@ -55,8 +57,12 @@ public class GZIPUtils {
 
     final ByteArrayOutputStream byteOutputStream = new ByteArrayOutputStream();
     IOUtils.copy(gzipInputStream, byteOutputStream);
+    byte[] unZipBytes = byteOutputStream.toByteArray();
 
-    return byteOutputStream.toByteArray();
+    // gzip stream 需要被close，不然会导致堆外OOM 可以参考https://github.com/azkaban/azkaban/pull/3023
+    IOUtils.closeQuietly(gzipInputStream);
+    IOUtils.closeQuietly(byteInputStream);
+    return unZipBytes;
   }
 
   public static String unGzipString(final byte[] bytes, final String encType)

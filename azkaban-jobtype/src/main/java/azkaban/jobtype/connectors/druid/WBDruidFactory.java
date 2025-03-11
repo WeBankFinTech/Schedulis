@@ -1,14 +1,17 @@
 package azkaban.jobtype.connectors.druid;
 
-import bsp.encrypt.EncryptUtil;
-import com.alibaba.druid.pool.DruidDataSource;
-import org.apache.commons.lang.StringUtils;
-import org.slf4j.Logger;
 
-import javax.sql.DataSource;
+import azkaban.utils.RSAUtils;
+import com.alibaba.druid.pool.DruidDataSource;
+
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.Properties;
+import javax.sql.DataSource;
+
+import com.alibaba.druid.pool.DruidPooledConnection;
+import org.apache.commons.lang.StringUtils;
+import org.slf4j.Logger;
 
 public class WBDruidFactory {
 
@@ -111,7 +114,7 @@ public class WBDruidFactory {
 			password = props.getProperty("bdp.datachecker.jdo.option.password");
 			try {
 				String privateKey = props.getProperty("password.private.key");
-				password = EncryptUtil.decrypt(privateKey, password);
+				password = RSAUtils.decrypt(privateKey, password);
 			} catch (Exception e){
 				log.error("password decore failed", e);
 			}
@@ -122,7 +125,7 @@ public class WBDruidFactory {
 			password = props.getProperty("job.datachecker.jdo.option.password");
 			try {
 				String privateKey = props.getProperty("password.private.key");
-				password = EncryptUtil.decrypt(privateKey, password);
+				password = RSAUtils.decrypt(privateKey, password);
 			} catch (Exception e){
 				log.error("password decore failed", e);
 			}
@@ -133,7 +136,7 @@ public class WBDruidFactory {
 			try {
 				String privateKey = props.getProperty("password.private.key");
 				String ciphertext = props.getProperty("msg.eventchecker.jdo.option.password");
-				password = EncryptUtil.decrypt(privateKey, ciphertext);
+				password = RSAUtils.decrypt(privateKey, ciphertext);
 			} catch (Exception e){
 				log.error("password decore failed", e);
 			}
@@ -144,7 +147,7 @@ public class WBDruidFactory {
 			try {
 				String privateKey = props.getProperty("password.private.key");
 				String ciphertext = props.getProperty("dops.datachecker.jdo.option.password");
-				password = EncryptUtil.decrypt(privateKey, ciphertext);
+				password = RSAUtils.decrypt(privateKey, ciphertext);
 			} catch (Exception e) {
 				log.error("password decore failed", e);
 			}
@@ -155,7 +158,7 @@ public class WBDruidFactory {
 			password = props.getProperty("datachecker.record.jdo.option.password");
 			try {
 				String privateKey = props.getProperty("password.private.key");
-				password = EncryptUtil.decrypt(privateKey, password);
+				password = RSAUtils.decrypt(privateKey, password);
 			} catch (Exception e) {
 				log.error("password decore failed", e);
 			}

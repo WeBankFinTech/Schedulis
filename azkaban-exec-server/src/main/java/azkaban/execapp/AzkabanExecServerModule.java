@@ -21,19 +21,19 @@ import static azkaban.Constants.ConfigurationKeys.AZKABAN_EVENT_REPORTING_CLASS_
 import static azkaban.Constants.ConfigurationKeys.AZKABAN_EVENT_REPORTING_ENABLED;
 
 import azkaban.executor.ExecutorLoader;
+import azkaban.executor.ExecutorQueueLoader;
 import azkaban.executor.JdbcExecutorLoader;
+import azkaban.executor.JdbcExecutorQueueLoader;
 import azkaban.spi.AzkabanEventReporter;
 import azkaban.utils.Props;
 import com.google.inject.AbstractModule;
 import com.google.inject.Provides;
-import com.webank.wedatasphere.schedulis.common.executor.ExecutorQueueLoader;
-import com.webank.wedatasphere.schedulis.common.executor.JdbcExecutorQueueLoader;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 import javax.inject.Inject;
 import javax.inject.Singleton;
-import org.slf4j.LoggerFactory;
 import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * This Guice module is currently a one place container for all bindings in the current module. This
@@ -66,20 +66,20 @@ public class AzkabanExecServerModule extends AbstractModule {
     final Class<?> eventReporterClass =
         props.getClass(AZKABAN_EVENT_REPORTING_CLASS_PARAM, null);
     if (eventReporterClass != null && eventReporterClass.getConstructors().length > 0) {
-      this.logger.info("Loading event reporter class " + eventReporterClass.getName());
+      logger.info("Loading event reporter class " + eventReporterClass.getName());
       try {
         final Constructor<?> eventReporterClassConstructor =
             eventReporterClass.getConstructor(Props.class);
         return (AzkabanEventReporter) eventReporterClassConstructor.newInstance(props);
       } catch (final InvocationTargetException e) {
-        this.logger.error(e.getTargetException().getMessage());
+        logger.error(e.getTargetException().getMessage());
         if (e.getTargetException() instanceof IllegalArgumentException) {
           throw new IllegalArgumentException(e);
         } else {
           throw new RuntimeException(e);
         }
       } catch (final Exception e) {
-        this.logger.error("Could not instantiate EventReporter " + eventReporterClass.getName());
+        logger.error("Could not instantiate EventReporter " + eventReporterClass.getName());
         throw new RuntimeException(e);
       }
     }

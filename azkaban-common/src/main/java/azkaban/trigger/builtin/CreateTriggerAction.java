@@ -24,7 +24,7 @@ import java.util.Map;
 
 public class CreateTriggerAction implements TriggerAction {
 
-  public static final String type = "CreateTriggerAction";
+  public static final String TYPE = "CreateTriggerAction";
   private static TriggerManager triggerManager;
   private final Trigger trigger;
   private final String actionId;
@@ -41,8 +41,8 @@ public class CreateTriggerAction implements TriggerAction {
 
   public static CreateTriggerAction createFromJson(final Object obj) throws Exception {
     final Map<String, Object> jsonObj = (HashMap<String, Object>) obj;
-    if (!jsonObj.get("type").equals(type)) {
-      throw new Exception("Cannot create action of " + type + " from "
+    if (!jsonObj.get("type").equals(TYPE)) {
+      throw new Exception("Cannot create action of " + TYPE + " from "
           + jsonObj.get("type"));
     }
     final String actionId = (String) jsonObj.get("actionId");
@@ -52,7 +52,7 @@ public class CreateTriggerAction implements TriggerAction {
 
   @Override
   public String getType() {
-    return type;
+    return TYPE;
   }
 
   @Override
@@ -64,7 +64,7 @@ public class CreateTriggerAction implements TriggerAction {
   public Object toJson() {
     final Map<String, Object> jsonObj = new HashMap<>();
     jsonObj.put("actionId", this.actionId);
-    jsonObj.put("type", type);
+    jsonObj.put("type", TYPE);
     jsonObj.put("trigger", this.trigger.toJson());
 
     return jsonObj;

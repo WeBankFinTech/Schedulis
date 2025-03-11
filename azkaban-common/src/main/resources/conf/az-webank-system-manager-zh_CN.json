@@ -52,6 +52,7 @@
     "systemManagePage": "系统管理页面",
     "userManage": "用户管理",
     "depManage": "部门管理",
+    "executorManage": "执行器管理",
     "groupSourceManage": "资源分组管理",
     "modifyUserList": "人员变动异常清单",
     "exceptionalPerson": "例外人员",
@@ -88,6 +89,7 @@
     "createTime": "创建时间",
     "updateTime": "更新时间",
     "syncModifyUser": "同步变更用户数据",
+    "refreshExecutorList": "强制刷新执行器列表",
     "downloadModifyUser": "下载变更用户信息",
     "modifyType": "变更类型",
     "quit": "离开",
@@ -141,6 +143,11 @@
     "holdBatchPause": "暂停模式",
     "holdBatchKill": "kill模式",
     "holdBatchBtn": "一键hold批",
-    "status": "状态"
+    "status": "状态",
+    "executorId": "执行器ID",
+    "hostname": "主机名",
+    "hostport": "端口",
+    "isValid": "是否有效",
+    "lastGroupInfo": "上次分组信息"
   }
 }

@@ -1,7 +1,5 @@
 package azkaban.jobhook;
 
-import azkaban.hookExecutor.Hook;
-import azkaban.utils.Props;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -12,6 +10,9 @@ import java.net.URL;
 import java.net.URLClassLoader;
 import java.util.ArrayList;
 import java.util.List;
+
+import azkaban.hookExecutor.Hook;
+import azkaban.utils.Props;
 
 public class JobHookManager {
 

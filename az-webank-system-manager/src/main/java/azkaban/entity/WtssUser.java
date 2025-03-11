@@ -214,18 +214,19 @@ public class WtssUser {
     return "WtssUser{" +
         "userId='" + userId + '\'' +
         ", username='" + username + '\'' +
+            ", password='" + password + '\'' +
         ", fullName='" + fullName + '\'' +
-        ", departmentI='" + departmentId + '\'' +
+            ", departmentId=" + departmentId +
         ", departmentName='" + departmentName + '\'' +
         ", email='" + email + '\'' +
         ", proxyUsers='" + proxyUsers + '\'' +
         ", roleId=" + roleId +
         ", userType=" + userType +
+            ", modifyInfo='" + modifyInfo + '\'' +
+            ", modifyType='" + modifyType + '\'' +
         ", createTime=" + createTime +
         ", updateTime=" + updateTime +
-        ", modifyType=" + modifyType +
-        ", modifyInfo=" + modifyInfo +
-        ", userCategory=" + userCategory +
+            ", userCategory='" + userCategory + '\'' +
         '}';
   }
 

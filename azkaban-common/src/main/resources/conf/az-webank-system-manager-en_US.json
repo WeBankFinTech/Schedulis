@@ -52,6 +52,7 @@
     "systemManagePage": "System Manage Page",
     "userManage": "User Manage",
     "depManage": "Department Manage",
+    "executorManage": "Executor Manage",
     "groupSourceManage": "Group Source Manage",
     "modifyUserList": "Modify User List",
     "exceptionalPerson": "Exceptional Person",
@@ -88,6 +89,7 @@
     "createTime": "Create Time",
     "updateTime": "Update Time",
     "syncModifyUser": "Sync Modify User Information",
+    "refreshExecutorList": "Refresh Executor List",
     "downloadModifyUser": "Download Modify User Information",
     "modifyType": "ModifyType",
     "quit": "Quit",
@@ -141,6 +143,11 @@
     "holdBatchPause": "hold batch - pause",
     "holdBatchKill": "hold batch - kill",
     "holdBatchBtn": "hold batch",
-    "status": "Status"
+    "status": "Status",
+    "executorId": "Executor Id",
+    "hostname": "Hostname",
+    "hostport": "Port",
+    "isValid": "Is Valid",
+    "lastGroupInfo": "Last Group Information"
   }
 }

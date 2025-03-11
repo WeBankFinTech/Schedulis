@@ -74,3 +74,13 @@
   -webkit-box-shadow: inset 0 0 5px rgba(0,0,0,0);
   background: #0094ff;
 }
+
+.get-flow-info {
+    color: #2a6496;
+    cursor: pointer;
+}
+
+#today-flow-info-view {
+    display: none;
+}
+

@@ -24,7 +24,7 @@ import azkaban.execapp.JobRunner;
 import azkaban.executor.ExecutableNode;
 import azkaban.spi.EventType;
 
-public class LocalFlowWatcher extends FlowWatcher {
+public class LocalFlowWatcher extends AbstractFlowWatcher {
 
   private final LocalFlowWatcherListener watcherListener;
   private FlowRunner runner;

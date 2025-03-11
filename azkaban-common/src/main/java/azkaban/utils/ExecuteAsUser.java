@@ -68,7 +68,7 @@ public class ExecuteAsUser {
     try {
       exitCode = process.waitFor();
     } catch (final InterruptedException e) {
-      logger.error(e.getMessage(), e);
+      logger.error("Failed to execute cmd", e);
       exitCode = 1;
     }
     return exitCode;

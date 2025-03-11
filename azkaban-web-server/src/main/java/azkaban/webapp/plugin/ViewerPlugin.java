@@ -19,6 +19,7 @@ package azkaban.webapp.plugin;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Objects;
 
 public class ViewerPlugin {
 
@@ -81,5 +82,24 @@ public class ViewerPlugin {
 
   public List<String> getJobTypes() {
     return this.jobTypes;
+  }
+
+  @Override
+  public boolean equals(Object o) {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    ViewerPlugin that = (ViewerPlugin) o;
+    return order == that.order && hidden == that.hidden && Objects
+        .equals(pluginName, that.pluginName) && Objects.equals(pluginPath, that.pluginPath)
+        && Objects.equals(jobTypes, that.jobTypes);
+  }
+
+  @Override
+  public int hashCode() {
+    return Objects.hash(pluginName, pluginPath, order, jobTypes, hidden);
   }
 }

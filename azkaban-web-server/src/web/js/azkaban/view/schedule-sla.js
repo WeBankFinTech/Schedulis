@@ -35,7 +35,7 @@ azkaban.ChangeSlaView = Backbone.View.extend({
   //关闭SLA配置页面时的操作
   handleSlaCancel: function () {
     console.log("Clicked cancel button");
-    var scheduleURL = contextURL + "/schedule";
+    var scheduleURL = "/schedule";
     //清空SLA定时告警配置选项
     var tFlowRules = document.getElementById("flowRulesTbl").tBodies[0];
     var rows = tFlowRules.rows;
@@ -51,13 +51,21 @@ azkaban.ChangeSlaView = Backbone.View.extend({
       tFinishRules.deleteRow(0);
     }
   },
+  checkJobExist: function (jobId, jobList) {
+    for (var i in jobList) {
+      if (jobList[i] == jobId) {
+        return true;
+      }
+    }
+    return false;
+  },
 
   // 定时调度页面, 定时调度工作流列表, 对显示的调度任务点击设置告警
-  initFromSched: function (scheduleId, projectName, flowName) {
+  initFromSched: function (scheduleId, projectName, flowName, scheduleType) {
 
     var self = this;
 
-    var requestURL = contextURL + "/manager?ajax=checkUserSetScheduleAlertPermission&project=" + projectName;
+    var requestURL = "/manager?ajax=checkUserSetScheduleAlertPermission&project=" + projectName;
     $.ajax({
       url: requestURL,
       type: "get",
@@ -67,7 +75,7 @@ azkaban.ChangeSlaView = Backbone.View.extend({
         if (data["setAlertFlag"] == 1) {
           console.log("have permission, click set alert config.");
           self.scheduleId = scheduleId;
-          var scheduleURL = contextURL + "/schedule"
+          var scheduleURL = scheduleType === 'schedule' ? "/schedule" : "/eventschedule"
           self.scheduleURL = scheduleURL;
 
           var indexToName = {};
@@ -96,13 +104,27 @@ azkaban.ChangeSlaView = Backbone.View.extend({
             }
 
             // 先清空页面缓存
-            $('#slaEmails').val("");
+            $('#slaEmails').val(loginUser);
             if (data.slaEmails) {
               $('#slaEmails').val(data.slaEmails.join());
             }
-
+            var aletTypeEle = $('#aletType');
+            var aletTypeId = {
+                2: 'emailCheckbox',
+                1: 'wexinCheckbox',
+            };
+            var alerterInfo = (data.settings && data.settings[0]) || (data.finishSettings && data.finishSettings[0]) || {};
+            if ( alerterInfo.alerterWay ) {
+                aletTypeEle.find(':checked').prop('checked',false);
+                var alertArr = alerterInfo.alerterWay.split(',');
+                for(var i =0; i < alertArr.length; i++){
+                    aletTypeEle.find('#' + aletTypeId[alertArr[i]] ).prop('checked',true);
+                }
+            } else {
+                $('#aletType input').prop('checked',true);
+            }
             $('#sla-via-department').prop('checked', false);
-            if (data.departmentSlaInform == "true"){
+            if (data.departmentSlaInform == "true") {
               $('#sla-via-department').prop('checked', true);
             }
 
@@ -121,20 +143,41 @@ azkaban.ChangeSlaView = Backbone.View.extend({
             if (data.settings) {
               var tFlowRules = document.getElementById("flowRulesTbl").tBodies[0];
               for (var setting in data.settings) {
-                var rFlowRule = tFlowRules.insertRow(0);
 
+                if (!self.checkJobExist(data.settings[setting].id, indexToName)) {
+                  console.log("timeout alerter job: " + data.settings[setting].id + " dose not exist!");
+                  continue;
+                }
+                var rFlowRule = tFlowRules.insertRow(0);
                 var cId = rFlowRule.insertCell(-1);
-                var idSelect = document.createElement("select");
-                idSelect.setAttribute("class", "schedule-select2-search");
+                $(cId).attr("style", "width:40%");
+                var idSelect = "<select class='schedule-select2-search' style='width:100%'>"
                 for (var i in indexToName) {
-                  idSelect.options[i] = new Option(indexToText[i], indexToName[i]);
+                  var selected = ""
                   if (data.settings[setting].id == indexToName[i]) {
-                    idSelect.options[i].selected = true;
+                    selected = "selected"
+                  }
+                  if (i === '0') {
+                    idSelect += "<option value=\"" + indexToName[0] + "\" title=\"" + indexToText[0] + "\"" + selected + ">" + indexToText[0] + "</option>"
+                  } else {
+                    var name = indexToName[i].substring(indexToName[i].lastIndexOf(":") + 1);
+                    idSelect += "<option value=\"" + indexToName[i] + "\" title=\"" + indexToText[i] + "\"" + selected + ">job " + name + "</option>"
                   }
                 }
-                cId.appendChild(idSelect);
-                $('.schedule-select2-search').select2();
+                idSelect += "</select>"
+                cId.innerHTML = idSelect;
+                // $('.schedule-select2-search').select2();
+                //             var idSelect = document.createElement("select");
+                //             idSelect.setAttribute("class", "schedule-select2-search");
+                //             $(idSelect).attr("style", "width:100%");
+                //             for (var i in indexToName) {
+                //               idSelect.options[i] = new Option(indexToText[i], indexToName[i]);
+
+                //             }
+                //             cId.appendChild(idSelect);
+                $('#flowRulesTbl .schedule-select2-search').select2();
                 var cRule = rFlowRule.insertCell(-1);
+                $(cRule).attr("style", "width:10%; min-width: 135px;");
                 var ruleSelect = document.createElement("select");
                 ruleSelect.setAttribute("class", "form-control");
                 for (var i in ruleBoxOptions) {
@@ -147,19 +190,41 @@ azkaban.ChangeSlaView = Backbone.View.extend({
                 cRule.appendChild(ruleSelect);
 
                 var cDuration = rFlowRule.insertCell(-1);
+                $(cDuration).attr("style", "width:10%; min-width: 85px;");
                 var duration = document.createElement("input");
                 duration.type = "text";
                 duration.setAttribute("class", "form-control durationpick");
                 duration.setAttribute("onkeyup", "this.value=this.value.replace(/[^\:\d]/g,'')");//只能输入数字和冒号
                 var rawMinutes = data.settings[setting].duration;
-                var intMinutes = rawMinutes.substring(0, rawMinutes.length - 1);
-                var minutes = parseInt(intMinutes);
-                var hours = Math.floor(minutes / 60);
-                minutes = minutes % 60;
-                duration.value = hours + ":" + minutes;
-                cDuration.appendChild(duration);
+                if(rawMinutes){
+                  var intMinutes = rawMinutes.substring(0, rawMinutes.length - 1);
+                  var minutes = parseInt(intMinutes);
+                  var hours = Math.floor(minutes / 60);
+                  minutes = minutes % 60;
+                  duration.value = hours + ":" + minutes;
+                }
+                var durationDiv = document.createElement("div");
+                durationDiv.setAttribute("class", "position-relative");
+                durationDiv.appendChild(duration);
+                cDuration.appendChild(durationDiv);
+
+                var cAbsTime = rFlowRule.insertCell(-1);
+                $(cAbsTime).attr("style", "width:10%; min-width: 85px;");
+                var absTime = document.createElement("input");
+                absTime.type = "text";
+                absTime.setAttribute("class", "form-control durationpick");
+                absTime.setAttribute("onkeyup", "this.value=this.value.replace(/[^\:\d]/g,'')");//只能输入数字和冒号
+                var rawAbsMinutes = data.settings[setting].absTime;
+                if(rawAbsMinutes){
+                  absTime.value = rawAbsMinutes;
+                }
+                var absTimenDiv = document.createElement("div");
+                absTimenDiv.setAttribute("class", "position-relative");
+                absTimenDiv.appendChild(absTime);
+                cAbsTime.appendChild(absTimenDiv);
 
                 var cLevel = rFlowRule.insertCell(-1);
+                $(cLevel).attr("style", "width:10%; min-width: 135px;");
                 var levelSelect = document.createElement("select");
                 levelSelect.setAttribute("class", "form-control");
                 $(levelSelect).append("<option value='INFO'>INFO</option>");
@@ -190,13 +255,26 @@ azkaban.ChangeSlaView = Backbone.View.extend({
                   }
                 }
                 cKill.appendChild(killCheck);
+
+                // 告警频率select
+                var cAlarmFrequency = rFlowRule.insertCell(-1);
+                $(cAlarmFrequency).attr("style", "width:15%; min-width: 165px;");
+                var alarmFrequencySelect = document.createElement("select")
+                alarmFrequencySelect.setAttribute("class", "form-control")
+                $(alarmFrequencySelect).append(`<option value=''>${wtssI18n.view.alarmFrequencySelect}</option>`);
+                $(alarmFrequencySelect).append(`<option value='dayOnce'>${wtssI18n.view.dayOnce}</option>`);
+                $(alarmFrequencySelect).append(`<option value='thirtyMinuteOnce'>${wtssI18n.view.thirtyMinuteOnce}</option>`);
+                $(alarmFrequencySelect).append(`<option value='threeHourOnce'>${wtssI18n.view.threeHourOnce}</option>`);
+                $(alarmFrequencySelect).val(data.settings[setting].alarmFrequency);
+                cAlarmFrequency.appendChild(alarmFrequencySelect);
+
                 //删除按钮
                 var cDelete = rFlowRule.insertCell(-1);
                 var remove = document.createElement("div");
-                $(remove).addClass("center-block").addClass('remove-timeout-btn');
+                $(remove).addClass("center-block");
                 var removeBtn = document.createElement("button");
                 $(removeBtn).attr('type', 'button');
-                $(removeBtn).addClass('btn').addClass('btn-sm').addClass('btn-danger');
+                $(removeBtn).addClass('btn btn-sm btn-danger remove-timeout-btn');
                 $(removeBtn).text('Delete');
                 $(remove).append(removeBtn);
                 cDelete.appendChild(remove);
@@ -210,28 +288,34 @@ azkaban.ChangeSlaView = Backbone.View.extend({
               var finishData = data.finishSettings
               var tFlowRules = document.getElementById("FinishRulesTbl").tBodies[0];
               for (var setting in finishData) {
+
+                if (finishData[setting].id != null && !self.checkJobExist(finishData[setting].id, indexToName)) {
+                  console.log("SLA alerter job: " + finishData[setting].id + " dose not exist!");
+                  continue;
+                }
                 var rFlowRule = tFlowRules.insertRow(0);
 
                 var cId = rFlowRule.insertCell(-1);
                 // var idSelect = document.createElement("select");
                 // idSelect.setAttribute("class", "form-control");
-                var idSelect = "<select class='schedule-select2-search' style='width:200px;'>"
+                var idSelect = "<select class='schedule-select2-search' style='width:100%;'>"
                 for (var i in indexToName) {
                   // idSelect.options[i] = new Option(indexToText[i], indexToName[i]);
                   var selected = ''
                   if (finishData[setting].id == indexToName[i]) {
-                    selected = 'selected';
+                    selected = ' selected ';
                   }
                   if (i === '0') {
-                    idSelect += "<option value=\"" + indexToName[0] + "\" title=\"" + indexToText[0] + "\">" + indexToText[0] + "</option>"
+                    idSelect += "<option value=\"" + indexToName[0] + "\" title=\"" + indexToText[0] + "\"" + selected + ">" + indexToText[0] + "</option>"
                   } else {
                     var name = indexToName[i].substring(indexToName[i].lastIndexOf(":") + 1);
                     idSelect += "<option value=\"" + indexToName[i] + "\" title=\"" + indexToText[i] + "\"" + selected + ">job " + name + "</option>"
                   }
                 }
                 idSelect += "</select>"
+                idSelect = filterXSS(idSelect, { 'whiteList': { 'select': ['class', 'style'], 'option': ['value', 'title', 'selected'] } })
                 cId.innerHTML = idSelect
-                $('.schedule-select2-search').select2();
+                $('#FinishRulesTbl .schedule-select2-search').select2();
                 var cRule = rFlowRule.insertCell(-1);
                 var ruleSelect = document.createElement("select");
                 ruleSelect.setAttribute("class", "form-control");
@@ -258,10 +342,10 @@ azkaban.ChangeSlaView = Backbone.View.extend({
                 //删除按钮
                 var cDelete = rFlowRule.insertCell(-1);
                 var remove = document.createElement("div");
-                $(remove).addClass("center-block").addClass('remove-btn');
+                $(remove).addClass("center-block");
                 var removeBtn = document.createElement("button");
                 $(removeBtn).attr('type', 'button');
-                $(removeBtn).addClass('btn').addClass('btn-sm').addClass('btn-danger');
+                $(removeBtn).addClass('btn btn-sm remove-btn btn-danger');
                 $(removeBtn).text('Delete');
                 $(remove).append(removeBtn);
                 cDelete.appendChild(remove);
@@ -271,19 +355,18 @@ azkaban.ChangeSlaView = Backbone.View.extend({
             $('.durationpick').datetimepicker({
               format: 'HH:mm'
             });
+            self.disabledAddBtn();
           };
 
           $.get(self.scheduleURL, fetchScheduleData, successHandler, "json");
 
           $('#sla-options').modal();
-
+          $('#set-sla-btn').attr('scheduleType', scheduleType)
           //this.schedFlowOptions = sched.flowOptions
           console.log("Loaded schedule info. Ready to set SLA.");
 
         } else {
-          $('#user-operator-schedule-flow-permit-panel').modal();
-          $('#title-user-operator-schedule-flow-permit').text(wtssI18n.view.scheduleAlertConfigPermission);
-          $('#body-user-operator-schedule-flow-permit').html(wtssI18n.view.noScheAlertConfigPermission);
+            messageBox.show(data.error, 'danger');
         }
       }
     });
@@ -306,32 +389,42 @@ azkaban.ChangeSlaView = Backbone.View.extend({
         window.location = redirectURL
       }
     };
-    $.post(scheduleURL, requestData, successHanlder, "json");
+    $.post(scheduleURL, requestData, successHandler, "json");
   },
 
   handleSetSla: function (evt) {
 
     var departmentSlaInform;
-    if($("#sla-via-department").is(":checked")){
+    var scheduletype = evt.target.getAttribute('scheduletype')
+    if ($("#sla-via-department").is(":checked")) {
       console.log("sla-via-department set")
-      departmentSlaInform="true";
-    }else{
+      departmentSlaInform = "true";
+    } else {
       console.log("sla-via-department unset")
-      departmentSlaInform="false";
+      departmentSlaInform = "false";
     }
-    var slaEmails = $('#slaEmails').val();
+    var aletTypeChecked =$('#aletType :checked');
+    var aletTypeArr = [];
+    for (var i=0; i< aletTypeChecked.length; i++) {
+        aletTypeArr.push(aletTypeChecked[i].value)
+    }
     //SLA告警设置
     var settings = {};
     var tFlowRules = document.getElementById("flowRulesTbl").tBodies[0];
     for (var row = 0; row < tFlowRules.rows.length - 1; row++) {
       var rFlowRule = tFlowRules.rows[row];
+      if (!rFlowRule.cells[0]) {
+        continue;
+      }
       var id = rFlowRule.cells[0].firstChild.value;
       var rule = rFlowRule.cells[1].firstChild.value;
-      var duration = rFlowRule.cells[2].firstChild.value;
-      var level = rFlowRule.cells[3].firstChild.value;
-      var email = rFlowRule.cells[4].firstChild.checked;
-      var kill = rFlowRule.cells[5].firstChild.checked;
-      settings[row] = id + "," + rule + "," + duration + "," + level + "," + email + "," + kill;
+      var duration = rFlowRule.cells[2].firstChild.firstChild.value;
+      var absTime = rFlowRule.cells[3].firstChild.firstChild.value;
+      var level = rFlowRule.cells[4].firstChild.value;
+      var email = rFlowRule.cells[5].firstChild.checked;
+      var kill = rFlowRule.cells[6].firstChild.checked;
+      var alarmFrequency = rFlowRule.cells[7].firstChild.value;
+      settings[row] = id + "," + rule + "," + duration + "," + absTime + "," + level + "," + email + "," + kill+","+alarmFrequency;
     }
     //失败成功告警设置
     var finishSettings = {};
@@ -346,26 +439,26 @@ azkaban.ChangeSlaView = Backbone.View.extend({
 
     //检查是否有重复的规则
     if (this.checkSlaRepeatRule(settings)) {
-      alert(wtssI18n.view.timeoutAlarmFormat);
+      messageBox.show(wtssI18n.view.timeoutAlarmFormat, 'warning');
       return;
     }
 
     //检查是否有重复的规则
     if (this.checkFinishRepeatRule(finishSettings)) {
-      alert(wtssI18n.view.eventAlarmFormat);
+        messageBox.show(wtssI18n.view.eventAlarmFormat, 'warning');;
       return;
     }
 
     var slaData = {
       scheduleId: this.scheduleId,
       ajax: "setSla",
-      slaEmails: slaEmails,
-      departmentSlaInform:departmentSlaInform,
+      slaEmails: $('#slaEmails').val().trim(),
+      alerterWay: aletTypeArr.toString(),
+      departmentSlaInform: departmentSlaInform,
       settings: settings,
-      finishSettings: finishSettings,
+      finishSettings: finishSettings
     };
-
-    var scheduleURL = this.scheduleURL;
+    var scheduleURL = scheduletype === 'schedule' ? this.scheduleURL : '/eventschedule';
     var successHandler = function (data) {
       if (data.error) {
         alert(data.error);
@@ -374,12 +467,38 @@ azkaban.ChangeSlaView = Backbone.View.extend({
         tFlowRules.length = 0;
         // 隐藏告警设置对话框, 触发变更
         $('#sla-options').modal("hide");
-        scheduleListView.handlePageChange();
+        if (scheduletype === 'schedule') {
+          scheduleListView.handlePageChange();
+        } else {
+          eventScheduleView.handlePageChange();
+        }
+
       }
     };
-    $.post(scheduleURL, slaData, successHandler, "json");
+    $.ajax({
+        url: scheduleURL,
+        type: "post",
+        async: true,
+        processData: true,
+        data: slaData,
+        dataType: "json",
+        error: function (data) {
+          console.log(data);
+        },
+        success: successHandler
+      });
+    // $.post(scheduleURL, slaData, successHandler, "json");
   },
-
+  disabledAddBtn: function() {
+    var indexToName = this.indexToName;
+    var tFlowRules = document.getElementById("flowRulesTbl").tBodies[0];
+    var retryTr = tFlowRules.rows.length - 1;
+    if (retryTr >= Object.keys(indexToName).length) {
+        $('#add-btn').attr('disabled', 'disabled');
+    } else {
+        $('#add-btn').removeAttr('disabled');
+    }
+ },
   handleAddRow: function (evt) {
     var indexToName = this.indexToName;
     var nameToIndex = this.nameToIndex;
@@ -390,12 +509,11 @@ azkaban.ChangeSlaView = Backbone.View.extend({
     var rFlowRule = tFlowRules.insertRow(tFlowRules.rows.length - 1);
 
     var retryTr = rFlowRule.rowIndex;
-    if (retryTr == Object.keys(indexToName).length) {
-      $('#add-btn').attr('disabled', 'disabled');
-    }
+    this.disabledAddBtn();
     //设置工作流/任务
     var cId = rFlowRule.insertCell(-1);
-    var idSelect = "<select class='schedule-select2-search'>"
+    $(cId).attr("style", "width:40%");
+    var idSelect = "<select class='schedule-select2-search' style='width:100%'>"
     for (var i in indexToName) {
       if (i === '0') {
         idSelect += "<option value=\"" + indexToName[0] + "\" title=\"" + indexToText[0] + "\">" + indexToText[0] + "</option>"
@@ -405,10 +523,12 @@ azkaban.ChangeSlaView = Backbone.View.extend({
       }
     }
     idSelect += "</select>"
+    idSelect = filterXSS(idSelect, { 'whiteList': { 'select': ['class', 'style'], 'option': ['value', 'title'] } })
     cId.innerHTML = idSelect;
-    $('.schedule-select2-search').select2();
+    $('#flowRulesTbl .schedule-select2-search').select2();
     //设置告警规则
     var cRule = rFlowRule.insertCell(-1);
+    $(cRule).attr("style", "width:10%; min-width: 135px;");
     var ruleSelect = document.createElement("select");
     ruleSelect.setAttribute("class", "form-control");
     for (var i in ruleBoxOptions) {
@@ -417,13 +537,29 @@ azkaban.ChangeSlaView = Backbone.View.extend({
     cRule.appendChild(ruleSelect);
     //设置超时时间
     var cDuration = rFlowRule.insertCell(-1);
+    $(cDuration).attr("style", "width:10%; min-width: 85px;");
     var duration = document.createElement("input");
     duration.type = "text";
     duration.setAttribute("class", "durationpick form-control");
-    cDuration.appendChild(duration);
+    var durationDiv = document.createElement("div");
+    durationDiv.setAttribute("class", "position-relative");
+    durationDiv.appendChild(duration);
+    cDuration.appendChild(durationDiv);
+
+    //设置超时时间点
+    var cAbsTime = rFlowRule.insertCell(-1);
+    $(cAbsTime).attr("style", "width:10%; min-width: 85px;");
+    var absTime = document.createElement("input");
+    absTime.type = "text";
+    absTime.setAttribute("class", "durationpick form-control");
+    var absTimeDiv = document.createElement("div");
+    absTimeDiv.setAttribute("class", "position-relative");
+    absTimeDiv.appendChild(absTime);
+    cAbsTime.appendChild(absTimeDiv);
 
     //设置告警级别
     var cLevel = rFlowRule.insertCell(-1);
+    $(cLevel).attr("style", "width:10%; min-width: 135px;");
     var levelSelect = document.createElement("select");
     levelSelect.setAttribute("class", "form-control");
     $(levelSelect).append("<option value='INFO'>INFO</option>");
@@ -448,13 +584,24 @@ azkaban.ChangeSlaView = Backbone.View.extend({
       format: 'HH:mm'
     });
 
+    // 设置告警频率
+    var cAlarmFrequency = rFlowRule.insertCell(-1);
+    $(cAlarmFrequency).attr("style", "width:15%; min-width: 165px;");
+    var alarmFrequencySelect = document.createElement("select")
+    alarmFrequencySelect.setAttribute("class", "form-control")
+    $(alarmFrequencySelect).append(`<option value=''>${wtssI18n.view.alarmFrequencySelect}</option>`);
+    $(alarmFrequencySelect).append(`<option value='dayOnce'>${wtssI18n.view.dayOnce}</option>`);
+    $(alarmFrequencySelect).append(`<option value='thirtyMinuteOnce'>${wtssI18n.view.thirtyMinuteOnce}</option>`);
+    $(alarmFrequencySelect).append(`<option value='threeHourOnce'>${wtssI18n.view.threeHourOnce}</option>`);
+    cAlarmFrequency.appendChild(alarmFrequencySelect);
+
     //删除按钮
     var cDelete = rFlowRule.insertCell(-1);
     var remove = document.createElement("div");
-    $(remove).addClass("center-block").addClass('remove-timeout-btn');
+    $(remove).addClass("center-block");
     var removeBtn = document.createElement("button");
     $(removeBtn).attr('type', 'button');
-    $(removeBtn).addClass('btn').addClass('btn-sm').addClass('btn-danger');
+    $(removeBtn).addClass('btn btn-sm remove-timeout-btn btn-danger');
     $(removeBtn).text('Delete');
     $(remove).append(removeBtn);
     cDelete.appendChild(remove);
@@ -487,16 +634,29 @@ azkaban.ChangeSlaView = Backbone.View.extend({
 
     //设置 flow 或者 job 名称
     var cId = rFlowRule.insertCell(-1);
-    var idSelect = document.createElement("select");
-    idSelect.setAttribute("class", "schedule-select2-search");
-    idSelect.style.width = "200px"
+    $(cId).attr("style", "width:60%");
+    var idSelect = "<select class='schedule-select2-search' style='width:100%'>"
     for (var i in indexToName) {
-      idSelect.options[i] = new Option(indexToText[i], indexToName[i]);
+      if (i === '0') {
+        idSelect += "<option value=\"" + indexToName[0] + "\" title=\"" + indexToText[0] + "\">" + indexToText[0] + "</option>"
+      } else {
+        var name = indexToName[i].substring(indexToName[i].lastIndexOf(":") + 1);
+        idSelect += "<option value=\"" + indexToName[i] + "\" title=\"" + indexToText[i] + "\">job " + name + "</option>"
+      }
     }
-    cId.appendChild(idSelect);
-    $('.schedule-select2-search').select2();
+    idSelect += "</select>"
+    cId.innerHTML = idSelect;
+    // var idSelect = document.createElement("select");
+    // idSelect.setAttribute("class", "schedule-select2-search");
+    // idSelect.style.width = "100%"
+    // for (var i in indexToName) {
+    //   idSelect.options[i] = new Option(indexToText[i], indexToName[i]);
+    // }
+    // cId.appendChild(idSelect);
+    $('#FinishRulesTbl .schedule-select2-search').select2();
     //设置规则选项
     var cRule = rFlowRule.insertCell(-1);
+    $(cRule).attr("style", "width:15%");
     var ruleSelect = document.createElement("select");
     ruleSelect.setAttribute("class", "form-control");
     for (var i in finshRuleBoxOptions) {
@@ -506,6 +666,7 @@ azkaban.ChangeSlaView = Backbone.View.extend({
 
     //设置告警级别
     var cLevel = rFlowRule.insertCell(-1);
+    $(cLevel).attr("style", "width:10%; min-width: 135px;");
     var levelSelect = document.createElement("select");
     levelSelect.setAttribute("class", "form-control");
     $(levelSelect).append("<option value='INFO'>INFO</option>");
@@ -519,10 +680,10 @@ azkaban.ChangeSlaView = Backbone.View.extend({
     //删除按钮
     var cDelete = rFlowRule.insertCell(-1);
     var remove = document.createElement("div");
-    $(remove).addClass("center-block").addClass('remove-btn');
+    $(remove).addClass("center-block");
     var removeBtn = document.createElement("button");
     $(removeBtn).attr('type', 'button');
-    $(removeBtn).addClass('btn').addClass('btn-sm').addClass('btn-danger');
+    $(removeBtn).addClass('btn btn-sm remove-btn btn-danger');
     $(removeBtn).text('Delete');
     $(remove).append(removeBtn);
     cDelete.appendChild(remove);
@@ -552,8 +713,9 @@ azkaban.ChangeSlaView = Backbone.View.extend({
   handleRemoveColumn: function (evt) {
     var curTarget = evt.currentTarget;
     // Should be the table
-    var row = curTarget.parentElement.parentElement;
+    var row = curTarget.parentElement.parentElement.parentElement;
     $(row).remove();
+    this.disabledAddBtn();
   },
 
   closeEditingTarget: function (evt) {
@@ -564,10 +726,9 @@ azkaban.ChangeSlaView = Backbone.View.extend({
     var oldlength = 0;
     for (var i in data) {
       oldlength++;
-      var items = data[i].substring(0, find(data[i], ",", 1));;
       //判断元素是否存在于new_arr中，如果不存在则插入到new_arr的最后
-      if ($.inArray(items, new_arr) == -1) {
-        new_arr.push(items);
+      if (new_arr.indexOf(data[i]) === -1) {
+        new_arr.push(data[i]);
       }
     }
     if (new_arr.length < oldlength) {

@@ -5,7 +5,7 @@ function addClass(el, newClass) {
 }
 
 var rewire = require('rewire'),
-    dateJs = rewire('../util/date.js');
+    dateJs = rewire('../util/utils.js');
 
 var moment = require('moment-timezone');
 

@@ -28,17 +28,19 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
 
+import com.fasterxml.jackson.core.JsonFactory;
+import com.fasterxml.jackson.core.JsonParser;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.*;
 import org.slf4j.LoggerFactory;
 import org.slf4j.Logger;
-import org.codehaus.jackson.JsonFactory;
-import org.codehaus.jackson.JsonNode;
-import org.codehaus.jackson.JsonParser;
-import org.codehaus.jackson.map.ObjectMapper;
-import org.codehaus.jackson.map.ObjectWriter;
 
 public class JSONUtils {
 
   private static final Logger logger = LoggerFactory.getLogger(JSONUtils.class);
+
+  public static final ObjectMapper mapper = new ObjectMapper();
 
   /**
    * The constructor. Cannot construct this class.
@@ -51,7 +53,7 @@ public class JSONUtils {
   }
 
   public static String toJSON(final Object obj, final boolean prettyPrint) {
-    final ObjectMapper mapper = new ObjectMapper();
+
 
     try {
       if (prettyPrint) {
@@ -69,8 +71,7 @@ public class JSONUtils {
   }
 
   public static void toJSON(final Object obj, final OutputStream stream,
-      final boolean prettyPrint) {
-    final ObjectMapper mapper = new ObjectMapper();
+                            final boolean prettyPrint) {
     try {
       if (prettyPrint) {
         final ObjectWriter writer = mapper.writerWithDefaultPrettyPrinter();
@@ -88,13 +89,11 @@ public class JSONUtils {
   }
 
   public static void toJSON(final Object obj, final File file, final boolean prettyPrint)
-      throws IOException {
-    final BufferedOutputStream stream =
-        new BufferedOutputStream(new FileOutputStream(file));
-    try {
+          throws IOException {
+
+    try (final BufferedOutputStream stream =
+                 new BufferedOutputStream(new FileOutputStream(file))) {
       toJSON(obj, stream, prettyPrint);
-    } finally {
-      stream.close();
     }
   }
 
@@ -108,27 +107,24 @@ public class JSONUtils {
   }
 
   public static Object parseJSONFromString(final String json) throws IOException {
-    final ObjectMapper mapper = new ObjectMapper();
     final JsonFactory factory = new JsonFactory();
-    final JsonParser parser = factory.createJsonParser(json);
+    final JsonParser parser = factory.createParser(json);
     final JsonNode node = mapper.readTree(parser);
 
     return toObjectFromJSONNode(node);
   }
 
   public static Object parseJSONFromFile(final File file) throws IOException {
-    final ObjectMapper mapper = new ObjectMapper();
     final JsonFactory factory = new JsonFactory();
-    final JsonParser parser = factory.createJsonParser(file);
+    final JsonParser parser = factory.createParser(file);
     final JsonNode node = mapper.readTree(parser);
 
     return toObjectFromJSONNode(node);
   }
 
   public static Object parseJSONFromReader(final Reader reader) throws IOException {
-    final ObjectMapper mapper = new ObjectMapper();
     final JsonFactory factory = new JsonFactory();
-    final JsonParser parser = factory.createJsonParser(reader);
+    final JsonParser parser = factory.createParser(reader);
     final JsonNode node = mapper.readTree(parser);
 
     return toObjectFromJSONNode(node);
@@ -137,7 +133,7 @@ public class JSONUtils {
   private static Object toObjectFromJSONNode(final JsonNode node) {
     if (node.isObject()) {
       final HashMap<String, Object> obj = new HashMap<>();
-      final Iterator<String> iter = node.getFieldNames();
+      final Iterator<String> iter = node.fieldNames();
       while (iter.hasNext()) {
         final String fieldName = iter.next();
         final JsonNode subNode = node.get(fieldName);
@@ -148,7 +144,7 @@ public class JSONUtils {
       return obj;
     } else if (node.isArray()) {
       final ArrayList<Object> array = new ArrayList<>();
-      final Iterator<JsonNode> iter = node.getElements();
+      final Iterator<JsonNode> iter = node.elements();
       while (iter.hasNext()) {
         final JsonNode element = iter.next();
         final Object subObject = toObjectFromJSONNode(element);
@@ -165,7 +161,7 @@ public class JSONUtils {
       } else if (node.isDouble()) {
         return node.asDouble();
       } else {
-        System.err.println("ERROR What is this!? " + node.getNumberType());
+        System.err.println("ERROR What is this!? " + node.numberType());
         return null;
       }
     } else if (node.isBoolean()) {
@@ -193,7 +189,7 @@ public class JSONUtils {
    * The other json writing methods are more robust and will handle more cases.
    */
   public static void writePropsNoJarDependency(final Map<String, String> properties,
-      final Writer writer) throws IOException {
+                                               final Writer writer) throws IOException {
     writer.write("{\n");
     int size = properties.size();
 
@@ -220,60 +216,108 @@ public class JSONUtils {
       return "\"\"";
     }
 
-    final StringBuffer buffer = new StringBuffer(str.length());
-    buffer.append('"');
+    final StringBuilder builder = new StringBuilder(str.length());
+    builder.append('"');
     for (int i = 0; i < str.length(); ++i) {
       final char ch = str.charAt(i);
 
       switch (ch) {
         case '\b':
-          buffer.append("\\b");
+          builder.append("\\b");
           break;
         case '\t':
-          buffer.append("\\t");
+          builder.append("\\t");
           break;
         case '\n':
-          buffer.append("\\n");
+          builder.append("\\n");
           break;
         case '\f':
-          buffer.append("\\f");
+          builder.append("\\f");
           break;
         case '\r':
-          buffer.append("\\r");
+          builder.append("\\r");
           break;
         case '"':
         case '\\':
         case '/':
-          buffer.append('\\');
-          buffer.append(ch);
+          builder.append('\\');
+          builder.append(ch);
           break;
         default:
           if (isCharSpecialUnicode(ch)) {
-            buffer.append("\\u");
+            builder.append("\\u");
             final String hexCode = Integer.toHexString(ch);
             final int lengthHexCode = hexCode.length();
             if (lengthHexCode < 4) {
-              buffer.append("0000".substring(0, 4 - lengthHexCode));
+              builder.append("0000".substring(0, 4 - lengthHexCode));
             }
-            buffer.append(hexCode);
+            builder.append(hexCode);
           } else {
-            buffer.append(ch);
+            builder.append(ch);
           }
       }
     }
-    buffer.append('"');
-    return buffer.toString();
+    builder.append('"');
+    return builder.toString();
   }
 
   private static boolean isCharSpecialUnicode(final char ch) {
-    if (ch < ' ') {
-      return true;
-    } else if (ch >= '\u0080' && ch < '\u00a0') {
-      return true;
-    } else if (ch >= '\u2000' && ch < '\u2100') {
+    if (ch < ' ' || ch >= '\u0080' && ch < '\u00a0' || ch >= '\u2000' && ch < '\u2100') {
       return true;
     }
 
     return false;
   }
+
+
+  public static class JacksonObjectMapperFactory {
+    /**
+     * 懒加载单例模式
+     * InstanceHolder内部类会在调用LoadBalanceEnhancerFactory.getInstance()时加载
+     * JVM保证InstanceHolder内部类仅加载一次
+     * */
+    private static class InstanceHolder {
+      public static ObjectMapper instance = new ObjectMapper().configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
+    }
+    public static ObjectMapper getInstance() {
+      return InstanceHolder.instance;
+    }
+
+  }
+
+
+  public static <T> T parseObject(String json, Class<T> valueType) throws IOException {
+    ObjectMapper mapper = JacksonObjectMapperFactory.getInstance();
+    T instance = mapper.readValue(json, valueType);
+    return instance;
+  }
+
+  public static <T> T parseObject(String json, TypeReference<T> valueTypeRef) throws IOException {
+    ObjectMapper mapper = JacksonObjectMapperFactory.getInstance();
+    T instance = mapper.readValue(json, valueTypeRef);
+    return instance;
+  }
+
+  /**
+   * 用于反序列化到泛型类实例，暂时不需要
+   */
+//  public static <T> T parseObject(String json,  DynamicTypeReference<T> typeReference)  {
+//    ObjectMapper mapper = JacksonObjectMapperFactory.getObjectMapper();
+//    T instance = null;
+//
+//    Class<?> parametrized = typeReference.getRawType();
+//    Class<?>[] parameterClasses = typeReference.getParameterClasses();
+////    System.out.println(parametrized);
+////    System.out.println(Arrays.toString(parameterClasses));
+//    JavaType javaType = mapper.getTypeFactory().constructParametricType(parametrized, parameterClasses);
+//    System.out.println(javaType);
+//    try {
+//      instance = mapper.readValue(json, javaType);
+//    } catch (JsonProcessingException e ) {
+//      LOG.error("", e);
+//    }
+//    return instance;
+//  }
+
+
 }

@@ -1,17 +1,16 @@
 package azkaban.jobtype;
 
-import com.webank.wedatasphere.schedulis.jobtype.HadoopJobUtils;
 import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.util.Set;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @SuppressWarnings("DefaultCharset")
 public class TestHadoopJobUtilsFindApplicationIdFromLog {
@@ -31,7 +30,7 @@ public class TestHadoopJobUtilsFindApplicationIdFromLog {
 
   @Test
   public void testNoApplicationId() throws IOException {
-    bw.write("28-08-2015 14:05:24 PDT spark INFO - 15/08/28 21:05:24 INFO client.RMProxy: Connecting to ResourceManager at eat1-nertzrm02.grid.linkedin.com/***REMOVED***:8032\n");
+    bw.write("28-08-2015 14:05:24 PDT spark INFO - 15/08/28 21:05:24 INFO client.RMProxy: Connecting to ResourceManager at eat1-nertzrm02.grid.linkedin.com/172.20.158.95:8032\n");
     bw.write("28-08-2015 14:05:24 PDT spark INFO - 15/08/28 21:05:24 INFO yarn.Client: Requesting a new application from cluster with 134 NodeManagers\n");
     bw.write("28-08-2015 14:05:24 PDT spark INFO - 15/08/28 21:05:24 INFO yarn.Client: Verifying our application has not requested more than the maximum memory capability of the cluster (55296 MB per container)\n");
     bw.write("28-08-2015 14:05:24 PDT spark INFO - 15/08/28 21:05:24 INFO yarn.Client: Will allocate AM container, with 4505 MB memory including 409 MB overhead\n");
@@ -101,13 +100,15 @@ public class TestHadoopJobUtilsFindApplicationIdFromLog {
     bw.write("28-08-2015 12:29:38 PDT Training_clickSelectFeatures INFO - INFO The url to track the job: http://eat1-nertzwp02.grid.linkedin.com:8080/proxy/application_1440264346270_3044/\n");
     bw.write("28-08-2015 12:29:38 PDT Training_clickSelectFeatures INFO - INFO See http://eat1-nertzwp02.grid.linkedin.com:8080/proxy/application_1440264346270_3044/ for details.\n");
     bw.write("28-08-2015 12:29:38 PDT Training_clickSelectFeatures INFO - INFO Running job: job_1440264346270_3044\n");
-    bw.write("28-08-2015 12:30:21 PDT Training_clickSelectFeatures INFO - INFO Closing idle connection Socket[addr=eat1-hcl5481.grid.linkedin.com/127.0.0.1,port=1234,localport=1111] to server eat1-hcl5481.grid.linkedin.com/127.0.0.1:42492\n");
-    bw.write("28-08-2015 12:30:37 PDT Training_clickSelectFeatures INFO - INFO Closing idle connection Socket[addr=eat1-nertznn01.grid.linkedin.com/127.0.0.1,port=1234,localport=1111] to server eat1-nertznn01.grid.linkedin.com/127.0.0.1:9000\n");
+    bw.write("28-08-2015 12:30:21 PDT Training_clickSelectFeatures INFO - INFO Closing idle connection Socket[addr=eat1-hcl5481.grid.linkedin.com/172.20.138.228,port=42492,localport=42382] to server eat1-hcl5481.grid.linkedin.com/172.20.138.228:42492\n");
+    bw.write("28-08-2015 12:30:37 PDT Training_clickSelectFeatures INFO - INFO Closing idle connection Socket[addr=eat1-nertznn01.grid.linkedin.com/172.20.158.57,port=9000,localport=30453] to server eat1-nertznn01.grid.linkedin.com/172.20.158.57:9000\n");
     bw.write("28-08-2015 12:31:09 PDT Training_clickSelectFeatures INFO - INFO Job job_1440264346270_3044 running in uber mode : false\n");
     bw.write("28-08-2015 12:29:38 PDT Training_clickSelectFeatures INFO - INFO Submitted application application_1440264346270_3088\n");
-    bw.write("28-08-2015 12:29:38 PDT Training_clickSelectFeatures INFO - INFO The url to track the job: http://127.0.0.1:8080/proxy/application_1440264346270_3088/\n");
-    bw.write("28-08-2015 12:29:38 PDT Training_clickSelectFeatures INFO - INFO See http://127.0.0.1 for details.\n");
+    bw.write("28-08-2015 12:29:38 PDT Training_clickSelectFeatures INFO - INFO The url to track the job: http://eat1-nertzwp02.grid.linkedin.com:8080/proxy/application_1440264346270_3088/\n");
+    bw.write("28-08-2015 12:29:38 PDT Training_clickSelectFeatures INFO - INFO See http://eat1-nertzwp02.grid.linkedin.com:8080/proxy/application_1440264346270_3088/ for details.\n");
     bw.write("28-08-2015 12:29:38 PDT Training_clickSelectFeatures INFO - INFO Running job: job_1440264346270_3088\n");
+    bw.write("28-08-2015 12:30:21 PDT Training_clickSelectFeatures INFO - INFO Closing idle connection Socket[addr=eat1-hcl5481.grid.linkedin.com/172.20.138.228,port=42492,localport=42382] to server eat1-hcl5481.grid.linkedin.com/172.20.138.228:42492\n");
+    bw.write("28-08-2015 12:30:37 PDT Training_clickSelectFeatures INFO - INFO Closing idle connection Socket[addr=eat1-nertznn01.grid.linkedin.com/172.20.158.57,port=9000,localport=30453] to server eat1-nertznn01.grid.linkedin.com/172.20.158.57:9000\n");
     bw.write("28-08-2015 12:31:09 PDT Training_clickSelectFeatures INFO - INFO Job job_1440264346270_3088 running in uber mode : false\n");
     bw.close();
 

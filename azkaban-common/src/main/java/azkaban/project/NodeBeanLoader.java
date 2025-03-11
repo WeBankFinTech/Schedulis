@@ -72,7 +72,7 @@ public class NodeBeanLoader {
     return true;
   }
 
-  public AzkabanNode toAzkabanNode(final NodeBean nodeBean) {
+  public AbstractAzkabanNode toAzkabanNode(final NodeBean nodeBean) {
     if (nodeBean.getType().equals(Constants.FLOW_NODE_TYPE)) {
       return new AzkabanFlow.AzkabanFlowBuilder()
           .name(nodeBean.getName())
@@ -113,7 +113,7 @@ public class NodeBeanLoader {
     final String[] cronParts = cronExpression.split("\\s+");
 
     Preconditions
-        .checkArgument(cronParts[0].equals("0"), "interval of flow trigger schedule has to"
+        .checkArgument("0".equals(cronParts[0]), "interval of flow trigger schedule has to"
             + " be larger than 1 min");
 
     Preconditions.checkArgument(scheduleMap.size() == 2, "flow trigger schedule must "

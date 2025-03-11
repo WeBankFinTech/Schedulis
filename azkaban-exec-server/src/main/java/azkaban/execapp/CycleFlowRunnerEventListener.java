@@ -1,10 +1,23 @@
 package azkaban.execapp;
 
+import static azkaban.executor.ExecutionOptions.FailureAction.CANCEL_ALL;
+import static azkaban.executor.ExecutionOptions.FailureAction.FAILED_PAUSE;
+import static azkaban.executor.ExecutionOptions.FailureAction.FINISH_ALL_POSSIBLE;
+import static azkaban.executor.ExecutionOptions.FailureAction.FINISH_CURRENTLY_RUNNING;
+import static java.util.stream.Collectors.joining;
+
 import azkaban.ServiceProvider;
 import azkaban.batch.HoldBatchContext;
 import azkaban.event.Event;
 import azkaban.event.EventListener;
-import azkaban.executor.*;
+import azkaban.executor.AlerterHolder;
+import azkaban.executor.ExecutableFlow;
+import azkaban.executor.ExecutionControllerUtils;
+import azkaban.executor.ExecutionCycle;
+import azkaban.executor.ExecutionCycleDao;
+import azkaban.executor.ExecutionOptions;
+import azkaban.executor.ExecutorManagerException;
+import azkaban.executor.Status;
 import azkaban.function.CheckedSupplier;
 import azkaban.server.ServerDao;
 import azkaban.sla.SlaOption;
@@ -16,24 +29,26 @@ import azkaban.utils.Props;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.reflect.TypeToken;
-import okhttp3.*;
+import java.io.IOException;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.TimeUnit;
+import java.util.function.Function;
+import java.util.function.Supplier;
+import java.util.stream.Stream;
+import javax.inject.Inject;
+import okhttp3.Call;
+import okhttp3.HttpUrl;
+import okhttp3.OkHttpClient;
+import okhttp3.Request;
+import okhttp3.Response;
+import okhttp3.ResponseBody;
 import org.apache.commons.collections.MapUtils;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import javax.inject.Inject;
-import java.io.IOException;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.function.Function;
-import java.util.function.Supplier;
-import java.util.stream.Stream;
-
-import static azkaban.executor.ExecutionOptions.FailureAction.*;
-import static java.util.stream.Collectors.joining;
 
 public class CycleFlowRunnerEventListener implements EventListener {
 

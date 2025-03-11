@@ -287,7 +287,7 @@ var messageBox = {
         document.body.removeChild($('.message-box')[0]);
     },
     //  success danger warning  info  primary
-    show: function(content, type) {
+    show: function(content, type, duration=2500) {
         if ($('.message-box')[0]) {
             this.messageRemove();
         }
@@ -300,7 +300,74 @@ var messageBox = {
         var that = this
         this.meaasgeTime = setTimeout(function() {
             that.messageRemove()
-        }, 2500);
+        }, duration);
+    }
+}
+
+var messageModal = {
+    show: function (title, content) {
+        console.log(title, content)
+        // 如果 modal 已经存在，先移除
+        $('#funcMessageModal').remove();
+
+        // 创建 modal 结构
+        const modal = $(`
+          <div id="funcMessageModal" class="func-modal">
+            <div class="func-modal-content">
+              <div class="func-modal-header">${title}</div>
+              <div class="func-modal-body">${content}</div>
+              <div class="func-modal-footer">
+                <button id="modalConfirmBtn" class="btn btn-success">确认</button>
+              </div>
+            </div>
+          </div>
+        `);
+
+        // 将 modal 添加到 body 中
+        $('body').append(modal);
+
+        // 定义样式
+        $('.func-modal').css({
+            display: 'none',
+            position: 'fixed',
+            zIndex: 1000,
+            left: 0,
+            top: 0,
+            width: '100%',
+            height: '100%',
+            overflow: 'auto',
+            backgroundColor: 'rgba(0, 0, 0, 0.5)'
+        });
+
+        $('.func-modal-content').css({
+            backgroundColor: '#fff',
+            margin: '15% auto',
+            padding: '20px',
+            border: '1px solid #888',
+            width: '80%',
+            maxWidth: '500px'
+        });
+
+        $('.func-modal-header, .func-modal-body, .func-modal-footer').css({
+            padding: '10px'
+        });
+
+        $('.func-modal-header').css({
+            fontSize: '20px',
+            fontWeight: 'bold'
+        });
+
+        $('.func-modal-footer').css({
+            textAlign: 'right'
+        });
+
+        // 显示 modal
+        $('#funcMessageModal').show();
+
+        // 绑定确认按钮点击事件
+        $('#modalConfirmBtn').on('click', function () {
+            $('#funcMessageModal').remove();
+        });
     }
 }
 
@@ -606,11 +673,15 @@ function changePageSizeSelectValue (id, sizeArr) {
     for (let i = 0; i< sizeArr.length; i++ ) {
         if (optionEle[i]) {
             optionEle[i].value = sizeArr[i];
-            optionEle[i].innerText = `${sizeArr[i]}条/页`
+            optionEle[i].innerText = `${sizeArr[i]}`+ wtssI18n.common.pagesize
+            $(optionEle[i]).removeClass()
+            $(optionEle[i]).addClass('common-page-size-'+sizeArr[i])
         } else {
             const option = document.createElement('option');
             option.value = sizeArr[i];
-            option.innerText = `${sizeArr[i]}条/页`;
+            option.innerText = `${sizeArr[i]}`+ wtssI18n.common.pagesize;
+            $(option).removeClass()
+            $(option).addClass('common-page-size-'+sizeArr[i])
             selectELE.append(option);
         }
     }

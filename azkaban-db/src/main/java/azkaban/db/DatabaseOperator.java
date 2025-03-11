@@ -16,24 +16,23 @@
  */
 package azkaban.db;
 
+import static java.util.Objects.requireNonNull;
+
+import java.sql.Connection;
+import java.sql.SQLException;
+import javax.inject.Inject;
 import org.apache.commons.dbutils.DbUtils;
 import org.apache.commons.dbutils.QueryRunner;
 import org.apache.commons.dbutils.ResultSetHandler;
-import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import javax.inject.Inject;
-import java.sql.Connection;
-import java.sql.SQLException;
-
-import static java.util.Objects.requireNonNull;
+import org.slf4j.Logger;
 
 /**
  * This interface is to define Base Data Access Object contract for Azkaban. All azkaban DB related
  * operations must be performed upon this interface. AZ DB operators all leverages QueryRunner
  * interface.
  *
- * @see QueryRunner
+ * @see org.apache.commons.dbutils.QueryRunner
  */
 public class DatabaseOperator {
 
@@ -45,7 +44,7 @@ public class DatabaseOperator {
   private DBMetrics dbMetrics;
 
   /**
-   * Note: this queryRunner should include a concrete {@link AzkabanDataSource} inside.
+   * Note: this queryRunner should include a concrete {@link AbstractAzkabanDataSource} inside.
    */
   @Inject
   public DatabaseOperator(final QueryRunner queryRunner) {
@@ -55,7 +54,7 @@ public class DatabaseOperator {
 
   /**
    * Executes the given Azkaban related SELECT SQL operations. it will call
-   * {@link AzkabanDataSource#getConnection()} inside queryrunner.query.
+   * {@link AbstractAzkabanDataSource#getConnection()} inside queryrunner.query.
    *
    * @param baseQuery The SQL query statement to execute.
    * @param resultHandler The handler used to create the result object
@@ -133,7 +132,7 @@ public class DatabaseOperator {
 
   /**
    * Executes the given AZ related INSERT, UPDATE, or DELETE SQL statement.
-   * it will call {@link AzkabanDataSource#getConnection()} inside
+   * it will call {@link AbstractAzkabanDataSource#getConnection()} inside
    * queryrunner.update.
    *
    * @param updateClause sql statements to execute
@@ -156,7 +155,18 @@ public class DatabaseOperator {
   /**
    * @return datasource wrapped in the database operator.
    */
-  public AzkabanDataSource getDataSource() {
-    return (AzkabanDataSource) this.queryRunner.getDataSource();
+  public AbstractAzkabanDataSource getDataSource() {
+    return (AbstractAzkabanDataSource) this.queryRunner.getDataSource();
+  }
+
+  /**
+   *
+   * @param updateClause
+   * @param params
+   * @throws SQLException
+   * @return
+   */
+  public void updateBatch(final String updateClause, final Object[][] params) throws SQLException {
+    this.queryRunner.batch(updateClause, params);
   }
 }

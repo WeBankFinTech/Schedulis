@@ -3,9 +3,6 @@ package azkaban.eventcheck;
 import azkaban.jobtype.connectors.druid.WBDruidFactory;
 import azkaban.jobtype.util.EventChecker;
 import com.alibaba.druid.pool.DruidDataSource;
-import org.slf4j.Logger;
-
-import javax.sql.DataSource;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
@@ -22,6 +19,8 @@ import java.util.ArrayList;
 import java.util.Enumeration;
 import java.util.List;
 import java.util.Properties;
+import javax.sql.DataSource;
+import org.slf4j.Logger;
 
 /**
  * @author georgeqiao
@@ -189,9 +188,9 @@ public abstract class AbstractEventCheck implements EventCheckAdapter{
             e.printStackTrace();
         }
 
-        for (String ppid : processList) {
-            System.out.println(ppid);
-
-        }
+//        for (String ppid : processList) {
+//            System.out.println(ppid);
+//
+//        }
     }
 }

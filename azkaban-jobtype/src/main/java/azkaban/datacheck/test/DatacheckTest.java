@@ -1,6 +1,10 @@
 package azkaban.datacheck.test;
 
 import java.util.Base64;
+import java.util.List;
+import java.util.Properties;
+
+import azkaban.jobtype.util.DataChecker;
 
 public class DatacheckTest {
 	
@@ -77,13 +81,13 @@ public class DatacheckTest {
 		try {
 			final Base64.Decoder decoder = Base64.getDecoder();
 			final Base64.Encoder encoder = Base64.getEncoder();
-			final String text = "123456";
+			final String text = "";
 			final byte[] textByte = text.getBytes("UTF-8");
 			//编码
 			final String encodedText = encoder.encodeToString(textByte);
 			System.out.println(encodedText);
 			//解码
-			System.out.println(new String(decoder.decode("aGl2ZSMyMDE4QDA3Cg=="), "UTF-8"));
+			System.out.println(new String(decoder.decode(""), "UTF-8"));
 		}catch(Exception e){
 
 		}

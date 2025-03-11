@@ -5,19 +5,16 @@ import azkaban.ServiceProvider;
 import azkaban.executor.DmsBusPath;
 import azkaban.executor.ExecutableFlow;
 import azkaban.executor.ExecutorLoader;
+import azkaban.metrics.ProjectHourlyReportMertics;
 import azkaban.project.entity.FlowBusiness;
 import azkaban.project.entity.LineageBusiness;
+import azkaban.project.entity.ProjectHourlyReportConfig;
+import com.alibaba.excel.annotation.ExcelProperty;
+import com.alibaba.fastjson.JSONArray;
+import com.alibaba.fastjson.JSONObject;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.reflect.TypeToken;
-import okhttp3.*;
-import okhttp3.HttpUrl.Builder;
-import org.apache.commons.collections.CollectionUtils;
-import org.apache.commons.io.IOUtils;
-import org.apache.commons.lang.StringUtils;
-import org.jetbrains.annotations.NotNull;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
@@ -25,13 +22,34 @@ import java.math.BigDecimal;
 import java.net.InetAddress;
 import java.net.NetworkInterface;
 import java.net.SocketException;
+import java.net.URI;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.sql.Timestamp;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
+
+import okhttp3.Call;
+import okhttp3.Callback;
+import okhttp3.HttpUrl;
+import okhttp3.HttpUrl.Builder;
+import okhttp3.MediaType;
+import okhttp3.OkHttpClient;
+import okhttp3.Request;
+import okhttp3.RequestBody;
+import okhttp3.Response;
+import org.apache.commons.collections.CollectionUtils;
+import org.apache.commons.io.IOUtils;
+import org.apache.commons.lang.StringUtils;
+import org.apache.http.client.utils.URIBuilder;
+import org.jetbrains.annotations.NotNull;
+import org.joda.time.format.DateTimeFormat;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  *
@@ -39,6 +57,13 @@ import java.util.concurrent.TimeUnit;
 public class HttpUtils {
 
     private static final Logger logger = LoggerFactory.getLogger(HttpUtils.class);
+
+    private static final String WTSS_EMAIL_UEL = "wtss.email.url";
+    private static final String WTSS_EMAIL_APPID = "wtss.email.appid";
+    private static final String WTSS_EMAIL_APPTOKEN = "wtss.email.appToken";
+    private static final String WTSS_EMAIL_FROM_ADDRESS = "wtss.email.from.address";
+
+    private static org.joda.time.format.DateTimeFormatter fmt = DateTimeFormat.forPattern("YYYY-MM-dd HH:mm:ss");
 
     public static Map<String, String> getReturnMap(String dataStr) {
         Map<String, String> dataMap = new HashMap<>();
@@ -55,8 +80,48 @@ public class HttpUtils {
             .readTimeout(60, TimeUnit.SECONDS)
             .build();
 
+    public static String httpClientEMAILHandle(Props props,
+                                               ProjectHourlyReportConfig projectHourlyReportConfig,
+                                               String content) throws Exception {
+        String emailUrl = props.get(WTSS_EMAIL_UEL);
+        String appid = props.get(WTSS_EMAIL_APPID);
+        String apptoken = props.get(WTSS_EMAIL_APPTOKEN);
+        String from = props.get(WTSS_EMAIL_FROM_ADDRESS);
+        long timestamp = LocalDateTime.now(ZoneId.systemDefault()).atZone(ZoneId.systemDefault()).toInstant().getEpochSecond();
+        Random random = new Random();
+        int nonce = random.nextInt(90000) + 10000;
+        String signature = MD5Utils.md5(MD5Utils.md5(appid + nonce + timestamp).toLowerCase() + apptoken).toLowerCase();
+        String reportReceivers = projectHourlyReportConfig.getReportReceiver().replace(",", ";");
+
+        URI uri = new URIBuilder(emailUrl).addParameter("appid", appid)
+                .addParameter("timestamp", String.valueOf(timestamp))
+                .addParameter("nonce", String.valueOf(nonce))
+                .addParameter("signature", signature)
+                .build();
 
 
+        HashMap<String, String> map = new HashMap<>();
+        map.put("From", from);
+        map.put("To", reportReceivers);
+        map.put("Title", "project hourly report metrics");
+        map.put("Content", content);
+
+        RequestBody requestBody = RequestBody.create(
+                JSONUtils.toJSON(map),
+                MediaType.parse("application/json; charset=utf-8")
+        );
+
+        Request request = new Request.Builder()
+                .url(uri.toURL())
+                .post(requestBody)
+                .build();
+
+        Call call = okHttpClient.newCall(request);
+        Response response = call.execute();
+        String res = response.body().string();
+        IOUtils.closeQuietly(response);
+        return res;
+    }
 
     /**
      * 工作流执行IMS上报 接口 HTTP同步远程执行方法
@@ -91,10 +156,10 @@ public class HttpUtils {
     }
 
     public static String getValue(Props props, String key) {
-        if (StringUtils.isNotBlank(props.get(key))) {
+        if (org.apache.commons.lang.StringUtils.isNotBlank(props.get(key))) {
             return props.get(key) == null ? props.get(key) : props.get(key).trim();
         }
-        if (props.getParent() != null && StringUtils.isNotBlank(props.getParent().get(key))) {
+        if (props.getParent() != null && org.apache.commons.lang.StringUtils.isNotBlank(props.getParent().get(key))) {
             return props.getParent().get(key) == null ? props.getParent().get(key) : props.getParent().get(key).trim();
         }
         return null;
@@ -466,6 +531,7 @@ public class HttpUtils {
 
     /**
      * 只支持查询数据库中修改时间为一个月内的数据，如果超过该值需要查询DMS
+     *
      * @param prop
      * @param jobCode
      * @param page
@@ -479,7 +545,7 @@ public class HttpUtils {
             executorLoader = ServiceProvider.SERVICE_PROVIDER.getInstance(ExecutorLoader.class);
         }
         if (executorLoader == null) {
-            return  null;
+            return null;
         }
         if (null == joblogger) {
             joblogger = logger;
@@ -674,6 +740,92 @@ public class HttpUtils {
         } catch (Exception e) {
             alertLogger.error("ims batch alert error", e);
         }
+    }
+
+    /**
+     * 获取DMS记录的不需要容灾重跑的任务清单
+     *
+     * @param prop
+     * @param projectName
+     * @param flowId
+     * @return
+     */
+    public static List<Object> getFindgapisDisableJobs(Props prop, String projectName, String flowId) throws IOException {
+        String resultJson = "";
+        logger.info("请求地址：" + prop.getString("wtss.dms.url"));
+        String url = prop.getString("wtss.dms.url") + "/metadata-service/findgapis/disableJobs";
+        String userName = prop.getString("wtss.dms.user");
+        String appId = prop.getString("wtss.dms.appid");
+        String token = prop.getString("wtss.dms.token");
+        long timestamp = System.currentTimeMillis();
+        int nonce = new Random().nextInt(90000) + 10000;
+        String signature = Encrypt(Encrypt(appId + nonce + userName + timestamp, null) + token, null);
+        HttpUrl httpUrl = HttpUrl.parse(url).newBuilder()
+                .addQueryParameter("projectName", projectName)
+                .addQueryParameter("timestamp", timestamp + "").addQueryParameter("loginUser", userName)
+                .addQueryParameter("appid", appId).addQueryParameter("nonce", nonce + "")
+                .addQueryParameter("signature", signature)
+                .build();
+
+        Request request = new Request.Builder().url(httpUrl).get().build();
+        Call call = okHttpClient.newCall(request);
+        Response response = call.execute();
+        resultJson = response.body().string();
+        IOUtils.closeQuietly(response);
+        List<Object> jobs = new ArrayList<>();
+        if (StringUtils.isNotEmpty(resultJson)) {
+            JSONObject jsonObject = JSONObject.parseObject(resultJson);
+            //获取data数字
+            JSONArray data = jsonObject.getJSONArray("data");
+            if (Objects.nonNull(data)) {
+                for (int i = 0; i < data.size(); i++) {
+                    JSONObject job = data.getJSONObject(i);
+                    if (job.getString("flowId").equals(flowId)) {
+                        jobs.add(job.getString("jobName"));
+                    }
+                }
+            }
+        }
+        return jobs;
+
+    }
+
+    public static void main(String[] args) throws IOException {
+
+        // getFindgapisDisableJobs(null, "cdvd_wtss","bdp_last_finish");
+        long timestamp = System.currentTimeMillis();
+        int nonce = new Random().nextInt(90000) + 10000;
+        String resultJson = "";
+        String signature = Encrypt(Encrypt("4383905086bbb12dd1d70775f61ff585f80f5315c4010a1968b312481ac11b97" + nonce + "lebronwang" + timestamp, null) + "", null);
+        HttpUrl httpUrl = HttpUrl.parse("http://172.21.0.230:8001/api/v1/isolate/metadata-service/findgapis/disableJobs").newBuilder()
+                .addQueryParameter("projectName", "duo_subflows_for_test_failed_0730")
+                // .addQueryParameter("flowId", "bdp_last_finish")
+                .addQueryParameter("timestamp", timestamp + "").addQueryParameter("loginUser", "lebronwang")
+                .addQueryParameter("appid", "4383905086bbb12dd1d70775f61ff585f80f5315c4010a1968b312481ac11b97")
+                .addQueryParameter("nonce", nonce + "")
+                .addQueryParameter("signature", signature)
+                //.addQueryParameter("isolateEvFlag","prod")
+                .build();
+        Request request = new Request.Builder().url(httpUrl).get().build();
+        Call call = okHttpClient.newCall(request);
+        Response response = call.execute();
+        resultJson = response.body().string();
+        IOUtils.closeQuietly(response);
+        List<Object> jobs = new ArrayList<>();
+        if (StringUtils.isNotEmpty(resultJson)) {
+            JSONObject jsonObject = JSONObject.parseObject(resultJson);
+            //获取data数字
+            JSONArray data = jsonObject.getJSONArray("data");
+            if (Objects.nonNull(data)) {
+                for (int i = 0; i < data.size(); i++) {
+                    JSONObject job = data.getJSONObject(i);
+                    if (job.getString("flowId").equals("alter_test_end_all_jobs")) {
+                        jobs.add(job.getString("jobName"));
+                    }
+                }
+            }
+        }
+        System.out.println(jobs);
     }
 
 

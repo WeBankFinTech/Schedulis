@@ -3,7 +3,7 @@ package azkaban.jobtype.connectors.gobblin;
 
 public class TestGobblinHadoopJob {
 //  private static final String JOB_ID = "test_job_id";
-//  private static final Logger LOG = LoggerFactory.getLogger(TestGobblinHadoopJob.class);
+//  private static final Logger LOG = Logger.getLogger(TestGobblinHadoopJob.class);
 //
 //  @Test
 //  public void testPrintableJobProperties() {

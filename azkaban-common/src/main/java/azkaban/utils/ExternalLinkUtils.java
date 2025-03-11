@@ -47,7 +47,7 @@ public class ExternalLinkUtils {
         .containsKey(Constants.ConfigurationKeys.AZKABAN_SERVER_EXTERNAL_LOGVIEWER_TOPIC)) {
       return "";
     }
-    // Find out which external link we should use to lead to our log com.webank.wedatasphere.schedulis.viewer.homepage
+    // Find out which external link we should use to lead to our log viewer
     final String topic = azkProps
         .getString(Constants.ConfigurationKeys.AZKABAN_SERVER_EXTERNAL_LOGVIEWER_TOPIC);
     return getLinkFromJobAndExecId(topic, azkProps, jobId, jobProps);

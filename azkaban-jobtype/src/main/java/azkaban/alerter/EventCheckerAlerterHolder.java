@@ -2,6 +2,8 @@ package azkaban.alerter;
 
 import azkaban.Constants;
 import azkaban.alert.Alerter;
+import azkaban.exceptional.user.dao.ExceptionalUserLoader;
+import azkaban.utils.Emailer;
 import azkaban.utils.FileIOUtils;
 import azkaban.utils.Props;
 import azkaban.utils.PropsUtils;

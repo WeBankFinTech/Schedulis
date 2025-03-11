@@ -45,13 +45,13 @@ public class JobCallbackUtil {
 
   private static final Logger logger = LoggerFactory.getLogger(JobCallbackUtil.class);
 
-  private static final Map<JobCallbackStatusEnum, String> firstJobcallbackPropertyMap =
+  private static final Map<JobCallbackStatusEnum, String> FIRST_JOB_CALLBACK_PROPERTY_MAP =
       new HashMap<>(
           JobCallbackStatusEnum.values().length);
 
   static {
     for (final JobCallbackStatusEnum statusEnum : JobCallbackStatusEnum.values()) {
-      firstJobcallbackPropertyMap.put(statusEnum,
+      FIRST_JOB_CALLBACK_PROPERTY_MAP.put(statusEnum,
           replaceStatusToken(FIRST_JOB_CALLBACK_URL_TEMPLATE, statusEnum));
     }
   }
@@ -68,7 +68,7 @@ public class JobCallbackUtil {
       throw new NullPointerException("One of the argument is null");
     }
 
-    final String jobCallBackUrl = firstJobcallbackPropertyMap.get(status);
+    final String jobCallBackUrl = FIRST_JOB_CALLBACK_PROPERTY_MAP.get(status);
     return props.containsKey(jobCallBackUrl);
   }
 

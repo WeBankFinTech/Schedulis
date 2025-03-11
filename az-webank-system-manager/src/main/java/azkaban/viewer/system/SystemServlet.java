@@ -5,10 +5,15 @@ import azkaban.batch.HoldBatchContext;
 import azkaban.batch.HoldBatchLevel;
 import azkaban.common.utils.ExcelUtil;
 import azkaban.dto.ModifyWtssUserDto;
-import azkaban.entity.*;
+import azkaban.entity.DepartmentMaintainer;
+import azkaban.entity.WebankDepartment;
+import azkaban.entity.WebankUser;
+import azkaban.entity.WtssRole;
+import azkaban.entity.WtssUser;
 import azkaban.exception.SystemUserManagerException;
 import azkaban.executor.DepartmentGroup;
 import azkaban.executor.Executor;
+import azkaban.executor.ExecutorManagerException;
 import azkaban.i18n.utils.LoadJsonUtils;
 import azkaban.module.SystemModule;
 import azkaban.project.Project;
@@ -19,15 +24,39 @@ import azkaban.scheduler.ScheduleManager;
 import azkaban.server.HttpRequestUtils;
 import azkaban.server.session.Session;
 import azkaban.service.impl.SystemManager;
+import azkaban.user.SystemUserManager;
 import azkaban.user.User;
 import azkaban.utils.GsonUtils;
 import azkaban.utils.Props;
 import azkaban.webank.data.WebankUsersSync;
 import azkaban.webapp.AzkabanWebServer;
-import azkaban.webapp.servlet.*;
+import azkaban.webapp.servlet.AbstractLoginAzkabanServlet;
+import azkaban.webapp.servlet.HistoryServlet;
+import azkaban.webapp.servlet.Page;
+import azkaban.webapp.servlet.ProjectManagerServlet;
+import azkaban.webapp.servlet.RecoverServlet;
 import com.google.common.base.Joiner;
 import com.google.gson.JsonObject;
 import com.google.inject.Injector;
+import java.io.File;
+import java.io.IOException;
+import java.io.OutputStream;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.StringJoiner;
+import java.util.concurrent.ScheduledThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
+import java.util.regex.Pattern;
+import java.util.stream.Collectors;
+import javax.servlet.ServletConfig;
+import javax.servlet.ServletException;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.collections4.MapUtils;
 import org.apache.commons.io.IOUtils;
@@ -36,19 +65,6 @@ import org.joda.time.DateTime;
 import org.json.JSONObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import javax.servlet.ServletConfig;
-import javax.servlet.ServletException;
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
-import java.io.File;
-import java.io.IOException;
-import java.io.OutputStream;
-import java.util.*;
-import java.util.concurrent.ScheduledThreadPoolExecutor;
-import java.util.concurrent.TimeUnit;
-import java.util.regex.Pattern;
-import java.util.stream.Collectors;
 
 /**
  * Created by zhu on 7/5/18.
@@ -163,12 +179,15 @@ public class SystemServlet extends AbstractLoginAzkabanServlet {
         final String ajaxName = getParam(req, "ajax");
 
         final User user = session.getUser();
+        if (user == null) {
+            ret.put("error", "null user");
+            this.writeJSON(resp, ret);
+            return;
+        }
         if (!user.getRoles().contains("admin")) {
             if (!"loadSystemUserSelectData".equals(ajaxName) && !"loadWebankDepartmentSelectData".equals(ajaxName)) {
                 ret.put("error", "No Access Permission");
-                if (ret != null) {
                     this.writeJSON(resp, ret);
-                }
                 return;
             }
         }
@@ -222,6 +241,8 @@ public class SystemServlet extends AbstractLoginAzkabanServlet {
             ajaxFetchDepartmentGroupById(req, resp, session, ret);
         } else if ("fetchExecutors".equals(ajaxName)) {
             ajaxFetchExecutors(req, resp, session, ret);
+        }  else if ("updateExecutor".equals(ajaxName)) {
+            ajaxUpdateExecutor(req, resp, session, ret);
         } else if ("findModifySystemUserPage".equals(ajaxName)) {
             ajaxFindModifySystemUserPage(req, resp, session, ret);
         } else if ("syncModifyEsbSystemUsers".equals(ajaxName)) {
@@ -250,9 +271,7 @@ public class SystemServlet extends AbstractLoginAzkabanServlet {
             ajaxPrivilegeReport(req, resp, session, ret);
         }
 
-        if (ret != null) {
             this.writeJSON(resp, ret);
-        }
     }
 
     /**
@@ -2092,6 +2111,21 @@ public class SystemServlet extends AbstractLoginAzkabanServlet {
                                     final HashMap<String, Object> ret) throws ServletException {
         List<Executor> executors = this.systemManager.fetchAllExecutors();
         ret.put("executors", executors);
+    }
+
+
+    private void ajaxUpdateExecutor(final HttpServletRequest req, final HttpServletResponse resp, final Session session,
+                                    final HashMap<String, Object> ret) throws ServletException {
+        JsonObject jsonObject = HttpRequestUtils.parseRequestToJsonObject(req);
+        Executor executor = GsonUtils.jsonToJavaObject(jsonObject, Executor.class);
+        try {
+            logger.info("update executor {}", executor);
+            this.systemManager.updateExecutor(executor);
+            ret.put("executor", executor);
+        } catch (ExecutorManagerException e) {
+            logger.warn("update executor {} error", executor,e);
+            ret.put("error", e.getMessage());
+        }
     }
 
     private void ajaxFetchAllExceptionUsers(final HttpServletRequest req, final HttpServletResponse resp, final Session session,

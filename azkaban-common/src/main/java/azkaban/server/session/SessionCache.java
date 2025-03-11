@@ -17,6 +17,7 @@
 package azkaban.server.session;
 
 import azkaban.Constants.ConfigurationKeys;
+import azkaban.user.User;
 import azkaban.utils.Props;
 import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
@@ -55,7 +56,7 @@ public class SessionCache {
         DEFAULT_SESSION_TIME_TO_LIVE);
     this.cache = CacheBuilder.newBuilder()
         .maximumSize(props.getInt("max.num.sessions", MAX_NUM_SESSIONS))
-        .expireAfterAccess(effectiveSessionTimeToLive, TimeUnit.MILLISECONDS)
+        .expireAfterAccess(effectiveSessionTimeToLive, TimeUnit.SECONDS)
         .build();
   }
 
@@ -92,7 +93,22 @@ public class SessionCache {
 
   public Session getSessionByUsername(String username){
     for(Session session: this.cache.asMap().values()){
+      if (session == null || session.getUser() == null || session.getUser().getUserId() == null) {
+        continue;
+      }
       if(session.getUser().getUserId().equals(username)){
+        return session;
+      }
+    }
+    return null;
+  }
+
+  public Session getSessionByUser(User user){
+    for(Session session: this.cache.asMap().values()){
+      if (session == null || session.getUser() == null || session.getUser().getUserId() == null) {
+        continue;
+      }
+      if (session.getUser().equals(user)) {
         return session;
       }
     }

@@ -33,6 +33,17 @@
               </div>
             <label>$alertEmailAddress</label>
             <textarea id="slaEmails" placeholder="$alertUserInputTips" class="form-control"></textarea>
+                <div  style="margin-top:10px">
+                    <label class=" control-label">$alerterWay</label>
+                    <span class="" id="aletType">
+                        <label class="radio-inline">
+                            <input type="checkbox" name="2" id="emailCheckbox" value="2"> $email
+                        </label>
+                        <label class="radio-inline">
+                            <input type="checkbox" name="1" id="wexinCheckbox" value="1"> $RTX
+                        </label>
+                    </span>
+                </div>
           </div>
         </fieldset>
         <h4>$ruleTimeoutAlertSet</h4>
@@ -42,15 +53,17 @@
             <th>$floworJob</th>
             <th>$ruleAlert</th>
             <th>$timeout(In HH:MM eg. kill in 10 minutes is 00:10)</th>
+            <th>$timeoutAbs</th>
             <th>$alertLevel</th>
-            <th>$sendemail</th>
+            <th>$sendAlert</th>
             <th>$stopJoborFlow</th>
+            <th>$alertFrequency</th>
             <th>$operate</th>
           </tr>
           </thead>
           <tbody>
           <tr id="addRow">
-            <td id="addRow-col" colspan="7">
+            <td id="addRow-col" colspan="9">
               <span class="addIcon"></span>
               <button type="button" class="btn btn-xs btn-success" id="add-btn">$addOneLine</button>
             </td>

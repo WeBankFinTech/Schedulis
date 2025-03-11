@@ -19,17 +19,17 @@ package azkaban.webapp.servlet;
 import static azkaban.ServiceProvider.SERVICE_PROVIDER;
 
 import azkaban.Constants.ConfigurationKeys;
-import azkaban.server.AzkabanServer;
+import azkaban.server.AbstractAzkabanServer;
 import azkaban.server.HttpRequestUtils;
 import azkaban.server.session.Session;
 import azkaban.utils.JSONUtils;
 import azkaban.utils.Props;
 import azkaban.utils.WebUtils;
+import azkaban.utils.XSSFilterUtils;
 import azkaban.webapp.AzkabanWebServer;
 import azkaban.webapp.plugin.PluginRegistry;
 import azkaban.webapp.plugin.TriggerPlugin;
 import azkaban.webapp.plugin.ViewerPlugin;
-import com.webank.wedatasphere.schedulis.common.utils.XSSFilterUtils;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.net.URLDecoder;
@@ -47,23 +47,27 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import org.apache.commons.lang.StringUtils;
 import org.joda.time.DateTime;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Base Servlet for pages
  */
 public abstract class AbstractAzkabanServlet extends HttpServlet {
 
+    private static final Logger logger = LoggerFactory.getLogger(AbstractAzkabanServlet.class.getName());
+
     public static final String JSON_MIME_TYPE = "application/json";
-    public static final String jarVersion = AbstractAzkabanServlet.class.getPackage()
+    public static final String JAR_VERSION = AbstractAzkabanServlet.class.getPackage()
         .getImplementationVersion();
-    protected static final WebUtils utils = new WebUtils();
+    protected static final WebUtils UTILS = new WebUtils();
     private static final String AZKABAN_SUCCESS_MESSAGE = "azkaban.success.message";
     private static final String AZKABAN_WARN_MESSAGE = "azkaban.warn.message";
     private static final String AZKABAN_FAILURE_MESSAGE = "azkaban.failure.message";
     private static final long serialVersionUID = -1;
 
     protected String passwordPlaceholder;
-    private AzkabanServer application;
+    private AbstractAzkabanServer application;
     private String name;
     private String label;
     private String color;
@@ -94,7 +98,7 @@ public abstract class AbstractAzkabanServlet extends HttpServlet {
     /**
      * To retrieve the application for the servlet
      */
-    public AzkabanServer getApplication() {
+    public AbstractAzkabanServer getApplication() {
         return this.application;
     }
 
@@ -138,10 +142,24 @@ public abstract class AbstractAzkabanServlet extends HttpServlet {
     }
 
     /**
+     * get runDate from request
+     */
+    public String getData(final HttpServletRequest request, final String name) throws ServletException {
+        return HttpRequestUtils.getData(request, name);
+    }
+    /**
      * Retrieves the param from the http servlet request.
      */
     public String getParam(final HttpServletRequest request, final String name, final String defaultVal) {
         return HttpRequestUtils.getParam(request, name, defaultVal);
+    }
+
+    public Boolean getBooleanParam(final HttpServletRequest request, final String name, final Boolean defaultVal) {
+        return HttpRequestUtils.getBooleanParam(request, name, defaultVal);
+    }
+
+    public String[] getParamValues(final HttpServletRequest request, final String name, final String[] defaultVal) {
+        return HttpRequestUtils.getParamValues(request, name, defaultVal);
     }
 
     /**
@@ -191,14 +209,12 @@ public abstract class AbstractAzkabanServlet extends HttpServlet {
      */
     protected void setErrorMessageInCookie(final HttpServletResponse response, final String errorMsg) {
         String originStr = "";
-        try {
-
             String nginxSSL = this.application.getServerProps().getString("nginx.ssl.module", "");
             if ("open".equals(nginxSSL)) {
                 if (XSSFilterUtils.invalidStringFilter(errorMsg)) {
-                    originStr = URLEncoder.encode("Can not input illegal character.", "utf-8");
+                originStr = dealUrlEncodeMessage("Can not input illegal character.");
                 } else if (StringUtils.isNotEmpty(errorMsg)) {
-                    originStr = URLEncoder.encode(errorMsg, "utf-8");
+                originStr = dealUrlEncodeMessage(errorMsg);
                 }
                 final Cookie cookie = new Cookie(AZKABAN_FAILURE_MESSAGE, originStr);
                 cookie.setSecure(true);
@@ -206,15 +222,11 @@ public abstract class AbstractAzkabanServlet extends HttpServlet {
                 response.addCookie(cookie);
             } else {
                 if (StringUtils.isNotEmpty(errorMsg)) {
-                    originStr = URLEncoder.encode(errorMsg, "utf-8");
+                originStr = dealUrlEncodeMessage(errorMsg);
                 }
                 final Cookie cookie = new Cookie(AZKABAN_FAILURE_MESSAGE, originStr);
                 cookie.setPath("/");
                 response.addCookie(cookie);
-            }
-
-        } catch (UnsupportedEncodingException e) {
-            e.printStackTrace();
         }
     }
 
@@ -223,12 +235,11 @@ public abstract class AbstractAzkabanServlet extends HttpServlet {
      */
     protected void setWarnMessageInCookie(final HttpServletResponse response, final String errorMsg) {
         String originStr = "";
-        try {
             String nginxSSL = this.application.getServerProps().getString("nginx.ssl.module", "");
             if ("open".equals(nginxSSL) && XSSFilterUtils.invalidStringFilter(errorMsg)) {
-                originStr = URLEncoder.encode("Can not input illegal character.", "utf-8");
+            originStr = dealUrlEncodeMessage("Can not input illegal character.");
             } else if (StringUtils.isNotEmpty(errorMsg)) {
-                originStr = URLEncoder.encode(errorMsg, "utf-8");
+            originStr = dealUrlEncodeMessage(errorMsg);
             }
             final Cookie cookie = new Cookie(AZKABAN_WARN_MESSAGE, originStr);
             if ("open".equals(nginxSSL)) {
@@ -236,9 +247,33 @@ public abstract class AbstractAzkabanServlet extends HttpServlet {
             }
             cookie.setPath("/");
             response.addCookie(cookie);
-        } catch (UnsupportedEncodingException e) {
-            e.printStackTrace();
+    }
+
+    /**
+     * URL ENCODE CUT 4000 ,PROJECT UPLOAD MESSAGE ADD </ul>
+     *
+     * @param message
+     * @return
+     */
+    private String dealUrlEncodeMessage(String message) {
+        if (StringUtils.isEmpty(message)) {
+            return "";
         }
+
+        try {
+            String encodeStr = URLEncoder.encode(message, "utf-8");
+            if (encodeStr.length() > 4000) {
+                encodeStr = encodeStr.substring(0, 4000);
+                //%3Cul%3E--<ul>  %3Cli%3E--<li>  %3C%2Fli%3E--</li>  %3C%2Ful%3E--</ul>
+                if (encodeStr.indexOf("%3Cul%3E") != -1 && encodeStr.indexOf("%3Cli%3E") != -1) {
+                    encodeStr = encodeStr.substring(0, encodeStr.lastIndexOf("%3C%2Fli%3E") + 11) + "%3C%2Ful%3E";
+                }
+            }
+            return encodeStr;
+        } catch (UnsupportedEncodingException e) {
+            logger.error(e.getMessage(), e);
+        }
+        return "";
     }
 
     /**
@@ -260,7 +295,7 @@ public abstract class AbstractAzkabanServlet extends HttpServlet {
             cookie.setPath("/");
             response.addCookie(cookie);
         } catch (UnsupportedEncodingException e) {
-            e.printStackTrace();
+            logger.warn("Failed to Encoding.", e);
         }
     }
 
@@ -278,7 +313,7 @@ public abstract class AbstractAzkabanServlet extends HttpServlet {
                 cookieStr = URLDecoder.decode(cookieStr, "utf-8");
             }
         } catch (UnsupportedEncodingException e) {
-            e.printStackTrace();
+            logger.warn("Failed to Encoding.", e);
         }
         return cookieStr;
     }
@@ -298,7 +333,7 @@ public abstract class AbstractAzkabanServlet extends HttpServlet {
                 cookieStr = URLDecoder.decode(cookieStr, "utf-8");
             }
         } catch (UnsupportedEncodingException e) {
-            e.printStackTrace();
+            logger.warn("Failed to Encoding.", e);
         }
         return cookieStr;
     }
@@ -317,7 +352,7 @@ public abstract class AbstractAzkabanServlet extends HttpServlet {
                 cookieStr = URLDecoder.decode(cookieStr, "utf-8");
             }
         } catch (UnsupportedEncodingException e) {
-            e.printStackTrace();
+            logger.warn("Failed to Encoding.", e);
         }
         return cookieStr;
     }
@@ -349,20 +384,21 @@ public abstract class AbstractAzkabanServlet extends HttpServlet {
         final Session session, final String template) {
         final Page page = new Page(req, resp, getApplication().getVelocityEngine(), template);
 
-        page.add("version", jarVersion);
+        page.add("version", JAR_VERSION);
         page.add("azkaban_name", this.name);
         page.add("azkaban_label", this.label);
         page.add("azkaban_color", this.color);
         page.add("note_type", NoteServlet.type);
         page.add("note_message", NoteServlet.message);
         page.add("note_url", NoteServlet.url);
-        page.add("utils", utils);
+        page.add("utils", UTILS);
         page.add("timezone", TimeZone.getDefault().getID());
         page.add("currentTime", (new DateTime()).getMillis());
         page.add("size", getDisplayExecutionPageSize());
 
         if (session != null && session.getUser() != null) {
             page.add("user_id", session.getUser().getUserId());
+            page.add("csrfToken", session.getSessionData("csrfToken"));
         }
         page.add("context", req.getContextPath());
 
@@ -398,7 +434,7 @@ public abstract class AbstractAzkabanServlet extends HttpServlet {
     protected Page newPage(final HttpServletRequest req, final HttpServletResponse resp, final String template) {
         final Page page = new Page(req, resp, getApplication().getVelocityEngine(), template);
 
-        page.add("version", jarVersion);
+        page.add("version", JAR_VERSION);
         page.add("azkaban_name", this.name);
         page.add("azkaban_label", this.label);
         page.add("azkaban_color", this.color);
