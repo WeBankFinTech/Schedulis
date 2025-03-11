@@ -41,7 +41,7 @@ public class DatabaseOperatorTest {
     private static final List<Integer> list = new ArrayList<>();
     private static final int index_2 = 15;
     private static int index_1 = 3;
-    private final AzkabanDataSource datasource = new AzDBTestUtility.EmbeddedMysqlDataSource();
+    private final AbstractAzkabanDataSource datasource = new AzDBTestUtility.EmbeddedMysqlDataSource();
     private final ResultSetHandler<Integer> handler = rs -> {
         if (!rs.next()) {
             return 0;
@@ -100,7 +100,7 @@ public class DatabaseOperatorTest {
 
     @Test(expected = SQLException.class)
     public void testTypoSqlStatement() throws Exception {
-        System.out.println("testTypoSqlStatement");
+       // System.out.println("testTypoSqlStatement");
         this.dbOperator.query("sele * from blah where ? = ?", this.handler, "id", 2);
     }
 

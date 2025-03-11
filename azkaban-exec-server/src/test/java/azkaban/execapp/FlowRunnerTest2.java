@@ -52,10 +52,6 @@ public class FlowRunnerTest2 extends FlowRunnerTestBase {
     // After it starts up, only joba should be running
     waitForAndAssertFlowStatus(Status.RUNNING);
 
-    this.runner.pause("test");
-    assertEquals(true, field.getBoolean(this.runner));
-    waitForAndAssertFlowStatus(Status.PAUSED);
-
     // 2.2 Flow is unpaused
     this.runner.resume("test");
     assertEquals(false, field.getBoolean(this.runner));

@@ -24,8 +24,8 @@ azkaban.JobLogModel = Backbone.Model.extend({
     this.set("logData", "");
   },
 
-  refresh: function(data) {
-    var requestURL = contextURL + "/executor";
+  refresh: function (data) {
+    var requestURL = "/executor";
     var finished = false;
     var logType = data != undefined ? data : "";
     var ref_flag = 0;
@@ -51,25 +51,37 @@ azkaban.JobLogModel = Backbone.Model.extend({
         finished = true;
       }
       else {
-        if(ref_flag==0 && "refresh" != lastlogType && data.status == "Finish"){//第一次获取日志的时候，清空日志显示区域的数据。避免残留数据。
+        if (ref_flag == 0 && "refresh" != lastlogType && data.status == "Finish") {//第一次获取日志的时候，清空日志显示区域的数据。避免残留数据。
           self.set("logData", "");
           self.trigger("change:logView", self.get("logData"));
         }
         //Job状态执行完成时，才显示过滤日志按钮。
-        if(data.status == "Finish" && !($("#errrorLogBtn").length>0) && !($("#infoLogBtn")>0)){
+        if (data.status == "Finish" && !($("#errrorLogBtn").length > 0) && !($("#infoLogBtn") > 0)) {
 
           // 执行成功之后清除定时任务
           clearInterval(timeTask);
           // 将自动刷新按钮设置为不可用
           document.getElementById('autoRefreshLogBtn').disabled = true;
-          $("#job-log-button-div").append(
-              '<button type="button" id="errrorLogBtn" class="btn btn-xs btn-info">'+wtssI18n.common.errorLog+'</button> '
-              + '<button type="button" id="infoLogBtn" class="btn btn-xs btn-info">'+wtssI18n.common.InfoLog+'</button> '
-              + '<button type="button" id="jobLogDownloadBtn" class="btn btn-xs btn-info">'+wtssI18n.common.logDownload+'</button> '
-              + '<button type="button" id="yarnLogBtn" class="btn btn-xs btn-info">'+wtssI18n.common.YARNInfo+'</button> '
-          )
+          var addLogBtn = ''
+          if (data.errorLogBtnSwitch) {
+            addLogBtn = '<button type="button" id="errrorLogBtn" class="btn btn-xs btn-info">'
+              + wtssI18n.common.errorLog + '</button> '
+          }
+          //判断按钮infoLogBtn是否存在
+          if (!document.getElementById('infoLogBtn')) {
+            addLogBtn += '<button type="button" id="infoLogBtn" class="btn btn-xs btn-info">'
+              + wtssI18n.common.InfoLog + '</button> '
+          }
+          //判断按钮yarnLogBtn是否存在
+          if (!document.getElementById('yarnLogBtn')) {
+            addLogBtn += '<button type="button" id="yarnLogBtn" class="btn btn-xs btn-info">'
+              + wtssI18n.common.YARNInfo + '</button> '
+          }
+          if (addLogBtn) {
+            $("#job-log-button-div").append(addLogBtn)
+          }
         }
-        setTimeout(function(){},1000);
+        setTimeout(function () { }, 1000);
 
         var offserLength = data.offset + data.length;
         self.set("offset", offserLength);
@@ -95,8 +107,8 @@ azkaban.JobLogModel = Backbone.Model.extend({
 
   },
 
-  refreshLatestLog: function(data) {
-    var requestURL = contextURL + "/executor";
+  refreshLatestLog: function (data) {
+    var requestURL = "/executor";
     var finished = false;
     var logType = data != undefined ? data : "";
     var ref_flag = 0;
@@ -120,26 +132,38 @@ azkaban.JobLogModel = Backbone.Model.extend({
         finished = true;
       }
       else {
-        if(ref_flag==0 && "refresh" != lastlogType && data.status == "Finish"){//第一次获取日志的时候，清空日志显示区域的数据。避免残留数据。
+        if (ref_flag == 0 && "refresh" != lastlogType && data.status == "Finish") {//第一次获取日志的时候，清空日志显示区域的数据。避免残留数据。
           self.set("latestLogData", "");
           self.trigger("change:logView", self.get("latestLogData"));
         }
         //Job状态执行完成时，才显示过滤日志按钮。
-        if(data.status == "Finish" && !($("#errrorLogBtn").length>0) && !($("#infoLogBtn")>0)){
+        if (data.status == "Finish" && !($("#errrorLogBtn").length > 0) && !($("#infoLogBtn") > 0)) {
 
           // 执行成功之后清除定时任务
           clearInterval(timeTask);
           // 将自动刷新按钮设置为不可用
           document.getElementById('autoRefreshLogBtn').disabled = true;
 
-          $("#job-log-button-div").append(
-              '<button type="button" id="errrorLogBtn" class="btn btn-xs btn-info">'+wtssI18n.common.errorLog+'</button> '
-              + '<button type="button" id="infoLogBtn" class="btn btn-xs btn-info">'+wtssI18n.common.InfoLog+'</button> '
-              + '<button type="button" id="jobLogDownloadBtn" class="btn btn-xs btn-info">'+wtssI18n.common.logDownload+'</button> '
-              + '<button type="button" id="yarnLogBtn" class="btn btn-xs btn-info">'+wtssI18n.common.YARNInfo+'</button> '
-          )
+          var addLogBtn = ''
+          if (data.errorLogBtnSwitch) {
+            addLogBtn = '<button type="button" id="errrorLogBtn" class="btn btn-xs btn-info">'
+              + wtssI18n.common.errorLog + '</button> '
+          }
+          //判断按钮infoLogBtn是否存在
+          if (!document.getElementById('infoLogBtn')) {
+            addLogBtn += '<button type="button" id="infoLogBtn" class="btn btn-xs btn-info">'
+              + wtssI18n.common.InfoLog + '</button> '
+          }
+          //判断按钮yarnLogBtn是否存在
+          if (!document.getElementById('yarnLogBtn')) {
+            addLogBtn += '<button type="button" id="yarnLogBtn" class="btn btn-xs btn-info">'
+              + wtssI18n.common.YARNInfo + '</button> '
+          }
+          if (addLogBtn) {
+            $("#job-log-button-div").append(addLogBtn)
+          }
         }
-        setTimeout(function(){},1000);
+        setTimeout(function () { }, 1000);
 
         var offsetLength = data.offset + data.length;
 
@@ -166,16 +190,16 @@ azkaban.JobLogModel = Backbone.Model.extend({
 
   },
 
-  error_info: function(data) {
-    var requestURL = contextURL + "/executor";
+  error_info: function (data) {
+    var requestURL = "/executor";
     var finished = false;
     var logType = data != undefined ? data : "";
-    lastlogType=logType;
+    lastlogType = logType;
 
     var requestData = {
       "execid": execId,
       "jobId": jobId,
-      "ajax":"fetchExecJobLogs",
+      "ajax": "fetchExecJobLogs",
       "offset": this.get("offset"),
       "length": 100000,
       "attempt": attempt,
@@ -184,12 +208,13 @@ azkaban.JobLogModel = Backbone.Model.extend({
 
     var self = this;
 
-    var successHandler = function(data) {
+    var successHandler = function (data) {
       console.log("fetchLogs");
       if (data.error) {
         console.log(data.error);
       }
       else {
+        var offserLength = data.offset + data.length;
         self.set("offset", data.offset);
         self.set("logData", data.data);
         self.trigger("change:logView", self.get("logData"));
@@ -203,7 +228,7 @@ azkaban.JobLogModel = Backbone.Model.extend({
       async: false,
       data: requestData,
       dataType: "json",
-      error: function(data) {
+      error: function (data) {
         console.log(data);
         finished = true;
       },

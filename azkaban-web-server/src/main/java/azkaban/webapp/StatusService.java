@@ -17,7 +17,7 @@
 
 package azkaban.webapp;
 
-import static azkaban.webapp.servlet.AbstractAzkabanServlet.jarVersion;
+import static azkaban.webapp.servlet.AbstractAzkabanServlet.JAR_VERSION;
 
 import azkaban.Constants.ConfigurationKeys;
 import azkaban.db.DatabaseOperator;
@@ -68,7 +68,7 @@ public class StatusService {
   }
 
   public Status getStatus() {
-    final String version = jarVersion == null ? "unknown" : jarVersion;
+    final String version = JAR_VERSION == null ? "unknown" : JAR_VERSION;
     final Runtime runtime = Runtime.getRuntime();
     final long usedMemory = runtime.totalMemory() - runtime.freeMemory();
 

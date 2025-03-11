@@ -57,7 +57,7 @@ public class FlowTrigger implements Serializable {
 
     validateDependencies(dependencies);
     this.schedule = schedule;
-    final Builder builder = new Builder();
+    final ImmutableMap.Builder builder = new Builder();
     dependencies.forEach(dep -> builder.put(dep.getName(), dep));
     this.dependencies = builder.build();
     this.maxWaitDuration = maxWaitDuration;

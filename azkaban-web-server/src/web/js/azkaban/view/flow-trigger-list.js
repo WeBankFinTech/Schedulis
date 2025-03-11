@@ -20,8 +20,8 @@
 
 var flowTriggerInstanceListView;
 
-function killTrigger(id) {
-  var requestData = {"id": id, "ajax": "killRunningTrigger"};
+function killTrigger (id) {
+  var requestData = { "id": id, "ajax": "killRunningTrigger" };
   var successHandler = function (data) {
     console.log("cancel clicked");
     if (data.error) {
@@ -32,7 +32,7 @@ function killTrigger(id) {
 
     }
   };
-  ajaxCall(contextURL + "/flowtriggerinstance", requestData, successHandler);
+  ajaxCall("/flowtriggerinstance", requestData, successHandler);
 };
 
 azkaban.FlowTriggerInstanceListView = Backbone.View.extend({
@@ -57,8 +57,8 @@ azkaban.FlowTriggerInstanceListView = Backbone.View.extend({
   updateJobs: function (evt) {
     var update = this.model.get("update");
     var lastTime = update.endTime == -1
-        ? (new Date()).getTime()
-        : update.endTime;
+      ? (new Date()).getTime()
+      : update.endTime;
     var executingBody = $("#triggerExecutableBody");
 
     if (update.nodes) {
@@ -67,8 +67,8 @@ azkaban.FlowTriggerInstanceListView = Backbone.View.extend({
 
     var data = this.model.get("data");
     var flowLastTime = data.endTime == -1
-        ? (new Date()).getTime()
-        : data.endTime;
+      ? (new Date()).getTime()
+      : data.endTime;
     var flowStartTime = data.startTime;
     this.updateProgressBar(data, flowStartTime, flowLastTime);
   },
@@ -119,19 +119,19 @@ azkaban.FlowTriggerInstanceListView = Backbone.View.extend({
     $(tdSubmitter).text(data.triggerSubmitter);
 
     var startTime = data.triggerStartTime == 0 ? (new Date()).getTime()
-        : data.triggerStartTime;
+      : data.triggerStartTime;
 
-    $(tdStart).text(getDateFormat(new Date(startTime)));
+    $(tdStart).text(getProjectModifyDateFormat(new Date(startTime)));
 
     if (data.triggerEndTime == 0) {
       $(tdEnd).text("-");
       $(tdElapse).text(
-          getDuration(data.triggerStartTime, (new Date()).getTime()));
+        getDuration(data.triggerStartTime, (new Date()).getTime()));
     }
     else {
-      $(tdEnd).text(getDateFormat(new Date(data.triggerEndTime)));
+      $(tdEnd).text(getProjectModifyDateFormat(new Date(data.triggerEndTime)));
       $(tdElapse).text(
-          getDuration(data.triggerStartTime, data.triggerEndTime));
+        getDuration(data.triggerStartTime, data.triggerEndTime));
     }
 
     var status = document.createElement("div");
@@ -141,7 +141,7 @@ azkaban.FlowTriggerInstanceListView = Backbone.View.extend({
     tdStatus.appendChild(status);
 
     $("#dependencyList").children("div").children("div").children(
-        "div")[1].innerHTML = "<pre>" + data.triggerProps + "</pre>";
+      "div")[1].innerHTML = filterXSS("<pre>" + data.triggerProps + "</pre>");
 
     // handle action part
     if (data.triggerStatus === "RUNNING") {
@@ -150,7 +150,7 @@ azkaban.FlowTriggerInstanceListView = Backbone.View.extend({
 
       tdActionButton.setAttribute("class", "btn btn-danger btn-sm");
       tdActionButton.setAttribute("onclick", "killTrigger(\"" + data.triggerId
-          + "\")");
+        + "\")");
       tdActionButton.innerHTML = "Kill";
       $(tdAction).append(tdActionButton);
       $(tr).append(tdAction);
@@ -226,18 +226,18 @@ azkaban.FlowTriggerInstanceListView = Backbone.View.extend({
 
     $(tdCancelCause).text(node.dependencyCancelCause);
     var startTime = node.dependencyStartTime == 0 ? (new Date()).getTime()
-        : node.dependencyStartTime;
+      : node.dependencyStartTime;
 
-    $(tdStart).text(getDateFormat(new Date(startTime)));
+    $(tdStart).text(getProjectModifyDateFormat(new Date(startTime)));
     if (node.dependencyEndTime == 0) {
       $(tdEnd).text("-");
       $(tdElapse).text(
-          getDuration(node.dependencyStartTime, (new Date()).getTime()));
+        getDuration(node.dependencyStartTime, (new Date()).getTime()));
     }
     else {
-      $(tdEnd).text(getDateFormat(new Date(node.dependencyEndTime)));
+      $(tdEnd).text(getProjectModifyDateFormat(new Date(node.dependencyEndTime)));
       $(tdElapse).text(
-          getDuration(node.dependencyStartTime, node.dependencyEndTime));
+        getDuration(node.dependencyStartTime, node.dependencyEndTime));
     }
 
     $(body).append(tr);

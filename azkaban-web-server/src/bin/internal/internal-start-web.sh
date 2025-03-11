@@ -19,11 +19,11 @@ export PATH=$JAVA_HOME/bin:$JAVA_HOME/jre/bin:$PATH
 
 azkaban_dir=$(dirname $0)/../..
 cycle_stop=$1
-
+#weapmEnabled=$2
 # Specifies location of azkaban.properties, log4j.properties files
 # Change if necessary
 conf=$azkaban_dir/conf
-logFile=/appcom/logs/azkaban/webServerLog_`date +%F+%T`.out
+logFile=/data/logs/wtss/webServerLog_`date +%F+%T`.out
 
 
 function preCheck(){
@@ -45,6 +45,8 @@ function loadClasspath(){
   do
     CLASSPATH=$CLASSPATH:$file
   done
+
+  CLASSPATH=$CLASSPATH:$azkaban_dir/conf/
 
   for file in $azkaban_dir/extlib/*.jar;
   do
@@ -80,7 +82,8 @@ function javaOption(){
   fi
 
   if [[ -z "$AZKABAN_OPTS" ]]; then
-    AZKABAN_OPTS="-Xmx16G -Xloggc:/appcom/logs/azkaban/gc.log -XX:+PrintGCDetails -XX:+PrintGCDateStamps -XX:+PrintHeapAtGC"
+    AZKABAN_OPTS="-Xmx16G -Xloggc:/data/logs/wtss/web_gc_%t.log -XX:+PrintGCDetails -XX:+PrintGCTimeStamps -XX:+PrintGCDateStamps -XX:+PrintHeapAtGC"
+#    AZKABAN_OPTS="-Xmx16G -Xloggc:/appcom/logs/azkaban/gc.log -XX:+PrintGCDetails -XX:+PrintGCTimeStamps -XX:+PrintGCDateStamps -XX:+PrintHeapAtGC -XX:+HeapDumpBeforeFullGC -XX:+HeapDumpAfterFullGC -XX:HeapDumpPath=/appcom/logs/azkaban/dump"
   fi
   # Set the log4j configuration file
   if [ -f $conf/log4j2.xml ]; then
@@ -100,7 +103,16 @@ function javaOption(){
 
 function start(){
     LOG INFO "starting AzkabanWebServer..."
-    java $AZKABAN_OPTS $JAVA_LIB_PATH -cp $CLASSPATH azkaban.webapp.AzkabanWebServer -conf $conf $@ >> $logFile 2>&1 &
+
+#      if [ ${weapmEnabled} == 'weapm' ]; then
+#        echo "start app with weapm-agent."
+#   JAVA_OPTS="-javaagent:/data/app/weapm-agent/5274/weapm-agent-starter.jar "
+#       nohup java $JAVA_OPTS $AZKABAN_OPTS $JAVA_LIB_PATH -cp $CLASSPATH azkaban.webapp.AzkabanWebServer -conf $conf $cycle_stop $@ >> $logFile 2>&1 &
+#      else
+       nohup java $AZKABAN_OPTS $JAVA_LIB_PATH -cp $CLASSPATH azkaban.webapp.AzkabanWebServer -conf $conf $cycle_stop $@ >> $logFile 2>&1 &
+#      fi
+#    nohup java $JAVA_OPTS $AZKABAN_OPTS $JAVA_LIB_PATH -cp $CLASSPATH azkaban.webapp.AzkabanWebServer -conf $conf $cycle_stop $@ >> $logFile 2>&1 &
+
     echo $! > $azkaban_dir/currentpid
     sleep 3s
     processName=`jps|grep AzkabanWebServer`
@@ -109,8 +121,19 @@ function start(){
         LOG INFO "AzkabanWebServer startup failed"
         return 1
     else
+        source $azkaban_dir/bin/internal/util.sh
+        host_port=$(get_prop ${azkaban_dir} "jetty.port")
+        (check_interface && merge_web_status $azkaban_dir 1)
         return 0
     fi
+}
+
+function check_interface(){
+  while [ "$(curl -s localhost:${host_port}|grep login)" = "" ]
+  do
+    LOG INFO "test web connection,waiting..."
+    sleep 10
+  done
 }
 
 function LOG(){

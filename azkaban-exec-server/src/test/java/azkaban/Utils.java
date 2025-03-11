@@ -1,6 +1,6 @@
 package azkaban;
 
-import azkaban.db.AzkabanDataSource;
+import azkaban.db.AbstractAzkabanDataSource;
 import azkaban.db.DatabaseOperator;
 import azkaban.db.DatabaseSetup;
 import com.google.inject.AbstractModule;
@@ -29,7 +29,7 @@ public class Utils {
   }
 
   public static DatabaseOperator initTestDB() throws Exception {
-    final AzkabanDataSource dataSource = new AzDBTestUtility.EmbeddedH2BasicDataSource();
+    final AbstractAzkabanDataSource dataSource = new AzDBTestUtility.EmbeddedH2BasicDataSource();
 
     final String sqlScriptsDir = new File("../azkaban-db/src/main/sql/").getCanonicalPath();
     final DatabaseSetup setup = new DatabaseSetup(dataSource, sqlScriptsDir);

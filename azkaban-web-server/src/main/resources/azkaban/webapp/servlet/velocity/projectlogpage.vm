@@ -24,7 +24,6 @@
   #parse ("azkaban/webapp/servlet/velocity/javascript.vm")
 
   <script type="text/javascript">
-    var contextURL = "${context}";
     var currentTime = ${currentTime};
     var timezone = "${timezone}";
     var errorMessage = null;
@@ -33,12 +32,18 @@
     var projectId = ${project.id};
     var projectName = "$project.name";
     var langType = "${currentlangType}";
+    // load cmdb data switch
+    var isCmdbLoaded=false;
   </script>
-  <script type="text/javascript" src="${context}/js/azkaban/i18n-config.js?version=1.10.0"></script>
-  <script type="text/javascript" src="${context}/js/azkaban/util/date.js?version=1.10.0"></script>
-  <script type="text/javascript" src="${context}/js/azkaban/util/ajax.js?version=1.10.0"></script>
-  <script type="text/javascript" src="${context}/js/azkaban/view/project-logs.js?version=1.10.0"></script>
-  <script type="text/javascript" src="${context}/js/azkaban/view/project-modals.js?version=1.10.0"></script>
+  <script type="text/javascript" src="/js/azkaban/i18n-config.js?version=1.49.0"></script>
+  <script type="text/javascript" src="/js/azkaban/util/utils.js?version=1.49.0"></script>
+  <script type="text/javascript" src="/js/azkaban/util/ajax.js?version=1.49.0"></script>
+  <script type="text/javascript" src="/js/azkaban/view/project-logs.js?version=1.49.0"></script>
+  <script type="text/javascript" src="/js/azkaban/view/project-modals.js?version=1.49.0"></script>
+  <link href="/css/bootstrap-select.min.css?version=1.49.0" rel="stylesheet">
+  <script type="text/javascript" src="/js/bootstrap-select.js?version=1.49.0"></script>
+  <script type="text/javascript" src="/js/moment-2.29.4.min.js?version=1.49.0"></script>
+  <script type="text/javascript" src="/js/bootstrap-datetimepicker.min.js?version=1.49.0"></script>
   
 </head>
 <body>

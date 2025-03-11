@@ -11,7 +11,7 @@
   "azkaban.viewer.event.eventAuth-detail-header.vm": {
   },
   "azkaban.viewer.event.eventAuth-manager.vm": {
-    "authedMessagePage": "Authorized Message Page",
+    "authedMessagePage": "Message Page",
     "messageInfoInclude": "Message sender or topic or name include ...",
     "quicklySearch": "Quick Search",
     "clickNameToRank": "* Click name to sort",
@@ -26,6 +26,8 @@
     "backlogAlarmSet": "Set up a list of alarm alerts that can be separated by a comma, space, or semicon.",
     "entertip": "Please enter a batch operator English name and a batch responsible English name",
     "cancel": "Cancel",
+    "authorizedSignal": "Authorized Signal",
+    "internalSignal": "Internal Signal",
     "setAlarm": "Set Alarm"
   },
   "azkaban.viewer.event.eventQueue-manager.vm": {

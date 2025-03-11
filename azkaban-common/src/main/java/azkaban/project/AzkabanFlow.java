@@ -32,24 +32,24 @@ import java.util.Map;
  * Contains a list of AzkabanNodes and related flow properties.
  * Introduced in Flow 2.0 design.
  */
-public class AzkabanFlow extends AzkabanNode {
+public class AzkabanFlow extends AbstractAzkabanNode {
 
-  private final Map<String, AzkabanNode> nodes;
+  private final Map<String, AbstractAzkabanNode> nodes;
   private final FlowTrigger flowTrigger;
 
   private AzkabanFlow(final String name, final Props props, final String condition,
-      final Map<String, AzkabanNode> nodes, final List<String> dependsOn,
+      final Map<String, AbstractAzkabanNode> nodes, final List<String> dependsOn,
       final FlowTrigger flowTrigger) {
     super(name, Constants.FLOW_NODE_TYPE, props, condition, dependsOn);
     this.nodes = nodes;
     this.flowTrigger = flowTrigger;
   }
 
-  public Map<String, AzkabanNode> getNodes() {
+  public Map<String, AbstractAzkabanNode> getNodes() {
     return this.nodes;
   }
 
-  public AzkabanNode getNode(final String name) {
+  public AbstractAzkabanNode getNode(final String name) {
     return this.nodes.get(name);
   }
 
@@ -63,7 +63,7 @@ public class AzkabanFlow extends AzkabanNode {
     private Props props;
     private String condition;
     private List<String> dependsOn;
-    private Map<String, AzkabanNode> nodes;
+    private Map<String, AbstractAzkabanNode> nodes;
     private FlowTrigger flowTrigger;
 
     public AzkabanFlowBuilder name(final String name) {
@@ -88,9 +88,9 @@ public class AzkabanFlow extends AzkabanNode {
       return this;
     }
 
-    public AzkabanFlowBuilder nodes(final Collection<? extends AzkabanNode> azkabanNodes) {
-      final Map<String, AzkabanNode> tempNodes = new HashMap<>();
-      for (final AzkabanNode node : azkabanNodes) {
+    public AzkabanFlowBuilder nodes(final Collection<? extends AbstractAzkabanNode> azkabanNodes) {
+      final Map<String, AbstractAzkabanNode> tempNodes = new HashMap<>();
+      for (final AbstractAzkabanNode node : azkabanNodes) {
         tempNodes.put(node.getName(), node);
       }
       this.nodes = ImmutableMap.copyOf(tempNodes);

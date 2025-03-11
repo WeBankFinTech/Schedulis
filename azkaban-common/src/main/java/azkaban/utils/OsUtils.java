@@ -1,15 +1,16 @@
 package azkaban.utils;
 
 import azkaban.executor.ExecutorInfo;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.Arrays;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * @author lebronwang
@@ -44,7 +45,7 @@ public class OsUtils {
     if (EXISTS_BASH && EXISTS_CAT && EXISTS_LOAD_AVG) {
       try {
         ProcessBuilder processBuilder =
-            new ProcessBuilder("/bin/bash", "-c", "/bin/cat /proc/loadavg");
+            new ProcessBuilder("/bin/bash", "-c", "top -bn 1|sed -n '/%Cpu(s)/p' | cut -d ',' -f 4|cut -d ' ' -f 2");
         final Process process = processBuilder.start();
         final ArrayList<String> output = new ArrayList<>();
         process.waitFor();
@@ -62,34 +63,29 @@ public class OsUtils {
 
         // process the output from bash call.
         if (output.size() > 0) {
-          final String[] splitedresult = output.get(0).split("\\s+");
-          double cpuUsage = 0.0;
-
+          double cpuUsage = 0;
           try {
-            cpuUsage = Double.parseDouble(splitedresult[0]);
+            cpuUsage = Math.round(100 - Double.parseDouble(output.get(0))) / 100.0;
           } catch (final NumberFormatException e) {
+            cpuUsage = 0.0;
             logger.error("yielding 0.0 for CPU usage as output is invalid -" + output.get(0));
-            throw new RuntimeException(
-                "yielding 0.0 for CPU usage as output is invalid -" + output.get(0));
           }
           logger.info("System load : " + cpuUsage);
           stats.setCpuUpsage(cpuUsage);
         }
       } catch (final Exception ex) {
+        stats.setCpuUpsage(0.0);
         logger.error("failed fetch system load info "
-            + "as exception is captured when fetching result from bash call. Ex -" + ex
-            .getMessage());
-        throw new RuntimeException("failed fetch system load info "
             + "as exception is captured when fetching result from bash call. Ex -" + ex
             .getMessage());
       }
     } else {
       logger.error(
           "failed fetch system load info, one or more files from the following list are missing -  "
-              + "'/bin/bash'," + "'/bin/cat'," + "'/proc/loadavg'");
+              + "'/bin/bash'," + "top -n 1|sed -n \"/%Cpu(s)/p\" | cut -d \" \" -f 11");
       throw new RuntimeException(
           "failed fetch system load info, one or more files from the following list are missing -  "
-              + "'/bin/bash'," + "'/bin/cat'," + "'/proc/loadavg'");
+              + "'/bin/bash'," + "top -n 1|sed -n \"/%Cpu(s)/p\" | cut -d \" \" -f 11");
     }
   }
 
@@ -115,7 +111,7 @@ public class OsUtils {
         process.waitFor();
         final InputStream inputStream = process.getInputStream();
         try {
-          final BufferedReader reader = new BufferedReader(
+          final java.io.BufferedReader reader = new java.io.BufferedReader(
               new InputStreamReader(inputStream, StandardCharsets.UTF_8));
           String line = null;
           while ((line = reader.readLine()) != null) {

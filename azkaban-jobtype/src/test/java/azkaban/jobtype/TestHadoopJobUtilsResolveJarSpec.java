@@ -1,17 +1,14 @@
 package azkaban.jobtype;
 
-import com.webank.wedatasphere.schedulis.jobtype.HadoopJobUtils;
-import com.webank.wedatasphere.schedulis.jobtype.SparkJobArg;
+import azkaban.utils.Props;
 import java.io.File;
 import java.io.IOException;
 
 import org.apache.commons.io.FileUtils;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.junit.Before;
 import org.junit.Test;
-
-import azkaban.utils.Props;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class TestHadoopJobUtilsResolveJarSpec {
   Props jobProps = null;
@@ -30,7 +27,7 @@ public class TestHadoopJobUtilsResolveJarSpec {
 
   File libraryJarFile = new File(libFolderFile, "library.jar");
 
-  String delim = SparkJobArg.delimiter;
+  String delim = SparkJobArg.DELIMITER;
 
   @Before
   public void beforeMethod() throws IOException {

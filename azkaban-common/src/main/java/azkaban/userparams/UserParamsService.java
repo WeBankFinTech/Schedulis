@@ -1,20 +1,22 @@
 package azkaban.userparams;
 
+import static java.util.Objects.requireNonNull;
+
 import azkaban.executor.ExecutorManagerException;
 import azkaban.executor.JdbcExecutorLoader;
 import azkaban.executor.UserVariable;
 import azkaban.project.ProjectLoader;
+import azkaban.system.SystemUserLoader;
+import azkaban.system.SystemUserManagerException;
+import azkaban.system.entity.WtssUser;
 import azkaban.utils.Props;
+import java.util.ArrayList;
+import java.util.List;
+import javax.inject.Inject;
+import javax.inject.Singleton;
 import org.apache.commons.collections4.CollectionUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import javax.inject.Inject;
-import javax.inject.Singleton;
-import java.util.ArrayList;
-import java.util.List;
-
-import static java.util.Objects.requireNonNull;
 
 /**
  * @author lebronwang

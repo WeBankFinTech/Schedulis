@@ -21,6 +21,7 @@ import static java.util.Objects.requireNonNull;
 import com.google.common.annotations.VisibleForTesting;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 
 /**
  * Node in a DAG: Directed acyclic graph.
@@ -41,8 +42,7 @@ public class Node {
 
   private final Dag dag;
 
-  // FIXME change this constructor access as public type in order to outside package can create this constructor.
-  public Node(final String name, final NodeProcessor nodeProcessor, final Dag dag) {
+  Node(final String name, final NodeProcessor nodeProcessor, final Dag dag) {
     requireNonNull(nodeProcessor, "The nodeProcessor parameter can't be null.");
     this.nodeProcessor = nodeProcessor;
     requireNonNull(name, "The name of the node can't be null");

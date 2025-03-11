@@ -23,13 +23,12 @@
   #parse("azkaban/webapp/servlet/velocity/style.vm")
   #parse("azkaban/webapp/servlet/velocity/javascript.vm")
   #parse("azkaban/webapp/servlet/velocity/svgflowincludes.vm")
-  <script type="text/javascript" src="${context}/js/moment.min.js?version=1.10.0"></script>
-  <script type="text/javascript" src="${context}/js/bootstrap-datetimepicker.min.js?version=1.10.0"></script>
-  <script type="text/javascript" src="${context}/js/raphael.min.js?version=1.10.0"></script>
-  <script type="text/javascript" src="${context}/js/morris.min.js?version=1.10.0"></script>
+  <script type="text/javascript" src="/js/moment-2.29.4.min.js?version=1.49.0"></script>
+  <script type="text/javascript" src="/js/bootstrap-datetimepicker.min.js?version=1.49.0"></script>
+  <script type="text/javascript" src="/js/raphael.min.js?version=1.49.0"></script>
+  <script type="text/javascript" src="/js/morris.min.js?version=1.49.0"></script>
 
   <script type="text/javascript">
-    var contextURL = "${context}";
     var currentTime = ${currentTime};
     var timezone = "${timezone}";
     var errorMessage = null;
@@ -43,32 +42,30 @@
 
     var loginUser = "${loginUser}";
     var langType = "${currentlangType}";
-    document.getElementById("pageNumInput").addEventListener("input",function(event){
-        event.target.value = event.target.value.replace(/\-/g,"");
-    });
   </script>
-  <script type="text/javascript" src="${context}/js/dust-full-2.2.3.min.js?version=1.10.0"></script>
-  <script type="text/javascript" src="${context}/js/azkaban/i18n-config.js?version=1.10.0"></script>
-  <script type="text/javascript" src="${context}/js/flowsummary.js?version=1.10.0"></script>
-  <script type="text/javascript" src="${context}/js/flowstats-no-data.js?version=1.10.0"></script>
-  <script type="text/javascript" src="${context}/js/flowstats.js?version=1.10.0"></script>
+  <script type="text/javascript" src="/js/azkaban/i18n-config.js?version=1.49.0"></script>
+  <script type="text/javascript" src="/js/dust-full-2.2.3.min.js?version=1.49.0"></script>
+  <script type="text/javascript" src="/js/flowstats-no-data.js?version=1.49.0"></script>
+  <script type="text/javascript" src="/js/flowstats.js?version=1.49.0"></script>
+  <script type="text/javascript" src="/js/flowsummary.js?version=1.49.0"></script>
 
-  <script type="text/javascript" src="${context}/js/azkaban/view/time-graph.js?version=1.10.0"></script>
+  <script type="text/javascript" src="/js/azkaban/view/time-graph.js?version=1.49.0"></script>
+  <script type="text/javascript" src="/js/azkaban/view/execute-job-list.js?version=1.49.0"></script>
 
-  <script type="text/javascript" src="${context}/js/azkaban/util/schedule.js?version=1.10.0"></script>
-  <script type="text/javascript" src="${context}/js/azkaban/view/schedule-sla.js?version=1.10.0"></script>
-  <script type="text/javascript" src="${context}/js/azkaban/view/flow-stats.js?version=1.10.0"></script>
-  <script type="text/javascript" src="${context}/js/azkaban/view/flow-execute-dialog.js?version=1.10.0"></script>
-  <script type="text/javascript" src="${context}/js/azkaban/view/flow.js?version=1.10.0"></script>
-  <script type="text/javascript" src="${context}/js/azkaban/view/history-recover.js?version=1.10.0"></script>
-  <script type="text/javascript" src="${context}/js/azkaban/view/cycle-execution.js?version=1.10.0"></script>
-  <script type="text/javascript" src="${context}/js/azkaban/view/flow-schedule-dialog.js?version=1.10.0"></script>
-  <script type="text/javascript" src="${context}/js/azkaban/view/schedule-context-menu.js?version=1.10.0"></script>
-  <link rel="stylesheet" href="${context}/css/kalendae.css?version=1.10.0" type="text/css">
-  <script type='text/javascript' src='${context}/js/kalendae.standalone.js?version=1.10.0'></script>
-  
-  <link rel="stylesheet" type="text/css" href="${context}/css/morris.css?version=1.10.0"/>
-  <link rel="stylesheet" type="text/css" href="${context}/css/bootstrap-datetimepicker.css?version=1.10.0"/>
+  <script type="text/javascript" src="/js/azkaban/util/schedule.js?version=1.49.0"></script>
+  <script type="text/javascript" src="/js/azkaban/view/schedule-sla.js?version=1.49.0"></script>
+  <script type="text/javascript" src="/js/azkaban/view/flow-stats.js?version=1.49.0"></script>
+  <script type="text/javascript" src="/js/azkaban/view/flow-execute-dialog.js?version=1.49.0"></script>
+  <script type="text/javascript" src="/js/azkaban/view/flow.js?version=1.49.0"></script>
+  <script type="text/javascript" src="/js/azkaban/view/history-recover.js?version=1.49.0"></script>
+  <script type="text/javascript" src="/js/azkaban/view/cycle-execution.js?version=1.49.0"></script>
+  <script type="text/javascript" src="/js/azkaban/view/flow-schedule-dialog.js?version=1.49.0"></script>
+  <script type="text/javascript" src="/js/azkaban/view/schedule-context-menu.js?version=1.49.0"></script>
+  <link rel="stylesheet" href="/css/kalendae.css?version=1.49.0" type="text/css">
+  <script type='text/javascript' src='/js/kalendae.standalone.js?version=1.40.0'></script>
+
+  <link rel="stylesheet" type="text/css" href="/css/morris.css?version=1.49.0"/>
+  <link rel="stylesheet" type="text/css" href="/css/bootstrap-datetimepicker.css?version=1.49.0"/>
   <style type="text/css">
       .select2-container .select2-selection--single .select2-selection__rendered {
         display: block;
@@ -97,7 +94,7 @@
     <div class="container-full">
       <div class="row">
         <div class="header-title">
-          <h1 style="word-break:break-all;"><a href="${context}/manager?project=${project.name}&flow=${flowid}">$flow
+          <h1 style="word-break:break-all;"><a href="javascript:void(0);" onclick="checkHrefUrlXss('/manager?project=${project.name}&flow=${flowid}')">$flow
             <small>$flowid</small>
           </a></h1>
         </div>
@@ -120,16 +117,16 @@
     <div class="container-full" style="word-break:break-all;">
       <ol class="breadcrumb">
         <li><a
-            href="${context}/manager?project=${project.name}"><strong>$program</strong> $project.name
+            href="javascript:void(0);" onclick="checkHrefUrlXss('/manager?project=${project.name}')"><strong>$program</strong> $project.name
         </a></li>
         <li class="active"><strong>$flow</strong> $flowid</li>
       </ol>
     </div>
   </div>
 
-  <script type="text/javascript" src="${context}/js/azkaban/view/hideHead.js?version=1.10.0"></script>
+  <script type="text/javascript" src="/js/azkaban/view/hideHead.js?version=1.49.0"></script>
 
-  <script type="text/javascript" src="${context}/js/azkaban/view/hideHead.js?version=1.10.0"></script>
+  <script type="text/javascript" src="/js/azkaban/view/hideHead.js?version=1.49.0"></script>
 
   <div class="container-full">
 
@@ -147,6 +144,8 @@
         #if($utils.isNotNull($parameters))
           <li id="flowParamViewLink"><a href="#flowparam">$flowParam</a></li>
         #end
+      <li id="applyLinkedData"><a href="#linkFlowData">$associatedData</a></li>
+      <li id="historyRerunTime"><a href="#linkHistoryRerunTime">$history</a></li>
     </ul>
   </div>
 
@@ -186,6 +185,21 @@
     <div class="row">
       <div class="col-xs-12">
         <div class="well well-clear well-sm" id="timeGraph">
+
+        </div>
+        <div class="search-container" >
+          <div id="search-form" method="get" class="form-inline header-form" role="form">
+            <input type="hidden" name="search" value="true">
+            <div class="form-group">
+              <div class="input-group">
+              <input type="text" id="searchtextbox" placeholder="$enterTip" value="" class="form-control input-sm" name="searchterm">
+                <span class="input-group-btn">
+                  <button id="quick-flow-serach-btn" type="button" class="btn btn-primary btn-sm">$quickSearch</button>
+                  <button type="button" class="btn btn-success btn-sm" id="adv-flow-filter-btn" style="margin-left:10px">$advancedFilter</button>
+                </span>
+              </div>
+            </div>
+          </div>
         </div>
 
         <table class="table table-striped table-bordered table-condensed table-hover"
@@ -199,7 +213,7 @@
             <th class="date">$runBatchDate</th>
             <th class="elapse">$timeOfExec</th>
             <th class="status">$status</th>
-            <th class="action">$operate</th>
+            <th>$flowType</th>
             <th>$comment</th>
           </tr>
           </thead>
@@ -207,32 +221,8 @@
           </tbody>
         </table>
         <table id="pageTable">
-          <tr>
-            <td>
-              <select id="pageSizeSelect" class="form-control select2" style="margin-bottom:5px;height:34px;">
-                <option value="20">$pp_20</option>
-                <option value="50">$pp_50</option>
-                <option value="100">$pp_100</option>
-              </select>
-            </td>
-            <td>
-              <ul id="pageSelection" class="pagination">
-                <li id="previous" class="first"><a><span class="arrow">&larr;</span>$previousPage</a></li>
-                <li id="page1"><a href="#page1">1</a></li>
-                <li id="page2"><a href="#page2">2</a></li>
-                <li id="page3"><a href="#page3">3</a></li>
-                <li id="page4"><a href="#page4">4</a></li>
-                <li id="page5"><a href="#page5">5</a></li>
-                <li id="next"><a>$nextPage<span class="arrow">&rarr;</span></a></li>
-              </ul>
-            </td>
-            <td>
-              <input id="pageNumInput" class="form-control" type="number" min="1"  style="margin-bottom:5px;width:100px;"/>
-            </td>
-            <td>
-              <button id="pageNumJump" class="btn btn-default" style="margin-bottom:5px" >$to</button>
-            </td>
-          </tr>
+           #parse ("azkaban/webapp/servlet/velocity/commonPagination.vm")
+
         </table>
       </div>
     </div>
@@ -292,6 +282,83 @@
     </div>
   </div><!-- /.container-fill -->
 
+  <!-- /linkedDataView-->
+  <div class="container-full" id="linkedDataView">
+    <div class="alert alert-danger" id="link-data-error-msg" style=" display: none; "></div>
+    <div id="linked-data-content">
+    <div id="flowLinkInputBox">
+    <h3>$inputdata</h3>
+    <table class="table table-striped table-bordered table-condensed table-hover" >
+      <thead>
+        <tr>
+          <th>#</th>
+          <th >$datasourceType</th>
+          <th >$schooling</th>
+          <th >$database</th>
+          <th >$datatable</th>
+          <th >$subsystem</th>
+          <th >$developmentDepartment</th>
+          <th >$developmentDirector</th>
+        </tr>
+        </thead>
+      <tbody id="flowLinkInputDataBody">
+      </tbody>
+     </table>
+          <table id="inputPageTable">
+             #parse ("azkaban/webapp/servlet/velocity/commonPagination.vm")
+
+          </table>
+          </div>
+          <div id="flowLinkOutBox">
+     <h3>$outputdata</h3>
+    <table class="table table-striped table-bordered table-condensed table-hover" >
+      <thead>
+        <tr>
+          <th>#</th>
+          <th >$datasourceType</th>
+          <th >$schooling</th>
+          <th >$database</th>
+          <th >$datatable</th>
+          <th >$subsystem</th>
+          <th >$developmentDepartment</th>
+          <th >$developmentDirector</th>
+        </tr>
+        </thead>
+      <tbody id="flowLinkoutputDataBody">
+      </tbody>
+     </table>
+          <table id="outPageTable">
+            #parse ("azkaban/webapp/servlet/velocity/commonPagination.vm")
+
+          </table>
+          </div>
+    </div>
+  </div><!-- /.container-fill -->
+   <div class="container-full" id="linkedHistoryRerunView" style="display: block;">
+    <table class="table table-striped table-bordered table-condensed table-hover">
+      <thead>
+        <tr>
+            <th>#</th>
+            <th>$jobid</th>
+            <th>$restarttime</th>
+            <th>$restartendtime</th>
+            <th>$restartexecutetime</th>
+            <th>$restartexecuteendtime</th>
+            <th>$reruninterval</th>
+            <th>$intervalunit</th>
+            <th>$historyrerunsnaturalday</th>
+            <th>$toskipthenaturalday</th>
+            <th>$rerunconcurrentnum</th>
+            <th>$rerunconcurrentexecutionsequence</th>
+        </tr>
+        </thead>
+      <tbody id="hstoryRerunBody">
+      </tbody>
+     </table>
+          <table id="historyReturnPageTable">
+             #parse ("azkaban/webapp/servlet/velocity/commonPagination.vm")
+          </table>
+</div>
   ## Context menu and the rest of the page.
 
   <div class="container-full">
@@ -302,6 +369,7 @@
     #parse ("azkaban/webapp/servlet/velocity/flowexecutionpanel.vm")
     #parse ("azkaban/webapp/servlet/velocity/messagedialog.vm")
     #parse ("azkaban/webapp/servlet/velocity/slapanel.vm")
+    #parse ("azkaban/webapp/servlet/velocity/batch-sla-panel.vm")
     #parse ("azkaban/webapp/servlet/velocity/flow-schedule-panel.vm")
   </div><!-- /.container -->
   #end
@@ -346,6 +414,142 @@
   </div>
 </div>
 
+## 高级过滤
+ <div class="modal" id="adv-flow-filter">
+      <div class="modal-dialog">
+        <div class="modal-content">
+          <div class="modal-header">
+            <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;
+            </button>
+            <h4 class="modal-title">$advancedFilter</h4>
+          </div>
+          <div class="modal-body">
+            <fieldset class="form-horizontal">
+              <div class="form-group">
+                <label for="execIdcontain" class="col-sm-2 control-label">$executeid</label>
+                <div class="col-sm-10">
+                  <input id="execIdcontain" type="text" placeholder="$executeid"
+                         value="" class="form-control" name="execIdcontain">
+                </div>
+              </div>
+              <div class="form-group" id="usercontain-div">
+                <label for="usercontain" class="col-sm-2 control-label">$user</label>
+                <div class="col-sm-10">
+                  <input id="usercontain" type="text" placeholder="$user"
+                         value="" class="form-control" name="usercontain">
+                </div>
+              </div>
+              <div class="form-group">
+                <label for="status" class="col-sm-2 control-label">$status</label>
+                <div class="col-sm-10">
+                  <select id="status" class="select2-status-style" multiple="multiple">
+                    <option value=0 selected="selected">All Status</option>
+                    <option value=20>Preparing</option>
+                    <option value=30>Running</option>
+                    <option value=40>Paused</option>
+                    <option value=50>Success</option>
+                    <option value=60>Killed</option>
+                    <option value=70>Failed</option>
+                    <option value=80>Failed Finishing</option>
+                  </select>
+                </div>
+              </div>
+		          <div class="form-group">
+                  <label for="flowType" class="col-sm-2 control-label">$flowTypeI18n</label>
+                  <div class="col-sm-10">
+                    <select id="flowType" class="form-control">
+                      <option value=-1>$all</option>
+                      <option value=0>$once</option>
+                      <option value=2>$historyReRun</option>
+                      <option value=3>$sch</option>
+                      <option value=4>$cycleExe</option>
+                      <option value=6>$eventSch</option>
+                    </select>
+                </div>
+              </div>
+              <div class="form-group" >
+                <label for="usercontain" class="col-sm-2 control-label">$flowremark</label>
+                <div class="col-sm-10">
+                  <input id="flowRemarks" type="text" placeholder="$enterremark"
+                         value="" class="form-control" name="usercontain">
+                </div>
+              </div>
+              <div class="form-group">
+                <label for="runDate" class="col-sm-2 control-label">$runBatchDate</label>
+                <div class="col-sm-10">
+                  <input type="text" id="runDate" value=""
+                         class="ui-datetime-container form-control">
+                </div>
+              </div>
+              <div class="form-group">
+                <label for="startDatetimeBegin" class="col-sm-2 control-label">$startTime</label>
+                <div class="col-sm-4">
+                  <input type="text" id="startDatetimeBegin" value=""
+                         class="ui-datetime-container form-control" autocomplete="off">
+                </div>
+                <label for="startDatetimeEnd"
+                       class="col-sm-2 control-label control-label-center">-</label>
+                <div class="col-sm-4">
+                  <input type="text" id="startDatetimeEnd" value=""
+                         class="ui-datetime-container form-control" autocomplete="off">
+                </div>
+              </div>
+              <div class="form-group">
+                <label for="endDatetimeBegin" class="col-sm-2 control-label">$endTime</label>
+                <div class="col-sm-4">
+                  <input type="text" id="endDatetimeBegin" value=""
+                         class="ui-datetime-container form-control" autocomplete="off">
+                </div>
+                <label for="endDatetimeEnd"
+                       class="col-sm-2 control-label control-label-center">-</label>
+                <div class="col-sm-4">
+                  <input type="text" id="endDatetimeEnd" value=""
+                         class="ui-datetime-container form-control" autocomplete="off">
+                </div>
+              </div>
+            </fieldset>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-default" data-dismiss="modal">$cancel</button>
+            <button class="btn btn-success" id="flow-filter-btn">$fuzzyQuery</button>
+            <button class="btn btn-success" id="flow-precise-filter-btn">$accurateQuery</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  ## 上传定时调度
+    <div class="modal" id="upload-sch-modal" >
+      <div class="modal-dialog">
+        <div class="modal-content">
+          <form id="upload-sch-form" enctype="multipart/form-data" method="post"
+                action="$!context/schedule">
+            <div class="modal-header">
+              <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;
+              </button>
+              <h4 class="modal-title">$uploadFile</h4>
+            </div>
+            <div class="modal-body">
+              <fieldset class="form-horizontal">
+                <div>
+                  <label class="upload-button" for="schfile">$uploadFile</label>
+                  <input type="file" id="schfile" name="schfile"
+                        style="position:absolute;clip:rect(0 0 0 0);">
+                  <span class="upload-file-name" id="schfilefieldsNameBox">$noFileUploaded</span>
+                </div>
+              </fieldset>
+            </div>
+            <div class="modal-footer">
+              <input type="hidden" name="project" value="$project.name">
+              <input type="hidden" name="flow" value="$flowid">
+              <input type="hidden" name="csrfToken" value="$csrfToken">
+              <input type="hidden" name="action" value="scheduleFileUpload">
+              <button type="button" class="btn btn-default" data-dismiss="modal">$cancel</button>
+              <button type="button" class="btn btn-primary" id="upload-sch-btn">$upload</button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
 </body>
 </body>
 </html>

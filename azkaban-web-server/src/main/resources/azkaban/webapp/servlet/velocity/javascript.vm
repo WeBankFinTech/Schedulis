@@ -13,12 +13,14 @@
  * License for the specific language governing permissions and limitations under
  * the License.
 *#
-
-<script type="text/javascript" src="${context}/js/jquery/jquery-1.9.1.js?version=1.10.0"></script>
-<script type="text/javascript" src="${context}/js/bootstrap.min.js?version=1.10.0"></script>
-<script type="text/javascript" src="${context}/js/underscore-1.8.2-min.js?version=1.10.0"></script>
-<script type="text/javascript" src="${context}/js/azkaban/namespace.js?version=1.10.0"></script>
-<script type="text/javascript" src="${context}/js/backbone-0.9.10-min.js?version=1.10.0"></script>
-<script type="text/javascript" src="${context}/js/jquery.base64.js?version=1.10.0"></script>
-<script type="text/javascript" src="${context}/js/select2/select2.js?version=1.10.0"></script>
-<link href="${context}/css/select2/select2.css?version=1.10.0" rel="stylesheet" />
+<script type="text/javascript" src="/js/xss.min.js?version=1.49.0"></script>
+<script type="text/javascript" src="/js/azkaban/util/xssFun.js?version=1.49.0"></script>
+<script type="text/javascript" src="/js/jquery/jquery-3.5.1.min.js?version=1.49.0"></script>
+<script type="text/javascript" src="/js/jquery/jquery-migrate-3.4.1.js?version=1.49.0"></script>
+<script type="text/javascript" src="/js/bootstrap.min.js?version=1.49.0"></script>
+<script type="text/javascript" src="/js/underscore-1.12.1.min.js?version=1.49.0"></script>
+<script type="text/javascript" src="/js/azkaban/namespace.js?version=1.49.0"></script>
+<script type="text/javascript" src="/js/backbone-0.9.10-min.js?version=1.49.0"></script>
+<script type="text/javascript" src="/js/jquery.base64.js?version=1.49.0"></script>
+<script type="text/javascript" src="/js/select2/select2.js?version=1.49.0"></script>
+<script type="text/javascript" src="/js/ajax-session.js?version=1.49.0"></script>

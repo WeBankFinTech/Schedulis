@@ -29,6 +29,7 @@ import com.google.inject.Injector;
  * type. The current direction of utilization of Guice is to gradually move classes into the Guice
  * scope so that Guice can automatically resolve dependencies and provide the required services
  * directly.
+ * @author WTSS
  */
 @SuppressWarnings("ImmutableEnumChecker")
 public enum ServiceProvider {

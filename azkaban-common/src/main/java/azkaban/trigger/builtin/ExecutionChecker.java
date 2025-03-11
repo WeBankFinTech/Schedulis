@@ -27,7 +27,7 @@ import java.util.Map;
 
 public class ExecutionChecker implements ConditionChecker {
 
-  public static final String type = "ExecutionChecker";
+  public static final String TYPE = "ExecutionChecker";
   public static ExecutorManagerAdapter executorManagerAdapter;
 
   private final String checkerId;
@@ -49,8 +49,8 @@ public class ExecutionChecker implements ConditionChecker {
 
   public static ExecutionChecker createFromJson(final HashMap<String, Object> jsonObj)
       throws Exception {
-    if (!jsonObj.get("type").equals(type)) {
-      throw new Exception("Cannot create checker of " + type + " from "
+    if (!jsonObj.get("type").equals(TYPE)) {
+      throw new Exception("Cannot create checker of " + TYPE + " from "
           + jsonObj.get("type"));
     }
     final int execId = Integer.valueOf((String) jsonObj.get("execId"));
@@ -102,7 +102,7 @@ public class ExecutionChecker implements ConditionChecker {
 
   @Override
   public String getType() {
-    return type;
+    return TYPE;
   }
 
   @Override
@@ -113,7 +113,7 @@ public class ExecutionChecker implements ConditionChecker {
   @Override
   public Object toJson() {
     final Map<String, Object> jsonObj = new HashMap<>();
-    jsonObj.put("type", type);
+    jsonObj.put("type", TYPE);
     jsonObj.put("execId", String.valueOf(this.execId));
     if (this.jobName != null) {
       jsonObj.put("jobName", this.jobName);

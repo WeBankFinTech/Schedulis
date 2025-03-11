@@ -16,6 +16,18 @@
 
 package azkaban.jobtype;
 
+import java.io.FileNotFoundException;
+import java.io.IOException;
+import java.io.InputStream;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Iterator;
+import java.util.Map;
+import java.util.Properties;
+import java.util.Set;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -23,14 +35,9 @@ import org.apache.hadoop.mapred.Counters;
 import org.apache.hadoop.mapred.Counters.Counter;
 import org.apache.hadoop.mapred.Counters.Group;
 import org.apache.hadoop.mapred.RunningJob;
-import org.apache.pig.impl.util.ObjectSerializer;
-import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import java.io.FileNotFoundException;
-import java.io.IOException;
-import java.io.InputStream;
-import java.util.*;
+import org.slf4j.Logger;
+import org.apache.pig.impl.util.ObjectSerializer;
 
 public class StatsUtils {
 
@@ -128,7 +135,7 @@ public class StatsUtils {
     for (String groupName : counterGroups) {
       Map<String, String> counterStats = new HashMap<String, String>();
       Group group = counters.getGroup(groupName);
-      Iterator<Counter> it = group.iterator();
+      Iterator<Counters.Counter> it = group.iterator();
       while (it.hasNext()) {
         Counter counter = it.next();
         counterStats.put(counter.getDisplayName(),

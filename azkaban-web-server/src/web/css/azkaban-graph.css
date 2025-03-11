@@ -80,6 +80,12 @@
   fill: #FFF;
 }
 
+.node.FAILED_SKIPPED_DISABLED > g > rect {
+  fill: #b4c7d2;
+  stroke: #d24646;
+  opacity: 0.5;
+}
+
 .FAILED_RETRYING > g > rect {
   fill: #d2526d;
   stroke: #80d2ca;
@@ -131,6 +137,13 @@
 .FAILED_FINISHING > g > text {
   fill: #FFF;
 }
+.PRE_FAILED  > g > text {
+    fill: #FFF;
+}
+.PRE_FAILED  > g > rect {
+    fill: #ca7b7ac8;
+    stroke: #ca7b7ac8;
+}
 .DISABLED > g > rect {
   fill: #DDD;
   stroke: #CCC;
@@ -140,17 +153,26 @@
   stroke: #CCC;
 }
 .nodeDisabled {
-  opacity: 0.25;
+  opacity: 0.3;
+}
+.nodeDisabled .nodeDisabled{
+  opacity: 1;
 }
 .SKIPPED > g > rect {
   fill: #DDD;
   stroke: #CCC;
 }
 .DISABLED {
-  opacity: 0.25;
+  opacity: 0.3;
+}
+.DISABLED .DISABLED{
+  opacity: 1;
 }
 .SKIPPED {
-  opacity: 0.25;
+  opacity: 0.3;
+}
+.SKIPPED .SKIPPED {
+  opacity: 1;
 }
 .QUEUED > g > rect {
   fill: #39b3d7;
@@ -160,7 +182,10 @@
   fill: #FFF;
 }
 .QUEUED {
-  opacity: 0.5;
+  opacity: 0.3;
+}
+.QUEUED .QUEUED {
+  opacity: 1;
 }
 /* Edges */
 .edge {

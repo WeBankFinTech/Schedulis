@@ -109,7 +109,7 @@ public class SecurityUtils {
   public static boolean shouldProxy(final Properties prop) {
     final String shouldProxy = prop.getProperty(ENABLE_PROXYING);
 
-    return shouldProxy != null && shouldProxy.equals("true");
+    return shouldProxy != null && "true".equals(shouldProxy);
   }
 
   public static synchronized void prefetchToken(final File tokenFile,
@@ -131,7 +131,7 @@ public class SecurityUtils {
           private void getToken(final Props p) throws InterruptedException,
               IOException {
             final String shouldPrefetch = p.getString(OBTAIN_BINARY_TOKEN);
-            if (shouldPrefetch != null && shouldPrefetch.equals("true")) {
+            if (shouldPrefetch != null && "true".equals(shouldPrefetch)) {
               logger.info("Pre-fetching token");
 
               logger.info("Pre-fetching fs token");

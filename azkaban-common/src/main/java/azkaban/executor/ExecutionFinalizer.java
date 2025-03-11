@@ -80,7 +80,7 @@ public class ExecutionFinalizer {
         if (!ExecutionControllerUtils.isFinished(dsFlow)) {
           this.updaterStage.set("finalizing flow " + execId + " failing the flow");
           logger.info("finalizing flow " + execId + " failing the flow");
-          ExecutionControllerUtils.failEverything(dsFlow);
+          ExecutionControllerUtils.failAllJobs(dsFlow);
           this.executorLoader.updateExecutableFlow(dsFlow);
         }
       }
@@ -112,7 +112,7 @@ public class ExecutionFinalizer {
       logger.info("finalizing flow " + execId + " alerting and emailing");
       ExecutionControllerUtils.alertUserOnFlowFinished(dsFlow, this.alerterHolder,
           ExecutionControllerUtils.getFinalizeFlowReasons(reason,
-              originalError));
+              originalError), this.executorLoader);
     }
 
   }

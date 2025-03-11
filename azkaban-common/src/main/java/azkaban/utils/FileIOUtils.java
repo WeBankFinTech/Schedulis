@@ -16,18 +16,32 @@
 
 package azkaban.utils;
 
-import java.io.*;
+import java.io.BufferedInputStream;
+import java.io.BufferedReader;
+import java.io.BufferedWriter;
+import java.io.File;
+import java.io.FileFilter;
+import java.io.FileInputStream;
+import java.io.FileReader;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.io.OutputStream;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.*;
-
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.StringTokenizer;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
-import org.slf4j.LoggerFactory;
 import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 
 /**
@@ -82,7 +96,7 @@ public class FileIOUtils {
    */
   public static void dumpNumberToFile(final Path filePath, final long num) throws IOException {
     try (final BufferedWriter writer = Files
-        .newBufferedWriter(filePath, StandardCharsets.UTF_8)) {
+            .newBufferedWriter(filePath, StandardCharsets.UTF_8)) {
       writer.write(String.valueOf(num));
     } catch (final IOException e) {
       log.error("Failed to write the number {} to the file {}", num, filePath, e);
@@ -95,7 +109,7 @@ public class FileIOUtils {
    * @param filePath the target file
    */
   public static long readNumberFromFile(final Path filePath)
-      throws IOException, NumberFormatException {
+          throws IOException, NumberFormatException {
     final List<String> allLines = Files.readAllLines(filePath);
     if (!allLines.isEmpty()) {
       return Long.parseLong(allLines.get(0));
@@ -106,8 +120,8 @@ public class FileIOUtils {
 
   public static String getSourcePathFromClass(final Class<?> containedClass) {
     File file =
-        new File(containedClass.getProtectionDomain().getCodeSource()
-            .getLocation().getPath());
+            new File(containedClass.getProtectionDomain().getCodeSource()
+                    .getLocation().getPath());
 
     if (!file.isDirectory() && file.getName().endsWith(".class")) {
       final String name = containedClass.getName();
@@ -119,7 +133,7 @@ public class FileIOUtils {
       return file.getPath();
     } else {
       return containedClass.getProtectionDomain().getCodeSource().getLocation()
-          .getPath();
+              .getPath();
     }
   }
 
@@ -194,13 +208,13 @@ public class FileIOUtils {
    * Hard link files and recurse into directories.
    */
   public static int createDeepHardlink(final File sourceDir, final File destDir)
-      throws IOException {
+          throws IOException {
     if (!sourceDir.exists()) {
       throw new IOException("Source directory " + sourceDir.getPath()
-          + " doesn't exist");
+              + " doesn't exist");
     } else if (!destDir.exists()) {
       throw new IOException("Destination directory " + destDir.getPath()
-          + " doesn't exist");
+              + " doesn't exist");
     } else if (sourceDir.isFile() && destDir.isFile()) {
       throw new IOException("Source or Destination is not a directory.");
     }
@@ -228,7 +242,7 @@ public class FileIOUtils {
   }
 
   private static void createDirsFindFiles(final File baseDir, final File sourceDir,
-      final File destDir, final Set<String> paths) {
+                                          final File destDir, final Set<String> paths) {
     final File[] srcList = sourceDir.listFiles();
     final String path = getRelativePath(baseDir, sourceDir);
     paths.add(path);
@@ -247,7 +261,7 @@ public class FileIOUtils {
   }
 
   public static Pair<Integer, Integer> readUtf8File(final File file, final int offset,
-      final int length, final OutputStream stream) throws IOException {
+                                                    final int length, final OutputStream stream) throws IOException {
     final byte[] buffer = new byte[length];
 
     final FileInputStream fileStream = new FileInputStream(file);
@@ -273,7 +287,7 @@ public class FileIOUtils {
   }
 
   public static LogData readUtf8File(final File file, final int fileOffset, final int length)
-      throws IOException {
+          throws IOException {
     final byte[] buffer = new byte[length];
     final FileInputStream fileStream = new FileInputStream(file);
     log.info("file length is {}, available size is {}", file.length(), fileStream.available());
@@ -298,14 +312,14 @@ public class FileIOUtils {
     }
     final Pair<Integer, Integer> utf8Range = getUtf8Range(buffer, 0, read);
     final String outputString =
-        new String(buffer, utf8Range.getFirst(), utf8Range.getSecond(), StandardCharsets.UTF_8);
+            new String(buffer, utf8Range.getFirst(), utf8Range.getSecond(), StandardCharsets.UTF_8);
 
     return new LogData(fileOffset + utf8Range.getFirst(),
-        utf8Range.getSecond(), outputString);
+            utf8Range.getSecond(), outputString);
   }
 
   public static JobMetaData readUtf8MetaDataFile(final File file, final int fileOffset,
-      final int length) throws IOException {
+                                                 final int length) throws IOException {
     final byte[] buffer = new byte[length];
     final FileInputStream fileStream = new FileInputStream(file);
 
@@ -330,17 +344,17 @@ public class FileIOUtils {
     }
     final Pair<Integer, Integer> utf8Range = getUtf8Range(buffer, 0, read);
     final String outputString =
-        new String(buffer, utf8Range.getFirst(), utf8Range.getSecond(), StandardCharsets.UTF_8);
+            new String(buffer, utf8Range.getFirst(), utf8Range.getSecond(), StandardCharsets.UTF_8);
 
     return new JobMetaData(fileOffset + utf8Range.getFirst(),
-        utf8Range.getSecond(), outputString);
+            utf8Range.getSecond(), outputString);
   }
 
   /**
    * Returns first and length.
    */
   public static Pair<Integer, Integer> getUtf8Range(final byte[] buffer, final int offset,
-      final int length) {
+                                                    final int length) {
     final int start = getUtf8ByteStart(buffer, offset);
     final int end = getUtf8ByteEnd(buffer, offset + length - 1);
 
@@ -450,7 +464,7 @@ public class FileIOUtils {
           this.buffer.append(line);
         }
       } catch (final IOException e) {
-        log.error("IOException in execute thread action, caused by:" + e);
+        log.error("IOException in execute thread action, caused by:", e);
       }
     }
 
@@ -471,10 +485,27 @@ public class FileIOUtils {
     private final int length;
     private final String data;
 
+    private String hdfsPath;
+
     public LogData(final int offset, final int length, final String data) {
       this.offset = offset;
       this.length = length;
       this.data = data;
+    }
+
+    public LogData(final int offset, final int length, final String data, String hdfsPath) {
+      this.offset = offset;
+      this.length = length;
+      this.data = data;
+      this.hdfsPath = hdfsPath;
+    }
+
+    public String getHdfsPath() {
+      return hdfsPath;
+    }
+
+    public void setHdfsPath(String hdfsPath) {
+      this.hdfsPath = hdfsPath;
     }
 
     public static LogData createLogDataFromObject(final Map<String, Object> map) {
@@ -525,7 +556,7 @@ public class FileIOUtils {
     }
 
     public static JobMetaData createJobMetaDataFromObject(
-        final Map<String, Object> map) {
+            final Map<String, Object> map) {
       final int offset = (Integer) map.get("offset");
       final int length = (Integer) map.get("length");
       final String data = (String) map.get("data");
@@ -640,5 +671,24 @@ public class FileIOUtils {
         findFile(f, targetFileName, resultFiles);
       }
     }
+  }
+
+  public static String readFile(File file){
+    StringBuilder sb = new StringBuilder();
+    BufferedReader br = null;
+    try {
+      br = new BufferedReader(new FileReader(file));
+      char[] data = new char[1024];
+      int rn = 0;
+      String line = "";
+      while ((line = br.readLine()) != null){
+        sb.append(line).append("\n");
+      }
+    } catch (Exception e) {
+      log.error("parse file faield.", e);
+    } finally {
+      IOUtils.closeQuietly(br);
+    }
+    return sb.toString();
   }
 }

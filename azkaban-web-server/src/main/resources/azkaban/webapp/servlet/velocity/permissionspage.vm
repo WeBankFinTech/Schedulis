@@ -24,20 +24,26 @@
   #parse ("azkaban/webapp/servlet/velocity/javascript.vm")
 
   <script type="text/javascript">
-    var contextURL = "${context}";
     var currentTime = ${currentTime};
     var timezone = "${timezone}";
     var errorMessage = null;
     var successMessage = null;
     var userId = "$username";
+    var projectId = ${project.id};
     var projectName = "$project.name";
     var langType = "${currentlangType}";
+    // load cmdb data switch
+    var isCmdbLoaded=false;
   </script>
-  <script type="text/javascript" src="${context}/js/azkaban/view/project-permissions.js?version=1.10.0"></script>
-  <script type="text/javascript" src="${context}/js/azkaban/view/project-modals.js?version=1.10.0"></script>
-  <script type="text/javascript" src="${context}/js/azkaban/i18n-config.js?version=1.10.0"></script>
-  <script src="${context}/js/select2/select2.full.min.js?version=1.10.0"></script>
-  <link href="${context}/css/select2/select2.min.css?version=1.10.0" rel="stylesheet" />
+  <script type="text/javascript" src="/js/azkaban/view/project-permissions.js?version=1.49.0"></script>
+  <script type="text/javascript" src="/js/azkaban/view/project-modals.js?version=1.49.0"></script>
+  <script type="text/javascript" src="/js/azkaban/i18n-config.js?version=1.49.0"></script>
+  <script src="/js/select2/select2.full.min.js?version=1.49.0"></script>
+  <link href="/css/select2/select2.min.css?version=1.49.0" rel="stylesheet" />
+  <link href="/css/bootstrap-select.min.css?version=1.49.0" rel="stylesheet">
+  <script type="text/javascript" src="/js/bootstrap-select.js?version=1.49.0"></script>
+  <script type="text/javascript" src="/js/moment-2.29.4.min.js?version=1.49.0"></script>
+  <script type="text/javascript" src="/js/bootstrap-datetimepicker.min.js?version=1.49.0"></script>
   
 </head>
 <body>
@@ -64,96 +70,6 @@
 
         #set ($project_page = "permissions")
         #parse ("azkaban/webapp/servlet/velocity/projectnav.vm")
-
-      ## User permissions table.
-
-      ##        <div class="panel panel-success">
-      ##          <div class="panel-heading">
-      ##            项目管理员
-      ##            #if ($isAdmin)
-      ##              <div class="pull-right">
-      ##                <button id="addUser" class="btn btn-xs btn-success">Add</button>
-      ##              </div>
-      ##            #end
-      ##          </div>
-      ##          <table class="table table-striped permission-table" id="permissions-table">
-      ##            <thead>
-      ##            <tr>
-      ##              <th class="tb-username"></th>
-      ##              <th class="tb-perm">Admin</th>
-      ##              <th class="tb-read">Read</th>
-      ##              <th class="tb-write">Write</th>
-      ##              <th class="tb-execute">Execute</th>
-      ##              <th class="tb-schedule">Schedule</th>
-      ##              #if ($isAdmin)
-      ##                <th class="tb-action"></th>
-      ##              #end
-      ##            </tr>
-      ##            </thead>
-      ##            <tbody>
-      ##
-      ##              #if ($permissions)
-      ##                #foreach ($perm in $permissions)
-      ##                <tr>
-      ##                  <td class="tb-username">
-      ##                    #if ($perm.first == $username)
-      ##                      ${perm.first} <span class="sublabel">(you)</span>
-      ##                    #else
-      ##                      $perm.first
-      ##                    #end
-      ##                  </td>
-      ##                  #if ($perm.second.isPermissionNameSet("ADMIN"))
-      ##                    <td><input id="${perm.first}-admin-checkbox" type="checkbox" name="admin"
-      ##                               disabled="disabled" checked="true"></input></td>
-      ##                    <td><input id="${perm.first}-read-checkbox" type="checkbox" name="read"
-      ##                               disabled="disabled" checked="true"></input></td>
-      ##                    <td><input id="${perm.first}-write-checkbox" type="checkbox" name="write"
-      ##                               disabled="disabled" checked="true"></input></td>
-      ##                    <td><input id="${perm.first}-execute-checkbox" type="checkbox" name="execute"
-      ##                               disabled="disabled" checked="true"></input></td>
-      ##                    <td><input id="${perm.first}-schedule-checkbox" type="checkbox" name="schedule"
-      ##                               disabled="disabled" checked="true"></input></td>
-      ##                  #else
-      ##                    <td><input id="${perm.first}-admin-checkbox" type="checkbox" name="admin"
-      ##                               disabled="disabled"></input></td>
-      ##                    <td><input id="${perm.first}-read-checkbox" type="checkbox" name="read"
-      ##                               disabled="disabled"  #if ($perm.second.isPermissionNameSet("READ"))
-      ##                               checked="true" #end></input></td>
-      ##                    <td><input id="${perm.first}-write-checkbox" type="checkbox" name="write"
-      ##                               disabled="disabled" #if ($perm.second.isPermissionNameSet("WRITE"))
-      ##                               checked="true" #end></input></td>
-      ##                    <td><input id="${perm.first}-execute-checkbox" type="checkbox" name="execute"
-      ##                               disabled="disabled" #if ($perm.second.isPermissionNameSet("EXECUTE"))
-      ##                               checked="true" #end></input></td>
-      ##                    <td><input id="${perm.first}-schedule-checkbox" type="checkbox" name="schedule"
-      ##                               disabled="disabled" #if ($perm.second.isPermissionNameSet(
-      ##                        "SCHEDULE")) checked="true" #end></input></td>
-      ##                  #end
-      ##
-      ##                  #if ($isAdmin)
-      ##                    <td>
-      ##                      <button id="$perm.first" #if($perm.first == $username)
-      ##                              class="btn btn-xs btn-disabled" #else
-      ##                              class="btn btn-xs btn-default" #end>修改
-      ##                      </button>
-      ##                    </td>
-      ##                  #end
-      ##                </tr>
-      ##                #end
-      ##              #else
-      ##                #if ($isAdmin)
-      ##                <tr>
-      ##                  <td colspan="7">未发现用户.</td>
-      ##                </tr>
-      ##                #else
-      ##                <tr>
-      ##                  <td colspan="6">未发现用户.</td>
-      ##                </tr>
-      ##                #end
-      ##              #end
-      ##            </tbody>
-      ##          </table>
-      ##        </div>
 
       ## Project Admin permissions table.
 
@@ -219,93 +135,6 @@
             </tbody>
           </table>
         </div>
-
-      ## Group permissions table.
-
-      ##        <div class="panel panel-warning">
-      ##          <div class="panel-heading">
-      ##            组用户
-      ##            #if ($isAdmin)
-      ##              <div class="pull-right">
-      ##                <button id="addGroup" class="btn btn-xs btn-warning">Add</button>
-      ##              </div>
-      ##            #end
-      ##          </div>
-      ##          <table class="table table-striped permission-table" id="group-permissions-table">
-      ##            <thead>
-      ##            <tr>
-      ##              <th class="tb-username"></th>
-      ##              <th class="tb-perm">Admin</th>
-      ##              <th class="tb-read">Read</th>
-      ##              <th class="tb-write">Write</th>
-      ##              <th class="tb-execute">Execute</th>
-      ##              <th class="tb-schedule">Schedule</th>
-      ##              #if ($isAdmin)
-      ##                <th class="tb-action"></th>
-      ##              #end
-      ##            </tr>
-      ##            </thead>
-      ##            <tbody>
-      ##              #if ($groupPermissions)
-      ##                #foreach ($perm in $groupPermissions)
-      ##                <tr>
-      ##                  <td class="tb-username">
-      ##                    #if ($perm.first == $username)
-      ##                      ${perm.first} <span class="sublabel">(you)</span>
-      ##                    #else
-      ##                      $perm.first
-      ##                    #end
-      ##                  </td>
-      ##                  #if ($perm.second.isPermissionNameSet("ADMIN"))
-      ##                    <td><input id="group-${perm.first}-admin-checkbox" type="checkbox" name="admin"
-      ##                               disabled="disabled" checked="true"></input></td>
-      ##                    <td><input id="group-${perm.first}-read-checkbox" type="checkbox" name="read"
-      ##                               disabled="disabled" checked="true"></input></td>
-      ##                    <td><input id="group-${perm.first}-write-checkbox" type="checkbox" name="write"
-      ##                               disabled="disabled" checked="true"></input></td>
-      ##                    <td><input id="group-${perm.first}-execute-checkbox" type="checkbox"
-      ##                               name="execute" disabled="disabled" checked="true"></input></td>
-      ##                    <td><input id="group-${perm.first}-schedule-checkbox" type="checkbox"
-      ##                               name="schedule" disabled="disabled" checked="true"></input></td>
-      ##                  #else
-      ##                    <td><input id="group-${perm.first}-admin-checkbox" type="checkbox" name="admin"
-      ##                               disabled="disabled"></input></td>
-      ##                    <td><input id="group-${perm.first}-read-checkbox" type="checkbox" name="read"
-      ##                               disabled="disabled"  #if ($perm.second.isPermissionNameSet("READ"))
-      ##                               checked="true" #end></input></td>
-      ##                    <td><input id="group-${perm.first}-write-checkbox" type="checkbox" name="write"
-      ##                               disabled="disabled" #if ($perm.second.isPermissionNameSet("WRITE"))
-      ##                               checked="true" #end></input></td>
-      ##                    <td><input id="group-${perm.first}-execute-checkbox" type="checkbox"
-      ##                               name="execute"
-      ##                               disabled="disabled" #if ($perm.second.isPermissionNameSet("EXECUTE"))
-      ##                               checked="true" #end></input></td>
-      ##                    <td><input id="group-${perm.first}-schedule-checkbox" type="checkbox"
-      ##                               name="schedule"
-      ##                               disabled="disabled" #if ($perm.second.isPermissionNameSet(
-      ##                        "SCHEDULE")) checked="true" #end></input></td>
-      ##                  #end
-      ##                  #if ($isProjectAdmin)
-      ##                    <td>
-      ##                      <button id="group-$perm.first" class="btn btn-xs btn-default">Change</button>
-      ##                    </td>
-      ##                  #end
-      ##                </tr>
-      ##                #end
-      ##              #else
-      ##                #if ($isAdmin)
-      ##                <tr>
-      ##                  <td colspan="7">未发现组.</td>
-      ##                </tr>
-      ##                #else
-      ##                <tr>
-      ##                  <td colspan="6">未发现组.</td>
-      ##                </tr>
-      ##                #end
-      ##              #end
-      ##            </tbody>
-      ##          </table>
-      ##        </div>
 
       ##项目用户table
 
@@ -477,59 +306,6 @@
       </div>
     </div>
 
-  ## Change permissions modal dialog.
-
-  ##    <div class="modal" id="change-permission">
-  ##      <div class="modal-dialog">
-  ##        <div class="modal-content">
-  ##          <div class="modal-header">
-  ##            <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;
-  ##            </button>
-  ##            <h4 class="modal-title" id="change-title">权限修改</h4>
-  ##          </div>
-  ##          <div class="modal-body">
-  ##            <div class="alert alert-danger" id="change-permission-error-msg"></div>
-  ##            <fieldset class="form-horizontal">
-  ##              <div class="form-group">
-  ##                <label for="path" class="col-sm-2 control-label">用户选择</label>
-  ##                <div class="col-sm-10">
-  ##                  <input type="text" name="userid" id="user-box" class="form-control">
-  ##                </div>
-  ##              </div>
-  ##              <div class="form-group">
-  ##                <div class="col-sm-offset-2 col-sm-10">
-  ##                  <label class="checkbox-inline">
-  ##                    <input id="admin-change" name="admin" type="checkbox">
-  ##                    管理员权限
-  ##                  </label>
-  ##                  <label class="checkbox-inline">
-  ##                    <input id="read-change" name="read" type="checkbox">
-  ##                    读权限
-  ##                  </label>
-  ##                  <label class="checkbox-inline">
-  ##                    <input id="write-change" name="write" type="checkbox">
-  ##                    写权限
-  ##                  </label>
-  ##                  <label class="checkbox-inline">
-  ##                    <input id="execute-change" name="execute" type="checkbox">
-  ##                    执行权限
-  ##                  </label>
-  ##                  <label class="checkbox-inline">
-  ##                    <input id="schedule-change" name="schedule" type="checkbox">
-  ##                    调度权限
-  ##                  </label>
-  ##                </div>
-  ##              </div>
-  ##            </fieldset>
-  ##          </div>
-  ##          <div class="modal-footer">
-  ##            <button type="button" class="btn btn-default" data-dismiss="modal">取消</button>
-  ##            <button type="button" class="btn btn-primary" id="change-btn">提交</button>
-  ##          </div>
-  ##        </div>
-  ##      </div>
-  ##    </div>
-
   ## Change project admin permissions modal dialog.
 
     <div class="modal" id="change-project-admin-permission">
@@ -552,28 +328,6 @@
                 </div>
               </div>
               <div class="form-group">
-              ##                <div class="col-sm-offset-2 col-sm-10">
-##                  <label class="checkbox-inline">
-##                    <input id="admin-change" name="admin" type="checkbox">
-##                    管理员权限
-##                  </label>
-##                  <label class="checkbox-inline">
-##                    <input id="read-change" name="read" type="checkbox">
-##                    读权限
-##                  </label>
-##                  <label class="checkbox-inline">
-##                    <input id="write-change" name="write" type="checkbox">
-##                    写权限
-##                  </label>
-##                  <label class="checkbox-inline">
-##                    <input id="execute-change" name="execute" type="checkbox">
-##                    执行权限
-##                  </label>
-##                  <label class="checkbox-inline">
-##                    <input id="schedule-change" name="schedule" type="checkbox">
-##                    调度权限
-##                  </label>
-##                </div>
               </div>
             </fieldset>
           </div>

@@ -27,9 +27,14 @@ import java.io.IOException;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.*;
+import java.util.stream.Collectors;
 import javax.inject.Inject;
 import javax.inject.Singleton;
+
+import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.dbutils.ResultSetHandler;
+import org.apache.commons.dbutils.handlers.ScalarHandler;
+import org.apache.commons.lang.StringUtils;
 import org.slf4j.LoggerFactory;
 import org.slf4j.Logger;
 
@@ -128,6 +133,107 @@ public class FetchActiveFlowDao {
     }
   }
 
+  public long getAllUnFinishFlowsTotal() throws ExecutorManagerException {
+    try {
+      return this.dbOperator.query(FetchUnFinishedExecutableFlows.ACTIVE_EXECUTABLE_FLOWS_COUNT, new ScalarHandler<>());
+    } catch (SQLException e) {
+      throw new ExecutorManagerException("Error count unfinished flows", e);
+    }
+  }
+
+  public long getUnFinishFlowsTotal(ExecutingQueryParam executingQueryParam) throws ExecutorManagerException {
+    try {
+      StringBuilder sql = new StringBuilder(FetchUnFinishedExecutableFlows.ACTIVE_EXECUTABLE_FLOWS_COUNT);
+      ArrayList<Object> params = new ArrayList<>();
+      if (executingQueryParam.getFuzzySearch()) {
+        sql = wrapMultiConditionSql("like", sql, executingQueryParam, params, false);
+      } else {
+        sql = wrapMultiConditionSql("=", sql, executingQueryParam, params,false);
+      }
+      return this.dbOperator.query(sql.toString(), new ScalarHandler<>(), params.toArray());
+    } catch (final SQLException e) {
+      throw new ExecutorManagerException("Error fetching unfinished flows", e);
+    }
+  }
+
+  public List<ExecutableFlow> fetchUnfinishedFlows(ExecutingQueryParam executingQueryParam) throws ExecutorManagerException {
+    try {
+      StringBuilder sql = new StringBuilder(FetchUnFinishedExecutableFlows.SEARCH_ACTIVE_EXECUTABLE_FLOWS);
+      ArrayList<Object> params = new ArrayList<>();
+      if (executingQueryParam.getFuzzySearch()) {
+        sql = wrapMultiConditionSql("like", sql, executingQueryParam, params, true);
+      } else {
+        sql = wrapMultiConditionSql("=", sql, executingQueryParam, params,true);
+      }
+      return this.dbOperator.query(sql.toString(), new FetchUnFinishedExecutableFlows(), params.toArray());
+    } catch (final SQLException e) {
+      throw new ExecutorManagerException("Error fetching unfinished flows", e);
+    }
+  }
+
+  private StringBuilder wrapMultiConditionSql(String action, StringBuilder sql, ExecutingQueryParam executingQueryParam, ArrayList<Object> params ,Boolean paging) {
+    String search = executingQueryParam.getSearch();
+
+    if (executingQueryParam.getPreciseSearch()||executingQueryParam.getFuzzySearch()) {
+      if (StringUtils.isNotBlank(executingQueryParam.getProjcontain())) {
+        wrapSqlParam(action, sql, "pr.name", executingQueryParam.getProjcontain(), params);
+      }
+      if (StringUtils.isNotBlank(executingQueryParam.getExecutorId())) {
+        wrapSqlParam(action, sql, "ex.executor_id", executingQueryParam.getExecutorId(), params);
+      }
+      if (StringUtils.isNotBlank(executingQueryParam.getFlowcontain())) {
+        wrapSqlParam(action, sql, "ex.flow_id", executingQueryParam.getFlowcontain(), params);
+      }
+      if (StringUtils.isNotBlank(executingQueryParam.getFlowType())) {
+        wrapSqlParam(action, sql, "ex.flow_type", executingQueryParam.getFlowType(), params);
+      }
+      if (StringUtils.isNotBlank(executingQueryParam.getUsercontain())) {
+        wrapSqlParam(action, sql, "ex.submit_user", executingQueryParam.getUsercontain(), params);
+      }
+      if (executingQueryParam.getStartBeginTime() > 0) {
+        wrapSqlParam(">", sql, "ex.start_time", String.valueOf(executingQueryParam.getStartBeginTime()), params);
+      }
+      if (executingQueryParam.getStartEndTime() > 0) {
+        wrapSqlParam("<", sql, "ex.end_time", String.valueOf(executingQueryParam.getStartEndTime()), params);
+      }
+      if (CollectionUtils.isNotEmpty(executingQueryParam.getProjectIds())) {
+        String projectIds = executingQueryParam.getProjectIds().stream().map(Object::toString).collect(Collectors.joining(",", "(", ")"));
+        sql.append(" and ex.project_id in ").append(projectIds);
+      }
+      if (paging && !executingQueryParam.getRecordRunningFlow()) {
+        sql.append(" order by ex.exec_id desc limit " + (executingQueryParam.getPage() - 1) * executingQueryParam.getSize() + " , " + executingQueryParam.getSize());
+      }
+    } else {
+      if (CollectionUtils.isNotEmpty(executingQueryParam.getProjectIds())) {
+        String projectIds = executingQueryParam.getProjectIds().stream().map(Object::toString).collect(Collectors.joining(",", "(", ")"));
+        sql.append(" and ex.project_id in ").append(projectIds);
+      }
+      sql.append(" and (pr.name like ? or ex.flow_id like ? or ex.submit_user like ? ) ");
+      if(paging && !executingQueryParam.getRecordRunningFlow()){
+        sql.append(" order by ex.exec_id desc limit ? , ?");
+      }
+      params.add("%" + search + "%");
+      params.add("%" + search + "%");
+      params.add("%" + search + "%");
+      if(paging && !executingQueryParam.getRecordRunningFlow()){
+        params.add((executingQueryParam.getPage() - 1) * executingQueryParam.getSize());
+        params.add(executingQueryParam.getSize());
+      }
+    }
+
+    return sql;
+  }
+
+  private void wrapSqlParam(String action, StringBuilder sql, String column, String executingQueryParam, ArrayList<Object> params) {
+    sql.append(" and " + column + " " + action + " ? ");
+    if ("like".equalsIgnoreCase(action)) {
+      params.add("%" + executingQueryParam + "%");
+    } else {
+      params.add(executingQueryParam);
+    }
+  }
+
+
   /**
    * Fetch unfinished flows similar to {@link #fetchUnfinishedFlows}, excluding flow data.
    *
@@ -208,7 +314,7 @@ public class FetchActiveFlowDao {
             // the condition in ExecutionFlowDao#FETCH_QUEUED_EXECUTABLE_FLOW
             + " AND NOT ("
             + "   ex.executor_id IS NULL"
-            + "   AND ex.status = " + Status.PREPARING.getNumVal()
+            + "   AND ex.status IN (" + Status.PREPARING.getNumVal() + "," + Status.SYSTEM_PAUSED.getNumVal() + ")"
             + " )";
 
     @Override
@@ -244,6 +350,23 @@ public class FetchActiveFlowDao {
                     + Status.KILLED.getNumVal() + ", "
                     + Status.FAILED.getNumVal() + ")"
                     + " AND ex.flow_data IS NOT NULL;";
+
+    private static final String ACTIVE_EXECUTABLE_FLOWS_COUNT =
+            "SELECT count(1) FROM execution_flows ex , projects pr" +
+                    " WHERE ex.status NOT IN (" +
+                    + Status.SUCCEEDED.getNumVal() + ", "
+                    + Status.KILLED.getNumVal() + ", "
+                    + Status.FAILED.getNumVal() + ")"
+                    + " AND ex.flow_data IS NOT NULL AND ex.project_id = pr.id ";
+
+    private static final String SEARCH_ACTIVE_EXECUTABLE_FLOWS =
+            "SELECT ex.exec_id exec_id, ex.enc_type enc_type, ex.flow_data flow_data, ex.`executor_id` executor_id " +
+                    " FROM execution_flows ex , projects pr" +
+                    " WHERE ex.status NOT IN (" +
+                    + Status.SUCCEEDED.getNumVal() + ", "
+                    + Status.KILLED.getNumVal() + ", "
+                    + Status.FAILED.getNumVal() + ")"
+                    + " AND ex.flow_data IS NOT NULL AND ex.project_id = pr.id ";
 
     @Override
     public List<ExecutableFlow> handle(

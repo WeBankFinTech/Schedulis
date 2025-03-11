@@ -42,17 +42,42 @@ function ajaxCall(requestURL, data, callback) {
 }
 
 function executeFlow(executingData) {
-  executeURL = contextURL + "/executor";
+    executeURL = "/executor";
+    var isBackupRerun = localStorage.getItem("isBackupRerun")
+    if (isBackupRerun === 'true') {
+        executeURL = "/executor?ajax=disasterToleranceRetry"
+    }else {
+        executeURL = "/executor";
+    }
+    var executingData1=executingData;
   var successHandler = function (data) {
     if (data.error) {
+        $("#execute-btn").attr("disabled", false).removeClass("button-disable");
       flowExecuteDialogView.hideExecutionOptionPanel();
       messageDialogView.show(wtssI18n.common.workflowError, data.error);
-    }
-    else {
+      } else if (data.info){
+        $("#execute-btn").attr("disabled", false).removeClass("button-disable");
+        messageDialogView.show(wtssI18n.common.workflowError, data.info);
+      } else if (data.warn) {
+        $("#execute-btn").attr("disabled", false).removeClass("button-disable");
+        const warnHtml = `${data.warn}<span style="color: red;">（请注意不管选择哪个选项版本物料和脚本只会使用新版本的进行执行）</span>`
+        warnDialogView.show(wtssI18n.common.workflowSubmit, warnHtml, wtssI18n.common.no, wtssI18n.common.yes,
+          function () {
+            executingData1.propertiesVersion='new';
+            executeFlow(executingData1);
+            flowExecuteDialogView.hideExecutionOptionPanel();
+          },
+          function () {
+            executingData1.propertiesVersion='old';
+            executeFlow(executingData1);
+            flowExecuteDialogView.hideExecutionOptionPanel();
+          }
+        );
+      } else {
       flowExecuteDialogView.hideExecutionOptionPanel();
       messageDialogView.show(wtssI18n.common.workflowSubmit, data.message,
         function() {
-          var redirectURL = contextURL + "/executor?execid=" + data.execid;
+            var redirectURL = filterXSS("/executor?execid=" + data.execid);
           window.location.href = redirectURL;
         }
       );
@@ -68,7 +93,7 @@ function fetchFlowInfo(model, projectName, flowId, execId) {
     fetchData.execid = execId;
   }
 
-  var executeURL = contextURL + "/executor";
+    var executeURL = "/executor";
   var successHandler = function (data) {
     if (data.error) {
       alert(data.error);
@@ -78,11 +103,13 @@ function fetchFlowInfo(model, projectName, flowId, execId) {
         data.otherOption = {};
       }
       model.set({
+          "jobDisabled": data.disabled,
         "successEmails": data.successEmails,
         "successEmailsOverride":data.successEmailsOverride,
         "failureEmails": data.failureEmails,
         "failureEmailsOverride":data.failureEmailsOverride,
         "failureAction": data.failureAction,
+          "rerunAction": data.rerunAction,
         "notifyFailure": {
           "first": data.notifyFailureFirst,
           "last": data.notifyFailureLast
@@ -110,7 +137,12 @@ function fetchFlowInfo(model, projectName, flowId, execId) {
         "slaAlertType":data.slaAlertType,
 
         "jobFailedRetryOptions":data.jobFailedRetryOptions,
-        "jobSkipFailedOptions":data.jobSkipFailedOptions
+          "jobSkipFailedOptions": data.jobSkipFailedOptions,
+          "jobSkipActionOptions": data.otherOption.jobSkipActionOptions,
+  
+          "flowRetryAlertOption": data.otherOption.flowRetryAlertOption,
+          "flowType": data.flowType,
+          "enabledCacheProjectFiles": data.enabledCacheProjectFiles,
       });
     }
     model.trigger("change:flowinfo");
@@ -128,7 +160,7 @@ function fetchFlowInfo(model, projectName, flowId, execId) {
 function fetchFlow(model, projectName, flowId, sync) {
   // Just in case people don't set sync
   sync = sync ? true : false;
-  var managerUrl = contextURL + "/manager";
+    var managerUrl = "/manager";
   var fetchData = {
     "ajax": "fetchflowgraph",
     "project": projectName,
@@ -186,7 +218,7 @@ function fetchFlow(model, projectName, flowId, sync) {
  *
  */
 function flowExecutingStatus(projectName, flowId) {
-  var requestURL = contextURL + "/executor";
+    var requestURL = "/executor";
 
   var executionIds;
   var successHandler = function (data) {

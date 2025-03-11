@@ -1,17 +1,24 @@
 package azkaban.webapp.error;
 
-import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.slf4j.Logger;
 
-import javax.servlet.*;
-import javax.servlet.http.HttpServlet;
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpSession;
 import java.io.IOException;
 import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.Iterator;
+import java.util.Map;
 import java.util.Map.Entry;
+import javax.servlet.FilterConfig;
+
+import javax.servlet.Filter;
+import javax.servlet.FilterChain;
+import javax.servlet.ServletException;
+import javax.servlet.ServletRequest;
+import javax.servlet.ServletResponse;
+import javax.servlet.http.HttpServlet;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpSession;
 
 /**
  * Created by zhu on 5/10/18.
@@ -44,9 +51,9 @@ public class SessionFilter extends HttpServlet implements Filter {
       if("POST".equals(httpRequest.getMethod())){
         //取的url相对地址
         String url = httpRequest.getRequestURI();
-        System.out.println(url);
+        logger.info(url);
         if (httpRequest.getSession() != null) {
-          System.out.println("NewSessionFilter doFilter httpRequest.getSession().getId()"+ httpRequest.getSession().getId());
+          logger.info("NewSessionFilter doFilter httpRequest.getSession().getId()"+ httpRequest.getSession().getId());
           //--------复制 session到临时变量
           HttpSession session = httpRequest.getSession();
           HashMap old = new HashMap();
@@ -69,7 +76,7 @@ public class SessionFilter extends HttpServlet implements Filter {
 
           //-----------------复制session
           for (Iterator it = old.entrySet().iterator(); it.hasNext();) {
-            Entry entry = (Entry) it.next();
+            Map.Entry entry = (Entry) it.next();
             session.setAttribute((String) entry.getKey(), entry.getValue());
           }
         }

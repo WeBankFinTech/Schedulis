@@ -20,13 +20,13 @@ import azkaban.event.Event;
 import azkaban.event.EventListener;
 import azkaban.metric.MetricException;
 import azkaban.metric.MetricReportManager;
-import azkaban.metric.TimeBasedReportingMetric;
+import azkaban.metric.AbstractTimeBasedReportingMetric;
 import azkaban.spi.EventType;
 
 /**
  * Metric to keep track of number of running jobs in Azkaban exec server
  */
-public class NumRunningJobMetric extends TimeBasedReportingMetric<Integer> implements
+public class NumRunningJobMetric extends AbstractTimeBasedReportingMetric<Integer> implements
     EventListener {
 
   public static final String NUM_RUNNING_JOB_METRIC_NAME = "NumRunningJobMetric";
@@ -45,7 +45,7 @@ public class NumRunningJobMetric extends TimeBasedReportingMetric<Integer> imple
   /**
    * Listen for events to maintain correct value of number of running jobs {@inheritDoc}
    *
-   * @see EventListener#handleEvent(Event)
+   * @see azkaban.event.EventListener#handleEvent(azkaban.event.Event)
    */
   @Override
   public synchronized void handleEvent(final Event event) {

@@ -11,7 +11,7 @@
   "azkaban.viewer.event.eventAuth-detail-header.vm": {
   },
   "azkaban.viewer.event.eventAuth-manager.vm": {
-    "authedMessagePage": "已授权信号页面",
+    "authedMessagePage": "信号页面",
     "messageInfoInclude": "消息发送者、消息主題或消息名称包含 ...",
     "quicklySearch": "快速查找",
     "clickNameToRank": "* 点击列名可排序",
@@ -26,6 +26,8 @@
     "backlogAlarmSet": "设置信号积压的告警列表，可以用逗号、空格或分号分隔列表.",
     "entertip": "请录入一个批量运维人员英文名和一个批量负责人英文名",
     "cancel": "取消",
+    "authorizedSignal": "已授权信号",
+    "internalSignal": "内部信号",
     "setAlarm": "设置告警"
   },
   "azkaban.viewer.event.eventQueue-manager.vm": {

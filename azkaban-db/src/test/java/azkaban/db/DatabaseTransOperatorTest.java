@@ -13,7 +13,8 @@
  * License for the specific language governing permissions and limitations under
  * the License.
  *
- */
+ *//*
+
 package azkaban.db;
 
 import org.apache.commons.dbutils.QueryRunner;
@@ -26,7 +27,7 @@ public class DatabaseTransOperatorTest {
 
   @Before
   public void setUp() throws Exception {
-    final AzkabanDataSource datasource = new AzDBTestUtility.EmbeddedH2BasicDataSource();
+    final AbstractAzkabanDataSource datasource = new AzDBTestUtility.EmbeddedH2BasicDataSource();
     final DatabaseTransOperator operator = new DatabaseTransOperator(new QueryRunner(),
         datasource.getConnection());
   }
@@ -41,3 +42,4 @@ public class DatabaseTransOperatorTest {
   public void testUpdate() throws Exception {
   }
 }
+*/

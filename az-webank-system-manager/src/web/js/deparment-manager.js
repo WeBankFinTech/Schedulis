@@ -1,7 +1,14 @@
+/**
+ * Created by zhu on 7/5/18.
+ */
+
+//处理方法 组装表格和翻页处理
 var systemDeparmentView;
 azkaban.SystemDeparmentView = Backbone.View.extend({
   events: {
     "click #dep-pageSelection li": "handleChangePageSelection",
+    "change #dep-pageSelection .pageSizeSelect": "handlePageSizeSelection",
+    "click #dep-pageSelection .pageNumJump": "handlePageNumJump",
     "click .btn-info": "handleUpdateSystemDeparmentBtn",
   },
 
@@ -10,6 +17,8 @@ azkaban.SystemDeparmentView = Backbone.View.extend({
     this.model.bind('render', this.render, this);
     this.model.set({page: 1, pageSize: 20});
     this.model.bind('change:page', this.handlePageChange, this);
+    this.model.set('elDomId','dep-pageSelection'); 
+    this.createResize();
   },
 
   render: function(evt) {
@@ -97,116 +106,11 @@ azkaban.SystemDeparmentView = Backbone.View.extend({
     this.renderPagination(evt);
   },
 
-  renderPagination: function(evt) {
-    var total = this.model.get("total");
-    total = total? total : 1;
-    var pageSize = this.model.get("pageSize");
-    var numPages = Math.ceil(total / pageSize);
-
-    this.model.set({"numPages": numPages});
-    var page = this.model.get("page");
-
-    //Start it off
-    $("#dep-pageSelection .active").removeClass("active");
-
-    // Disable if less than 5
-    console.log("Num pages " + numPages)
-    var i = 1;
-    for (; i <= numPages && i <= 5; ++i) {
-      $("#dep-page" + i).removeClass("disabled");
-    }
-    for (; i <= 5; ++i) {
-      $("#dep-page" + i).addClass("disabled");
-    }
-
-    // Disable prev/next if necessary.
-    if (page > 1) {
-      var prevNum = parseInt(page) - parseInt(1);
-      $("#dep-previous").removeClass("disabled");
-      $("#dep-previous")[0].page = prevNum;
-      $("#dep-previous a").attr("href", "#system-deparment#page" + prevNum);
-    }
-    else {
-      $("#dep-previous").addClass("disabled");
-    }
-
-    if (page < numPages) {
-      var nextNum = parseInt(page) + parseInt(1);
-      $("#dep-next")[0].page = nextNum;
-      $("#dep-next").removeClass("disabled");
-      $("#dep-next a").attr("href", "#system-deparment#page" + nextNum);
-    }
-    else {
-      var nextNum = parseInt(page) + parseInt(1);
-      $("#dep-next").addClass("disabled");
-    }
-
-    // Selection is always in middle unless at barrier.
-    var startPage = 0;
-    var selectionPosition = 0;
-    if (page < 3) {
-      selectionPosition = page;
-      startPage = 1;
-    }
-    else if (page == numPages && page != 3 && page != 4) {
-      selectionPosition = 5;
-      startPage = numPages - 4;
-    }
-    else if (page == numPages - 1 && page != 3) {
-      selectionPosition = 4;
-      startPage = numPages - 4;
-    }
-    else if (page == 4) {
-      selectionPosition = 4;
-      startPage = page - 3;
-    }
-    else if (page == 3) {
-      selectionPosition = 3;
-      startPage = page - 2;
-    }
-    else {
-      selectionPosition = 3;
-      startPage = page - 2;
-    }
-
-    $("#dep-page"+selectionPosition).addClass("active");
-    $("#dep-page"+selectionPosition)[0].page = page;
-    var selecta = $("#dep-page" + selectionPosition + " a");
-    selecta.text(page);
-    selecta.attr("href", "#system-deparment#page" + page);
-
-    for (var j = 0; j < 5; ++j) {
-      var realPage = startPage + j;
-      var elementId = "#dep-page" + (j+1);
-
-      $(elementId)[0].page = realPage;
-      var a = $(elementId + " a");
-      a.text(realPage);
-      a.attr("href", "#system-deparment#page" + realPage);
-    }
-  },
-
-  handleChangePageSelection: function(evt) {
-    if ($(evt.currentTarget).hasClass("disabled")) {
-      return;
-    }
-    var page = evt.currentTarget.page;
-    this.model.set({"page": page});
-  },
-
-  handleChangeView: function(evt) {
-    // if (this.init) {
-    //   return;
-    // }
-    console.log("init");
-    this.handlePageChange(evt);
-    this.init = true;
-  },
-
+  ...commonPaginationFun(),
   handlePageChange: function(evt) {
     var start = this.model.get("page") - 1;
     var pageSize = this.model.get("pageSize");
-    var requestURL = contextURL + "/system";
+    var requestURL = "/system";
     var searchString = $('#serarch-deparment').val();
 
     var model = this.model;
@@ -235,7 +139,7 @@ azkaban.SystemDeparmentView = Backbone.View.extend({
 
     $("#old-department-group").empty();
     $("#old-department-group").append("<option value='0'>"+wtssI18n.system.groupPro+"</option>");
-    var requestUrl = contextURL + "/system?ajax=fetchAllDepartmentGroup";
+    var requestUrl = "/system?ajax=fetchAllDepartmentGroup";
     var model = this.model;
     var successHandler = function (data) {
         if (data.error) {
@@ -282,22 +186,25 @@ azkaban.DeparmentOptionsView = Backbone.View.extend({
 
   handleAddDeparment: function (evt) {
     console.log("click upload project");
+    $("#add-deparment-modal-error-msg").hide();
     $('#add-deparment-panel').modal();
     $("#department-group").empty();
     $("#department-group").append("<option value='0'>"+wtssI18n.system.groupPro+"</option>");
-    var requestUrl = contextURL + "/system?ajax=fetchAllDepartmentGroup";
+    var requestUrl = "/system?ajax=fetchAllDepartmentGroup";
     var model = this.model;
     var successHandler = function (data) {
         if (data.error) {
-            $("#add-deparment-modal-error-msg").show();
-            $("#add-deparment-modal-error-msg").text(data.error);
+        messageBox.show(data.error, 'danger');
             return false;
         } else {
             model.set({"departmentGroups": data.departmentGroups});
             var departmentGroups = data.departmentGroups;
+        var groupHtml = ""
             for(var index in departmentGroups){
-                $("#department-group").append("<option value='" + departmentGroups[index].id + "'>" + departmentGroups[index].name + "</option>");
+          groupHtml += "<option value='" + departmentGroups[index].id + "'>" + departmentGroups[index].name + "</option>"
             }
+        groupHtml = filterXSS(groupHtml, { 'whiteList': { 'option': ['value'] } })
+        $("#department-group").append(groupHtml);
         }
         model.trigger("render");
     };
@@ -334,7 +241,6 @@ azkaban.AddDeparmentView = Backbone.View.extend({
 
   initialize: function (settings) {
     console.log("Hide modal error msg");
-    $("#add-deparment-modal-error-msg").hide();
     // this.loadWebankDeparmentData();
     // this.loadWebankDepartmentData();
   },
@@ -354,7 +260,7 @@ azkaban.AddDeparmentView = Backbone.View.extend({
     //状态值说明: 1 -> 允许, 2 -> 不允许, 默认为1
     var uploadFlag = 1;
 
-    var requestURL = contextURL + "/system";
+    var requestURL = "/system";
 
     if(null == dpId || "" == dpId){
       alert(wtssI18n.system.departmentIDReq);
@@ -412,7 +318,7 @@ azkaban.AddDeparmentView = Backbone.View.extend({
     var model = this.model;
     var requestData = {
       "ajax": "addDeparment",
-      "dpId": dpId,
+      "deparmentId": dpId,
       "pid": pid ? pid : 0,
       "dpName": dpName,
       "dpChName": dpChName,
@@ -423,11 +329,10 @@ azkaban.AddDeparmentView = Backbone.View.extend({
     };
     var successHandler = function (data) {
       if (data.error) {
-        $("#add-deparment-modal-error-msg").show();
-        $("#add-deparment-modal-error-msg").text(data.error.message);
+        messageBox.show(data.error.message, 'danger');
         return false;
       } else {
-        window.location.href = contextURL + "/system#system-deparment";
+        window.location.href = "/system#system-deparment";
         window.location.reload();
       }
       model.trigger("render");
@@ -436,7 +341,7 @@ azkaban.AddDeparmentView = Backbone.View.extend({
   },
 
   // loadWebankDepartmentData:function () {
-  //   var requestURL = contextURL + "/system";
+  //   var requestURL =  "/system";
   //   var requestData = {
   //     "ajax":"loadWebankDepartmentSelectData",
   //   };
@@ -467,8 +372,14 @@ azkaban.AddDeparmentView = Backbone.View.extend({
   // },
 
   render: function () {
+    $("#deparment-id").val("");
+    $("#parent-id").val("");
+    $("#deparment-name").val("");
+    $("#deparment-ch-name").val("");
+    $("#org-id").val("");
+    $("#org-name").val("");
+    $("#department-group").val("");
     //this.loadWebankDepartmentData();
-    $("#add-deparment-modal-error-msg").hide();
   },
 });
 
@@ -499,7 +410,7 @@ azkaban.UpdateDeparmentView = Backbone.View.extend({
     // 上传权限状态值说明: 1 -> 允许, 2 -> 不允许, 默认为1
     var uploadFlag = 1;
 
-    var requestURL = contextURL + "/system";
+    var requestURL = "/system";
 
     // if(null == dpId){
     //   alert("部门ID不能为空");
@@ -562,10 +473,10 @@ azkaban.UpdateDeparmentView = Backbone.View.extend({
     var successHandler = function (data) {
       if (data.error) {
         $("#update-deparment-modal-error-msg").show();
-        $("#update-deparment-modal-error-msg").text(data.error.message);
+        $("#update-deparment-modal-error-msg").text(data.error);
         return false;
       } else {
-        window.location.href = contextURL + "/system#system-deparment";
+        window.location.href = "/system#system-deparment";
         window.location.reload();
       }
       model.trigger("render");
@@ -574,11 +485,12 @@ azkaban.UpdateDeparmentView = Backbone.View.extend({
   },
 
   handleDeleteSystemDeparment: function (evt) {
+    deleteDialogView.show(wtssI18n.deletePro.deleteDepartment, wtssI18n.deletePro.whetherDeleteDepartment, wtssI18n.common.cancel, wtssI18n.common.delete, '', function() {
     console.log("Delete System Deparment button.");
     var dpId = $("#update-deparment-id").val();
-    var requestURL = contextURL + "/system";
+        var requestURL = "/system";
 
-    var model = this.model;
+        // var model = this.model;
     var requestData = {
       "ajax": "deleteDeparment",
       "dpId": dpId,
@@ -589,18 +501,19 @@ azkaban.UpdateDeparmentView = Backbone.View.extend({
         $("#update-deparment-modal-error-msg").text(data.error.message);
         return false;
       } else {
-        window.location.href = contextURL + "/system#system-deparment";
+            window.location.href = "/system#system-deparment";
         window.location.reload();
       }
-      model.trigger("render");
+        // model.trigger("render");
     };
     $.get(requestURL, requestData, successHandler, "json");
+    });
   },
 
   loadDeparmentData: function () {
 
     var dpId = this.model.get("dpId");
-    var requestURL = contextURL + "/system";
+    var requestURL = "/system";
 
     var requestData = {
       "ajax": "getDeparmentById",

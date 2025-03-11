@@ -19,6 +19,9 @@ package azkaban.storage;
 
 import azkaban.spi.Storage;
 
+/**
+ * @author WTSS
+ */
 
 public enum StorageImplementationType {
   LOCAL(LocalStorage.class),

@@ -6,6 +6,8 @@ import azkaban.db.SQLTransaction;
 import azkaban.utils.GZIPUtils;
 import azkaban.utils.JSONUtils;
 import org.apache.commons.dbutils.ResultSetHandler;
+import org.apache.commons.dbutils.handlers.BeanHandler;
+import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -15,10 +17,7 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Objects;
-import java.util.Optional;
+import java.util.*;
 
 import static java.util.stream.Collectors.joining;
 
@@ -30,30 +29,44 @@ public class ExecutionCycleDao {
     private final DatabaseOperator dbOperator;
 
     private static final String GET_CYCLE_FLOWS_TOTAL_SQL = "SELECT count(DISTINCT e.id) FROM execution_cycle_flows e " +
-        " LEFT JOIN project_permissions p ON e.`project_id` = p.`project_id` WHERE e.status = 30 ";
+            " LEFT JOIN project_permissions p ON e.`project_id` = p.`project_id` WHERE e.status = 30 ";
+
+
+    private static final String GET_CYCLE_FLOWS_ALL_TOTAL_SQL = "/*slave*/ SELECT count(1) from (SELECT ecf.*,p.userName from\n" +
+            "            (SELECT b.name,a.* from execution_cycle_flows a left join\n" +
+            "                           projects b on a.project_id  = b.id  whereCondition group by project_id,flow_id )ecf\n" +
+            "    left join (SELECT project_id ,name userName from  project_permissions group by project_id ,name ) p on ecf.project_id = p.project_id where  ecf.name is not null  group by ecf.id order by ecf.id desc)A where 1=1 ";
+    private static final String GET_CYCLE_FLOWS_ALL_PAGES = "/*slave*/ SELECT * from (SELECT ecf.*,p.userName from\n" +
+            "            (SELECT b.name,a.* from execution_cycle_flows a left join\n" +
+            "                           projects b on a.project_id  = b.id  whereCondition group by project_id,flow_id )ecf\n" +
+            "    left join (SELECT project_id,name userName from  project_permissions group by project_id ,name ) p on ecf.project_id = p.project_id where  ecf.name is not null  group by ecf.id order by ecf.id desc)A where 1=1 ";
+
 
     private static final String LIST_CYCLE_FLOWS_SQL =
             "SELECT DISTINCT e.id, e.status, e.now_exec_id, e.project_id, e.flow_id, e.submit_user, e.submit_time, e.update_time, e.start_time, e.end_time, e.enc_type, e.data " +
-                " FROM execution_cycle_flows e  " +
-                " LEFT JOIN project_permissions p ON e.`project_id` = p.`project_id` WHERE e.status = 30 ";
+                    " FROM execution_cycle_flows e  " +
+                    " LEFT JOIN project_permissions p ON e.`project_id` = p.`project_id` WHERE e.status = 30 ";
 
     private static final String GET_CYCLE_FLOWS_BY_MAINTAINER_TOTAL_SQL = "SELECT count(*) FROM execution_cycle_flows WHERE status = 30";
 
     private static final String LIST_CYCLE_FLOWS_BY_MAINTAINER_SQL =
-        "SELECT id, status, now_exec_id, project_id, flow_id, submit_user, submit_time, update_time, start_time, end_time, enc_type, data " +
-            "FROM execution_cycle_flows WHERE status = 30";
+            "SELECT id, status, now_exec_id, project_id, flow_id, submit_user, submit_time, update_time, start_time, end_time, enc_type, data " +
+                    "FROM execution_cycle_flows WHERE status = 30";
 
     private static final String UPLOAD_CYCLE_FLOW_SQL =
             "INSERT INTO execution_cycle_flows (status, now_exec_id, project_id, flow_id, submit_user, submit_time, update_time, " +
                     "start_time, end_time) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
 
     private static final String GET_CYCLE_FLOW_SQL =
-            "SELECT id, status, now_exec_id, project_id, flow_id, submit_user, submit_time, update_time, start_time, end_time, enc_type, data " +
-            "FROM execution_cycle_flows WHERE project_id = ? AND flow_id = ? ORDER BY start_time DESC limit 1";
+            "/*slave*/ SELECT id, status, now_exec_id, project_id, flow_id, submit_user, submit_time, update_time, start_time, end_time, enc_type, data " +
+                    "FROM execution_cycle_flows WHERE project_id = ? AND flow_id = ? ORDER BY start_time DESC limit 1";
+    private static final String GET_CYCLE_FLOW_SQL_DESC_ID =
+            "/*slave*/ SELECT a.* " +
+                    "FROM execution_cycle_flows a  WHERE project_id = ? AND flow_id = ? ORDER BY id DESC limit 1";
 
     private static final String GET_CYCLE_FLOW_BY_ID_SQL =
             "SELECT id, status, now_exec_id, project_id, flow_id, submit_user, submit_time, update_time, start_time, end_time, enc_type, data " +
-            "FROM execution_cycle_flows WHERE id = ? ORDER BY start_time DESC limit 1";
+                    "FROM execution_cycle_flows WHERE id = ? ORDER BY start_time DESC limit 1";
 
     private static final String UPDATE_CYCLE_FLOW_BY_EXECID_SQL =
             "UPDATE execution_cycle_flows SET now_exec_id = ?, update_time = ? WHERE now_exec_id = ?";
@@ -67,6 +80,18 @@ public class ExecutionCycleDao {
             "SELECT id, status, now_exec_id, project_id, flow_id, submit_user, submit_time, update_time, start_time, end_time, enc_type, data " +
                     "FROM execution_cycle_flows WHERE status = 30";
 
+    private static final String GET_RUNNING_CYCLE_FLOWS =
+            "/*slave*/ SELECT id, status, now_exec_id, project_id, flow_id, submit_user, submit_time, update_time, start_time, end_time, enc_type, data " +
+                    "FROM execution_cycle_flows WHERE status = 30 and project_id = ? and flow_id = ? ";
+
+    private static final String GET_ALL_CYCLE_FLOWS_TOTAL =
+            "SELECT count(1) " +
+                    "FROM execution_cycle_flows WHERE 1 = 1";
+
+    private static final String GET_ALL_CYCLE_FLOWS =
+            "SELECT id, status, now_exec_id, project_id, flow_id, submit_user, submit_time, update_time, start_time, end_time, enc_type, data " +
+                    "FROM execution_cycle_flows where 1=1";
+
     @Inject
     public ExecutionCycleDao(final DatabaseOperator dbOperator) {
         this.dbOperator = dbOperator;
@@ -74,7 +99,7 @@ public class ExecutionCycleDao {
 
     public synchronized int uploadCycleFlow(ExecutionCycle cycleFlow) throws ExecutorManagerException {
         long now = System.currentTimeMillis();
-        Object[] params = new Object[] {
+        Object[] params = new Object[]{
                 cycleFlow.getStatus().getNumVal(),
                 cycleFlow.getCurrentExecId(),
                 cycleFlow.getProjectId(),
@@ -88,7 +113,7 @@ public class ExecutionCycleDao {
         SQLTransaction<Integer> insertAndGetLastId = transOperator -> {
             transOperator.update(UPLOAD_CYCLE_FLOW_SQL, params);
             transOperator.getConnection().commit();
-            return (int)transOperator.getLastInsertId();
+            return (int) transOperator.getLastInsertId();
         };
         try {
             int id = dbOperator.transaction(insertAndGetLastId);
@@ -114,8 +139,8 @@ public class ExecutionCycleDao {
     public int updateCycleFlow(ExecutionCycle cycleFlow) throws ExecutorManagerException {
         try {
             String json = JSONUtils.toJSON(cycleFlow);
-            byte[] data =  GZIPUtils.gzipBytes(json.getBytes(StandardCharsets.UTF_8));
-            Object[] params = new Object[] {
+            byte[] data = GZIPUtils.gzipBytes(json.getBytes(StandardCharsets.UTF_8));
+            Object[] params = new Object[]{
                     cycleFlow.getStatus().getNumVal(),
                     cycleFlow.getCurrentExecId(),
                     System.currentTimeMillis(),
@@ -160,6 +185,16 @@ public class ExecutionCycleDao {
         }
     }
 
+    public ExecutionCycle getExecutionCycleFlowDescId(String projectId, String flowId) throws ExecutorManagerException {
+        try {
+            List<ExecutionCycle> cycleFlows = dbOperator.query(GET_CYCLE_FLOW_SQL_DESC_ID, this::resultSet2CycleFlowsPages, projectId, flowId);
+
+            return cycleFlows.isEmpty() ? null : cycleFlows.get(0);
+        } catch (SQLException e) {
+            logger.error(String.format("get cycle flow failed, projectId: %s, flowId: %s", projectId, flowId), e);
+            throw new ExecutorManagerException(String.format("get cycle flow failed, projectId: %s, flowId: %s", projectId, flowId), e);
+        }
+    }
 
     public ExecutionCycle getExecutionCycleFlow(int id) throws ExecutorManagerException {
         try {
@@ -186,6 +221,140 @@ public class ExecutionCycleDao {
         }
     }
 
+
+    public int getExecutionCycleAllTotal(String userName, String searchTerm, HashMap<String, String> queryMap) throws ExecutorManagerException {
+        String sql = GET_CYCLE_FLOWS_ALL_TOTAL_SQL;
+
+        ResultSetHandler<Integer> handler = rs -> rs.next() ? rs.getInt(1) : 0;
+        try {
+            String supperSearchSql = "";
+            List<Object> conditions = new ArrayList<>();
+            if (queryMap != null && !queryMap.isEmpty()) {
+                for (String column : queryMap.keySet()) {
+                    String condition = queryMap.get(column);
+                    if (StringUtils.isNotEmpty(condition)) {
+                        String likeParam = "%" + condition + "%";
+                        supperSearchSql = supperSearchSql + " and " + column + " like ? ";
+                        conditions.add(likeParam);
+                    }
+                }
+            }
+
+            String param = "%" + searchTerm + "%";
+
+            if (StringUtils.isNotEmpty(searchTerm)) {
+
+                sql = sql.replace("whereCondition", " where b.name LIKE ? or a.flow_id LIKE ? or a.submit_user LIKE ? ");
+
+            } else {
+                sql = sql.replace("whereCondition", "");
+
+            }
+
+            if (StringUtils.isNotEmpty(userName)) {
+
+                if (StringUtils.isNotEmpty(searchTerm)) {
+                    sql = sql + " and A.userName = ?";
+                    return dbOperator.query(sql, handler, param, param, param, userName);
+                } else {
+                    sql = sql + supperSearchSql;
+                    sql = sql + " and A.userName = ?";
+                    conditions.add(userName);
+                    return dbOperator.query(sql, handler, conditions.stream().toArray());
+                }
+
+
+            } else {
+                if (StringUtils.isNotEmpty(searchTerm)) {
+                    return dbOperator.query(sql, handler, param, param, param);
+                } else {
+                    sql = sql + supperSearchSql;
+                    return dbOperator.query(sql, handler, conditions.stream().toArray());
+                }
+
+            }
+
+        } catch (Exception e) {
+
+            logger.error("获取循环执行报错" + e);
+
+        }
+
+
+        return 0;
+    }
+
+    List<ExecutionCycle> getExecutionCycleAllPages(String userName, String searchTerm, int offset, int length, HashMap<String, String> queryMap) throws ExecutorManagerException {
+
+        String sql = GET_CYCLE_FLOWS_ALL_PAGES;
+
+        try {
+            String supperSearchSql = "";
+            List<Object> conditions = new ArrayList<>();
+            if (queryMap != null && !queryMap.isEmpty()) {
+
+                for (String column : queryMap.keySet()) {
+                    String condition = queryMap.get(column);
+                    if (StringUtils.isNotEmpty(condition)) {
+                        String likeParam = "%" + condition + "%";
+                        supperSearchSql = supperSearchSql + " and " + column + " like ? ";
+                        conditions.add(likeParam);
+                    }
+                }
+            }
+            String param = "%" + searchTerm + "%";
+            if (StringUtils.isNotEmpty(searchTerm)) {
+
+                sql = sql.replace("whereCondition", " where b.name LIKE ? or a.flow_id LIKE ? or a.submit_user LIKE ? ");
+
+            } else {
+                sql = sql.replace("whereCondition", "");
+
+            }
+
+            if (StringUtils.isNotEmpty(userName)) {
+
+                if (StringUtils.isNotEmpty(searchTerm)) {
+                    sql = sql + " and A.userName = ? ";
+                    sql = sql + " limit ?,?";
+                    return dbOperator.query(sql, this::resultSet2CycleFlowsPages, param, param, param, userName, offset, length);
+                } else {
+
+                    sql = sql + supperSearchSql;
+                    sql = sql + " and A.userName = ? ";
+                    sql = sql + " limit ?,?";
+                    conditions.add(userName);
+                    conditions.add(offset);
+                    conditions.add(length);
+                    return dbOperator.query(sql, this::resultSet2CycleFlowsPages, conditions.stream().toArray());
+                }
+
+
+            } else {
+
+
+                if (StringUtils.isNotEmpty(searchTerm)) {
+                    sql = sql + " limit ?,?";
+                    return dbOperator.query(sql, this::resultSet2CycleFlowsPages, param, param, param, offset, length);
+                } else {
+                    sql = sql + supperSearchSql;
+                    sql = sql + " limit ?,?";
+                    conditions.add(offset);
+                    conditions.add(length);
+                    return dbOperator.query(sql, this::resultSet2CycleFlowsPages, conditions.stream().toArray());
+                }
+
+            }
+
+        } catch (Exception e) {
+            logger.error("获取循环执行报错" + e);
+
+        }
+
+        return null;
+    }
+
+
     public int getCycleFlowsTotal(String username, List<Integer> maintainedProjectIds) throws ExecutorManagerException {
         ResultSetHandler<Integer> handler = rs -> rs.next() ? rs.getInt(1) : 0;
         try {
@@ -193,12 +362,12 @@ public class ExecutionCycleDao {
                     .map(Objects::toString)
                     .collect(joining(",", "(", ")"));
             final String querySQL = " SELECT COUNT(1) FROM ((SELECT id, `status`, now_exec_id, project_id, flow_id, submit_user, submit_time, update_time, start_time, end_time, enc_type, `data`" +
-                "   FROM execution_cycle_flows WHERE STATUS = 30 " +
-                "   AND (project_id IN " + projectIds + " OR submit_user = ?)) " +
-                " UNION " +
-                " (SELECT DISTINCT e.id, e.status, e.now_exec_id, e.project_id, e.flow_id, e.submit_user, e.submit_time, e.update_time, e.start_time, e.end_time, e.enc_type, e.data " +
-                "   FROM execution_cycle_flows e  " +
-                "   LEFT JOIN project_permissions p ON e.`project_id` = p.`project_id` WHERE e.status = 30 AND p.`name` = ? )) tmp;";
+                    "   FROM execution_cycle_flows WHERE STATUS = 30 " +
+                    "   AND (project_id IN " + projectIds + " OR submit_user = ?)) " +
+                    " UNION " +
+                    " (SELECT DISTINCT e.id, e.status, e.now_exec_id, e.project_id, e.flow_id, e.submit_user, e.submit_time, e.update_time, e.start_time, e.end_time, e.enc_type, e.data " +
+                    "   FROM execution_cycle_flows e  " +
+                    "   LEFT JOIN project_permissions p ON e.`project_id` = p.`project_id` WHERE e.status = 30 AND p.`name` = ? )) tmp;";
             return dbOperator.query(querySQL, handler, username, username);
         } catch (SQLException e) {
             logger.error("get cycle flows count failed", e);
@@ -230,13 +399,13 @@ public class ExecutionCycleDao {
                     .map(Objects::toString)
                     .collect(joining(",", "(", ")"));
             final String querySQL = " (SELECT id, `status`, now_exec_id, project_id, flow_id, submit_user, submit_time, update_time, start_time, end_time, enc_type, `data` " +
-                "    FROM execution_cycle_flows WHERE STATUS = 30 " +
-                "    AND (project_id IN " + projectIds + " OR submit_user = ? )) " +
-                " UNION " +
-                " (SELECT DISTINCT e.id, e.status, e.now_exec_id, e.project_id, e.flow_id, e.submit_user, e.submit_time, e.update_time, e.start_time, e.end_time, e.enc_type, e.data " +
-                "    FROM execution_cycle_flows e  " +
-                "    LEFT JOIN project_permissions p ON e.`project_id` = p.`project_id` WHERE e.status = 30 AND p.`name` = ? ) " +
-                " LIMIT ?, ? ";
+                    "    FROM execution_cycle_flows WHERE STATUS = 30 " +
+                    "    AND (project_id IN " + projectIds + " OR submit_user = ? )) " +
+                    " UNION " +
+                    " (SELECT DISTINCT e.id, e.status, e.now_exec_id, e.project_id, e.flow_id, e.submit_user, e.submit_time, e.update_time, e.start_time, e.end_time, e.enc_type, e.data " +
+                    "    FROM execution_cycle_flows e  " +
+                    "    LEFT JOIN project_permissions p ON e.`project_id` = p.`project_id` WHERE e.status = 30 AND p.`name` = ? ) " +
+                    " LIMIT ?, ? ";
             Object[] params = new Object[]{username, username, offset, length};
             return dbOperator.query(querySQL, this::resultSet2CycleFlows, params);
         } catch (SQLException e) {
@@ -266,4 +435,69 @@ public class ExecutionCycleDao {
         return cycleFlows;
     }
 
+    private List<ExecutionCycle> resultSet2CycleFlowsPages(ResultSet rs) throws SQLException {
+        List<ExecutionCycle> cycleFlows = new ArrayList<>();
+        while (rs.next()) {
+            ExecutionCycle cycleFlow = new ExecutionCycle();
+            // cycleFlow.setProjectName(rs.getString("name"));
+            cycleFlow.setId(rs.getInt("id"));
+            cycleFlow.setStatus(Status.fromInteger(rs.getInt("status")));
+            cycleFlow.setCurrentExecId(rs.getInt("now_exec_id"));
+            cycleFlow.setProjectId(rs.getInt("project_id"));
+            cycleFlow.setFlowId(rs.getString("flow_id"));
+            cycleFlow.setSubmitUser(rs.getString("submit_user"));
+            cycleFlow.setSubmitTime(rs.getLong("submit_time"));
+            cycleFlow.setUpdateTime(rs.getLong("update_time"));
+            cycleFlow.setStartTime(rs.getLong("start_time"));
+            cycleFlow.setEndTime(rs.getLong("end_time"));
+            cycleFlow.setEncType(rs.getInt("enc_type"));
+            cycleFlow.setData(rs.getBytes("data"));
+            Map<String, Object> mp = parseData(cycleFlow.getCurrentExecId());
+
+            if (!mp.isEmpty()) {
+                cycleFlow.setCycleOption((Map<String, Object>) mp.get("cycleOptions"));
+                cycleFlow.setOtherOption((Map<String, Object>) mp.get("otherOptions"));
+                cycleFlow.setExecutionOptions(ExecutionOptions.createFromObject(mp.get("executionOptions")));
+            }
+
+            cycleFlows.add(cycleFlow);
+        }
+        return cycleFlows;
+    }
+
+    private Map<String, Object> parseData(Integer currentExecId) {
+
+        try {
+            ExecutableFlow executableFlow = this.dbOperator.query("/*slave*/ select flow_data data from execution_flows where exec_id =? limit 1", new BeanHandler<>(ExecutableFlow.class), currentExecId);
+            final String jsonString = GZIPUtils.unGzipString(executableFlow.getData(), "UTF-8");
+            Object o = JSONUtils.parseJSONFromString(jsonString);
+            Map<String, Object> flowObject = (Map<String, Object>) o;
+            return flowObject;
+        } catch (Exception e) {
+
+        }
+        return new HashMap<>();
+    }
+
+
+    public void deleteExecutionCycle(int projectId, String flowId) {
+        try {
+            String sql = "DELETE from execution_cycle_flows where project_id =? and flow_id =?";
+            this.dbOperator.update(sql, projectId, flowId);
+        } catch (Exception e) {
+
+            logger.error("删除失败：projectId {},flowId {},Exception {}",projectId,flowId,  e);
+        }
+
+    }
+
+    public List<ExecutionCycle> getRunningCycleFlows(Integer projectId, String flowId) {
+
+        try {
+            return dbOperator.query(GET_RUNNING_CYCLE_FLOWS, this::resultSet2CycleFlows,projectId,flowId);
+        } catch (SQLException e) {
+            logger.error("get all running cycle flows failed,projectId {},flowId {},Exception",projectId,flowId,e);
+        }
+        return new ArrayList<>();
+    }
 }

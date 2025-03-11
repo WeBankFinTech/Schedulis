@@ -1,7 +1,6 @@
 package azkaban.executor;
 
 import azkaban.utils.Pair;
-import java.util.concurrent.TimeUnit;
 import org.slf4j.LoggerFactory;
 import org.slf4j.Logger;
 
@@ -10,6 +9,7 @@ import java.util.Collections;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.PriorityBlockingQueue;
+import java.util.concurrent.TimeUnit;
 
 /**
  * <pre>

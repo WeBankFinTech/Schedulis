@@ -16,20 +16,21 @@
 
 package azkaban.jobtype.hiveutils.azkaban.hive.actions;
 
+import org.apache.commons.io.IOUtils;
+import org.slf4j.LoggerFactory;
+import org.slf4j.Logger;
+
 import azkaban.jobtype.hiveutils.HiveQueryExecutionException;
 import azkaban.jobtype.hiveutils.HiveQueryExecutor;
+import azkaban.jobtype.hiveutils.azkaban.Utils;
 import azkaban.jobtype.hiveutils.azkaban.HiveAction;
 import azkaban.jobtype.hiveutils.azkaban.HiveViaAzkabanException;
-import azkaban.jobtype.hiveutils.azkaban.Utils;
 import azkaban.jobtype.hiveutils.util.AzkabanJobPropertyDescription;
-import org.apache.commons.io.IOUtils;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.io.BufferedReader;
 import java.io.FileReader;
-import java.io.IOException;
 import java.io.InputStreamReader;
+import java.io.IOException;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.Properties;

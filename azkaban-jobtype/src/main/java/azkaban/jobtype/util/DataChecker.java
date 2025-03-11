@@ -1,10 +1,11 @@
 package azkaban.jobtype.util;
 
 import azkaban.jobtype.connectors.druid.WBDataCheckerDao;
+import java.util.Properties;
+import java.util.Random;
+import java.util.concurrent.TimeUnit;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import java.util.Properties;
 
 public class DataChecker {
 	public final static String SOURCE_TYPE = "source.type";
@@ -23,6 +24,23 @@ public class DataChecker {
 
 	public final static String PRIORITY = "checker.priority";
 
+    public final static String DC_WAIT_ENABLED = "wtss.datachecker.random.wiat.enabled";
+
+    public final static String DC_WAIT_BASE_TIME = "wtss.datachecker.random.wait.base.time";
+
+    public static final String DC_SQL_EXCEPTION_MAX_RETRIES = "datachecker.sql.exception.max.retries";
+    public static final String DC_SQL_EXCEPTION_RETRY_DELAY_MS = "datachecker.sql.exception.retry.delay.ms";
+    public static final String DC_SQL_EXCEPTION_KEYWORDS = "datachecker.sql.exception.keywords";
+
+    public static final String DC_HOURLY_SECONDARY_PARTITION = "hourly.secondary.partition";
+
+    /**
+     * 是否跳过 DOPS 检查
+     */
+    public static final String DC_IGNORE_DOPS_CHECK = "ignore.dops.check";
+
+    public static final String DC_RANGE_INTERVAL = "range.interval";
+
 	private Properties p;
 	private static final Logger logger = LoggerFactory.getLogger(DataChecker.class);
 
@@ -35,22 +53,31 @@ public class DataChecker {
 			throw new RuntimeException("Properties is null. Can't continue");
 		}
 		if (!p.containsKey(SOURCE_TYPE)) {
-//		    throw new RuntimeException("Must specify a " + SOURCE_TYPE
-//		          + " key and value.");
 			logger.info("Properties "  + SOURCE_TYPE + " value is Null !");
 		}
 		if (!p.containsKey(DATA_OBJECT)) {
-//			throw new RuntimeException("Must specify a " + DATA_OBJECT
-//			          + " key and value.");
 			logger.info("Properties " + DATA_OBJECT + " value is Null !");
 		}
-		WBDataCheckerDao wbDao = WBDataCheckerDao.getInstance();//微众数据源检查Dao
+        WBDataCheckerDao wbDao = WBDataCheckerDao.getInstance();
 
 		boolean success = wbDao.validateTableStatusFunction(p, logger);
 		if(!success) {
 			throw new RuntimeException("Data not found.");
+        } else {
+            String dcWaitEnabled = p.getProperty(DC_WAIT_ENABLED, "false");
+            if ("true".equalsIgnoreCase(dcWaitEnabled)) {
+                try {
+                    String baseTimeStr = p.getProperty(DC_WAIT_BASE_TIME, "30");
+                    // 创建一个随机数生成器
+                    Random random = new Random();
+                    // 生成30到60之间的随机整数（包括30和60）
+                    int sleepTime = random.nextInt(31) + Integer.parseInt(baseTimeStr);
+                    TimeUnit.SECONDS.sleep(sleepTime);
+                } catch (Exception e) {
+                    logger.info("InterruptedException occurred while waiting for 60 seconds", e);
+                }
 		}
-
+        }
 	}
 
 	public void cancel() throws Exception {

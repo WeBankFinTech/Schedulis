@@ -37,22 +37,22 @@ public class DefaultMailCreator implements MailCreator {
 
   public static final String DEFAULT_MAIL_CREATOR = "default";
   private static final DateFormat DATE_FORMATTER = new SimpleDateFormat("yyyy/MM/dd HH:mm:ss z");
-  private static final HashMap<String, MailCreator> registeredCreators = new HashMap<>();
-  private static final MailCreator defaultCreator;
+  private static final HashMap<String, MailCreator> REGISTERED_CREATORS = new HashMap<>();
+  private static final MailCreator DEFAULT_CREATOR;
 
   static {
-    defaultCreator = new DefaultMailCreator();
-    registerCreator(DEFAULT_MAIL_CREATOR, defaultCreator);
+    DEFAULT_CREATOR = new DefaultMailCreator();
+    registerCreator(DEFAULT_MAIL_CREATOR, DEFAULT_CREATOR);
   }
 
   public static void registerCreator(final String name, final MailCreator creator) {
-    registeredCreators.put(name, creator);
+    REGISTERED_CREATORS.put(name, creator);
   }
 
   public static MailCreator getCreator(final String name) {
-    MailCreator creator = registeredCreators.get(name);
+    MailCreator creator = REGISTERED_CREATORS.get(name);
     if (creator == null) {
-      creator = defaultCreator;
+      creator = DEFAULT_CREATOR;
     }
     return creator;
   }

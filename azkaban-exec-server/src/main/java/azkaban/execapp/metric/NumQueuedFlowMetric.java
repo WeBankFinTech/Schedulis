@@ -19,12 +19,12 @@ package azkaban.execapp.metric;
 import azkaban.execapp.FlowRunnerManager;
 import azkaban.metric.MetricException;
 import azkaban.metric.MetricReportManager;
-import azkaban.metric.TimeBasedReportingMetric;
+import azkaban.metric.AbstractTimeBasedReportingMetric;
 
 /**
  * Metric to keep track of number of queued flows in Azkaban exec server
  */
-public class NumQueuedFlowMetric extends TimeBasedReportingMetric<Integer> {
+public class NumQueuedFlowMetric extends AbstractTimeBasedReportingMetric<Integer> {
 
   public static final String NUM_QUEUED_FLOW_METRIC_NAME = "NumQueuedFlowMetric";
   private static final String NUM_QUEUED_FLOW_METRIC_TYPE = "uint16";
@@ -47,7 +47,7 @@ public class NumQueuedFlowMetric extends TimeBasedReportingMetric<Integer> {
   /**
    * Update value using flow manager {@inheritDoc}
    *
-   * @see TimeBasedReportingMetric#preTrackingEventMethod()
+   * @see AbstractTimeBasedReportingMetric#preTrackingEventMethod()
    */
   @Override
   protected synchronized void preTrackingEventMethod() {

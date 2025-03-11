@@ -1,7 +1,12 @@
 package azkaban.viewer.homepage;
 
 import azkaban.common.utils.TimeUtils;
-import azkaban.executor.*;
+import azkaban.executor.ExecutableFlow;
+import azkaban.executor.ExecutableFlowBase;
+import azkaban.executor.ExecutableNode;
+import azkaban.executor.ExecutorManagerAdapter;
+import azkaban.executor.ExecutorManagerException;
+import azkaban.executor.Status;
 import azkaban.flow.Flow;
 import azkaban.flow.Node;
 import azkaban.i18n.utils.LoadJsonUtils;
@@ -18,19 +23,22 @@ import azkaban.webapp.AzkabanWebServer;
 import azkaban.webapp.servlet.AbstractLoginAzkabanServlet;
 import azkaban.webapp.servlet.Page;
 import azkaban.webapp.servlet.RecoverServlet;
+import java.io.File;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Calendar;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import javax.servlet.ServletConfig;
+import javax.servlet.ServletException;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
 import org.apache.commons.lang.StringUtils;
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import javax.servlet.ServletConfig;
-import javax.servlet.ServletException;
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
-import java.io.File;
-import java.io.IOException;
-import java.util.*;
 
 /**
  * Created by zhu on 9/11/18.
@@ -392,6 +400,9 @@ public class HomePageServlet extends AbstractLoginAzkabanServlet {
         realTimeData.put("flowName", execFlow.getFlowId());
         realTimeData.put("execId", execFlow.getExecutionId() + "");
         realTimeData.put("execStatus", status + "");
+        realTimeData.put("project", execFlow.getProjectName());
+        realTimeData.put("projectId", "" + execFlow.getProjectId());
+        realTimeData.put("flowType", "" + execFlow.getFlowType());
         realTimeFlowExecuteData.add(realTimeData);
       }
     } catch (ExecutorManagerException e) {

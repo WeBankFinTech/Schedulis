@@ -16,6 +16,8 @@
 
 package azkaban.flow;
 
+import azkaban.Constants;
+
 public class CommonJobProperties {
   /*
    * The following are Common properties that can be set in a job file
@@ -108,7 +110,7 @@ public class CommonJobProperties {
   /**
    * The execution id. This should be unique per flow, but may not be due to restarts.
    */
-  public static final String EXEC_ID = "azkaban.flow.execid";
+  public static final String EXEC_ID = Constants.FlowProperties.AZKABAN_FLOW_EXEC_ID;
 
   /**
    * The numerical project id identifier.
@@ -168,5 +170,26 @@ public class CommonJobProperties {
       "azkaban.flow.start.milliseconds";
   public static final String FLOW_START_TIMEZONE =
       "azkaban.flow.start.timezone";
+
+  /**
+   * 工作流提交用户
+   */
+  public static final String FLOW_SUBMIT_USER = "submit_user";
+
+  /**
+   * 任务代理用户
+   */
+  public static final String JOB_PROXY_USER = "execute_user";
+  public static final String JOB_NESTED_ID = "azkaban.job.nested.id";
+
+  /**
+   * 任务自动 disabled 配置
+   */
+  public static final String JOB_AUTO_DISABLED = "auto.disabled";
+
+  /**
+   * ignore job id
+   */
+  public static final String IGNORE_PARSE_JOBSERVERID = "wtss.ignore.parese.jobserverid";;
 
 }

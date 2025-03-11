@@ -24,6 +24,7 @@ import azkaban.utils.Props;
 import azkaban.utils.PropsUtils;
 import azkaban.webapp.plugin.TriggerPlugin;
 import java.io.File;
+import java.io.IOException;
 import java.lang.reflect.Constructor;
 import java.net.MalformedURLException;
 import java.net.URL;
@@ -151,6 +152,12 @@ public class TriggerPluginLoader {
       } catch (final ClassNotFoundException e) {
         log.error("Class " + pluginClass + " not found.");
         continue;
+      } finally {
+        try {
+          urlClassLoader.close();
+        } catch (IOException e) {
+          log.error("Error when closing URLClassLoader, cased by " + e.getMessage());
+        }
       }
 
       final String source = FileIOUtils.getSourcePathFromClass(triggerClass);

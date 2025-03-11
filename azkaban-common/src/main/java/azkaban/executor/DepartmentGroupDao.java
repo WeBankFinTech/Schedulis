@@ -1,7 +1,9 @@
 package azkaban.executor;
 
+import azkaban.Constants;
 import azkaban.db.DatabaseOperator;
 import azkaban.db.SQLTransaction;
+import azkaban.server.AbstractAzkabanServer;
 import com.google.common.cache.CacheBuilder;
 import com.google.common.cache.CacheLoader;
 import com.google.common.cache.LoadingCache;
@@ -9,8 +11,8 @@ import org.apache.commons.dbutils.ResultSetHandler;
 import org.apache.commons.dbutils.handlers.ScalarHandler;
 import org.apache.commons.lang3.StringUtils;
 import org.jetbrains.annotations.NotNull;
-import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.slf4j.Logger;
 
 import javax.inject.Inject;
 import javax.inject.Singleton;
@@ -35,6 +37,11 @@ public class DepartmentGroupDao {
             "LEFT JOIN cfg_webank_organization o ON g.`id` = o.`group_id` " +
             "LEFT JOIN wtss_user u ON u.`department_id` = o.`dp_id` " +
             "WHERE u.`username` = ? ;";
+
+    private static final String FETCH_DEFAULT_EXECUTORS_IDS = "" +
+        "SELECT e.executor_id FROM  department_group_executors e\n" +
+        "LEFT JOIN department_group g ON e.`group_id` = g.`id`\n" +
+        "WHERE g.`name` = ?;";
 
     private static final String INSERT_DEPARTMENT_GROUP = "INSERT INTO department_group (`id`, `name`, `description`, `create_time`, `update_time`, `schedule_switch`) VALUES (?, ?, ?, ?, ?, ?);";
 
@@ -439,7 +446,20 @@ public class DepartmentGroupDao {
 
     public List<Integer> fetchExecutorsIdSBySubmitUser(String submitUser) throws ExecutorManagerException {
         try {
-            return this.dbOperator.query(DepartmentGroupDao.FETCH_EXECUTORS_IDS_BY_SUBMIT_USER, new FetchExecutorIdsHandler(), submitUser);
+            List<Integer> executorIds = this.dbOperator.query(
+                DepartmentGroupDao.FETCH_EXECUTORS_IDS_BY_SUBMIT_USER,
+                new FetchExecutorIdsHandler(), submitUser);
+            if (executorIds == null || executorIds.isEmpty()) {
+                logger.info("submit User {} do not have executor, use default group executor",
+                    submitUser);
+                String defaultGroup = AbstractAzkabanServer.getAzkabanProperties()
+                    .getString(Constants.ConfigurationKeys.WTSS_DEFAULT_DEPARTMENT_GROUP,
+                        "default_group");
+                return this.dbOperator.query(DepartmentGroupDao.FETCH_DEFAULT_EXECUTORS_IDS,
+                    new FetchExecutorIdsHandler(), defaultGroup);
+            } else {
+                return executorIds;
+            }
         } catch (final Exception e) {
             throw new ExecutorManagerException("fetch ExecutorsIdS BySubmitUser failed", e);
         }

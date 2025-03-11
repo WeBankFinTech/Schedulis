@@ -141,16 +141,16 @@ azkaban.ScheduleFlowView = Backbone.View.extend({
       success: function (data) {
         if (data.status == "success") {
           console.log("Successfully scheduled for " + projectName + "."
-              + flowName);
+            + flowName);
           if (data.action == "redirect") {
-            window.location = contextURL + "/manager?project=" + projectName
-                + "&flow=" + flowName;
+            window.location = filterXSS("/manager?project=" + projectName
+              + "&flow=" + flowName);
           }
           else {
             $("#success_message").text("Flow " + projectName + "." + flowName
-                + " scheduled!");
-            window.location = contextURL + "/manager?project=" + projectName
-                + "&flow=" + flowName;
+              + " scheduled!");
+            window.location = filterXSS("/manager?project=" + projectName
+              + "&flow=" + flowName);
           }
         }
         else {
@@ -184,7 +184,7 @@ azkaban.AdvancedScheduleView = Backbone.View.extend({
   },
   initialize: function (setting) {
     this.contextMenu = new azkaban.ScheduleContextMenu(
-        {el: $('#scheduleDisableJobMenu')});
+      { el: $('#scheduleDisableJobMenu') });
     this.handleGeneralOptionsSelect();
     $("#advdatepicker").datepicker();
     $("#advdatepicker").datepicker('setDate', new Date());
@@ -204,9 +204,9 @@ azkaban.AdvancedScheduleView = Backbone.View.extend({
       "flow": flowName
     };
 
-    var executeURL = contextURL + "/executor";
+    var executeURL = "/executor";
     this.executeURL = executeURL;
-    var scheduleURL = contextURL + "/schedule";
+    var scheduleURL = "/schedule";
     this.scheduleURL = scheduleURL;
     var handleAddRow = this.handleAddRow;
 
@@ -232,7 +232,7 @@ azkaban.AdvancedScheduleView = Backbone.View.extend({
       }
       toNode.inNodes[fromNode.id] = fromNode;
     }
-    flowData.set({nodes: nodes});
+    flowData.set({ nodes: nodes });
 
     var disabled = {};
     for (var i = 0; i < data.nodes.length; ++i) {
@@ -245,49 +245,49 @@ azkaban.AdvancedScheduleView = Backbone.View.extend({
         disabled[updateNode.id] = true;
       }
     }
-    flowData.set({disabled: disabled});
+    flowData.set({ disabled: disabled });
 
     $.get(
-        executeURL,
-        fetchData,
-        function (data) {
-          if (data.error) {
-            alert(data.error);
+      executeURL,
+      fetchData,
+      function (data) {
+        if (data.error) {
+          alert(data.error);
+        }
+        else {
+          if (data.successEmails) {
+            $('#scheduleSuccessEmails').val(data.successEmails.join());
           }
-          else {
-            if (data.successEmails) {
-              $('#scheduleSuccessEmails').val(data.successEmails.join());
-            }
-            if (data.failureEmails) {
-              $('#scheduleFailureEmails').val(data.failureEmails.join());
-            }
+          if (data.failureEmails) {
+            $('#scheduleFailureEmails').val(data.failureEmails.join());
+          }
 
-            if (data.failureAction) {
-              $('#scheduleFailureAction').val(data.failureAction);
-            }
-            if (data.notifyFailureFirst) {
-              $('#scheduleNotifyFailureFirst').attr('checked', true);
-            }
-            if (data.notifyFailureLast) {
-              $('#scheduleNotifyFailureLast').attr('checked', true);
-            }
-            if (data.flowParam) {
-              var flowParam = data.flowParam;
-              for (var key in flowParam) {
-                var row = handleAddRow();
-                var td = $(row).find('td');
-                $(td[0]).text(key);
-                $(td[1]).text(flowParam[key]);
-              }
-            }
-
-            if (!data.running || data.running.length == 0) {
-              $(".radio").attr("disabled", "disabled");
-              $(".radioLabel").addClass("disabled", "disabled");
+          if (data.failureAction) {
+            $('#scheduleFailureAction').val(data.failureAction);
+          }
+          if (data.notifyFailureFirst) {
+            $('#scheduleNotifyFailureFirst').prop('checked', true);
+          }
+          if (data.notifyFailureLast) {
+            $('#scheduleNotifyFailureLast').prop('checked', true);
+          }
+          if (data.flowParam) {
+            var flowParam = data.flowParam;
+            for (var key in flowParam) {
+              var row = handleAddRow();
+              var td = $(row).find('td');
+              $(td[0]).text(key);
+              $(td[1]).text(flowParam[key]);
             }
           }
-        },
-        "json"
+
+          if (!data.running || data.running.length == 0) {
+            $(".radio").attr("disabled", "disabled");
+            $(".radioLabel").addClass("disabled", "disabled");
+          }
+        }
+      },
+      "json"
     );
   },
   handleCancel: function (evt) {
@@ -349,7 +349,7 @@ azkaban.AdvancedScheduleView = Backbone.View.extend({
     var executingJobOption = $('input:radio[name=gender]:checked').val();
 
     var scheduleTime = $('#advhour').val() + "," + $('#advminutes').val() + ","
-        + $('#advam_pm').val() + "," + $('#advtimezone').val();
+      + $('#advam_pm').val() + "," + $('#advtimezone').val();
     var scheduleDate = $('#advdatepicker').val();
     var is_recurring = $('#advis_recurring').val();
     var period = $('#advperiod').val() + $('#advperiod_units').val();
@@ -387,17 +387,17 @@ azkaban.AdvancedScheduleView = Backbone.View.extend({
     };
 
     $.post(
-        scheduleURL,
-        scheduleData,
-        function (data) {
-          if (data.error) {
-            alert(data.error);
-          }
-          else {
-            window.location = scheduleURL;
-          }
-        },
-        "json"
+      scheduleURL,
+      scheduleData,
+      function (data) {
+        if (data.error) {
+          alert(data.error);
+        }
+        else {
+          window.location = scheduleURL;
+        }
+      },
+      "json"
     )
   },
   handleAddRow: function (evt) {
@@ -454,7 +454,7 @@ azkaban.AdvancedScheduleView = Backbone.View.extend({
   },
   closeEditingTarget: function (evt) {
     if (this.editingTarget != null && this.editingTarget != evt.target
-        && this.editingTarget != evt.target.parentElement) {
+      && this.editingTarget != evt.target.parentElement) {
       var input = $(this.editingTarget).children("input")[0];
       var text = $(input).val();
       $(input).remove();
@@ -477,8 +477,8 @@ azkaban.AdvancedScheduleView = Backbone.View.extend({
   handleDisableMenuClick: function (action, el, pos) {
     var flowData = scheduleFlowData;
     var jobid = el[0].jobid;
-    var requestURL = contextURL + "/manager?project=" + projectName + "&flow="
-        + flowName + "&job=" + jobid;
+    var requestURL = filterXSS("/manager?project=" + projectName + "&flow="
+      + flowName + "&job=" + jobid);
     if (action == "open") {
       window.location.href = requestURL;
     }
@@ -489,7 +489,7 @@ azkaban.AdvancedScheduleView = Backbone.View.extend({
       var disabled = flowData.get("disabled");
 
       disabled[jobid] = true;
-      flowData.set({disabled: disabled});
+      flowData.set({ disabled: disabled });
       flowData.trigger("change:disabled");
     }
     else if (action == "disableAll") {
@@ -500,7 +500,7 @@ azkaban.AdvancedScheduleView = Backbone.View.extend({
         disabled[key] = true;
       }
 
-      flowData.set({disabled: disabled});
+      flowData.set({ disabled: disabled });
       flowData.trigger("change:disabled");
     }
     else if (action == "disableParents") {
@@ -514,7 +514,7 @@ azkaban.AdvancedScheduleView = Backbone.View.extend({
         }
       }
 
-      flowData.set({disabled: disabled});
+      flowData.set({ disabled: disabled });
       flowData.trigger("change:disabled");
     }
     else if (action == "disableChildren") {
@@ -528,7 +528,7 @@ azkaban.AdvancedScheduleView = Backbone.View.extend({
         }
       }
 
-      flowData.set({disabled: disabledMap});
+      flowData.set({ disabled: disabledMap });
       flowData.trigger("change:disabled");
     }
     else if (action == "disableAncestors") {
@@ -537,7 +537,7 @@ azkaban.AdvancedScheduleView = Backbone.View.extend({
 
       recurseAllAncestors(nodes, disabled, jobid, true);
 
-      flowData.set({disabled: disabled});
+      flowData.set({ disabled: disabled });
       flowData.trigger("change:disabled");
     }
     else if (action == "disableDescendents") {
@@ -546,19 +546,19 @@ azkaban.AdvancedScheduleView = Backbone.View.extend({
 
       recurseAllDescendents(nodes, disabled, jobid, true);
 
-      flowData.set({disabled: disabled});
+      flowData.set({ disabled: disabled });
       flowData.trigger("change:disabled");
     }
     else if (action == "enable") {
       var disabled = flowData.get("disabled");
 
       disabled[jobid] = false;
-      flowData.set({disabled: disabled});
+      flowData.set({ disabled: disabled });
       flowData.trigger("change:disabled");
     }
     else if (action == "enableAll") {
       disabled = {};
-      flowData.set({disabled: disabled});
+      flowData.set({ disabled: disabled });
       flowData.trigger("change:disabled");
     }
     else if (action == "enableParents") {
@@ -572,7 +572,7 @@ azkaban.AdvancedScheduleView = Backbone.View.extend({
         }
       }
 
-      flowData.set({disabled: disabled});
+      flowData.set({ disabled: disabled });
       flowData.trigger("change:disabled");
     }
     else if (action == "enableChildren") {
@@ -586,7 +586,7 @@ azkaban.AdvancedScheduleView = Backbone.View.extend({
         }
       }
 
-      flowData.set({disabled: disabled});
+      flowData.set({ disabled: disabled });
       flowData.trigger("change:disabled");
     }
     else if (action == "enableAncestors") {
@@ -595,7 +595,7 @@ azkaban.AdvancedScheduleView = Backbone.View.extend({
 
       recurseAllAncestors(nodes, disabled, jobid, false);
 
-      flowData.set({disabled: disabled});
+      flowData.set({ disabled: disabled });
       flowData.trigger("change:disabled");
     }
     else if (action == "enableDescendents") {
@@ -604,7 +604,7 @@ azkaban.AdvancedScheduleView = Backbone.View.extend({
 
       recurseAllDescendents(nodes, disabled, jobid, false);
 
-      flowData.set({disabled: disabled});
+      flowData.set({ disabled: disabled });
       flowData.trigger("change:disabled");
     }
   }

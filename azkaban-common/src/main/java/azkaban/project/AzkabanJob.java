@@ -26,7 +26,7 @@ import java.util.List;
  * The smallest individual unit of execution in Azkaban.
  * Contains information about job type and related properties.
  */
-public class AzkabanJob extends AzkabanNode {
+public class AzkabanJob extends AbstractAzkabanNode {
 
   private AzkabanJob(final String name, final String type, final Props props,
       final String condition, final List<String> dependsOn) {

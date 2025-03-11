@@ -16,18 +16,19 @@
 
 package azkaban.jobtype;
 
-import azkaban.flow.CommonJobProperties;
-import azkaban.jobExecutor.JavaProcessJob;
-import azkaban.security.commons.AbstractHadoopSecurityManager;
-import azkaban.utils.Props;
-import org.slf4j.Logger;
+import static org.apache.hadoop.security.UserGroupInformation.HADOOP_TOKEN_FILE_LOCATION;
 
 import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.StringTokenizer;
 
-import static org.apache.hadoop.security.UserGroupInformation.HADOOP_TOKEN_FILE_LOCATION;
+import org.slf4j.Logger;
+
+import azkaban.flow.CommonJobProperties;
+import azkaban.jobExecutor.JavaProcessJob;
+import azkaban.security.commons.AbstractHadoopSecurityManager;
+import azkaban.utils.Props;
 
 public class HadoopJavaJob extends JavaProcessJob {
 

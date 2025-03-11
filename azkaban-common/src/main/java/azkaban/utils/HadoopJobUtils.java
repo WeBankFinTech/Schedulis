@@ -18,31 +18,34 @@ package azkaban.utils;
 
 import azkaban.Constants;
 import azkaban.jobid.BDPClientJobInfo;
-import org.apache.commons.collections.CollectionUtils;
-import org.apache.commons.lang3.StringUtils;
-import org.slf4j.Logger;
-
-import java.io.*;
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import org.apache.commons.collections.CollectionUtils;
+import org.apache.commons.lang3.StringUtils;
+import org.slf4j.Logger;
 
 /**
  * <pre>
  * There are many common methods that's required by the Hadoop*Job.java's. They are all consolidated
  * here.
- * 
+ *
  * Methods here include getting/setting hadoop tokens,
  * methods for manipulating lib folder paths and jar paths passed in from Azkaban prop file,
- * and finally methods for helping to parse logs for application ids, 
+ * and finally methods for helping to parse logs for application ids,
  * and kill the applications via Yarn (very helpful during the cancel method)
- * 
+ *
  * </pre>
- * 
- * 
+ *
+ *
  */
 
 public class HadoopJobUtils {
@@ -52,7 +55,7 @@ public class HadoopJobUtils {
           .compile("application_\\d+_\\d+");
 
   public static final Pattern BDP_CLIENT_JOB_ID_PATTERN = Pattern
-      .compile("job_\\d{14}+_\\d+");
+          .compile("job_\\d{14}+_\\d+");
 
   public static final String BDP_CLIENT_CONF_FILE = "bdp.client.conf.file";
 
@@ -82,41 +85,51 @@ public class HadoopJobUtils {
       log.warn("Failed to execute killAllHadoopJobs", e);
     }
     log.info("applicationIds to kill: " + allSpawnedJobs);
-
-    String yarnKillShell = getYarnKillShell(sysProps);
-    if (StringUtils.isBlank(yarnKillShell)) {
+    if (null == allSpawnedJobs || allSpawnedJobs.isEmpty()) {
+      log.info("not exists yarn id");
       return;
     }
+    String yarnKillShell = getYarnKillShell(sysProps);
     String appIds = StringUtils.join(allSpawnedJobs, " ");
+    if (StringUtils.isBlank(appIds)) {
+      return;
+    }
     killByCommand(String.format("timeout 300 sh %s %s", yarnKillShell, appIds), log);
   }
 
   public static void killAllHadoopJobsSync(String logFilePath, Logger log, Props sysProps)
-      throws IOException, InterruptedException {
+          throws IOException, InterruptedException {
     Set<String> allSpawnedJobs = new HashSet<>();
     try {
       allSpawnedJobs = findIdFromLog(logFilePath, log, APPLICATION_ID_PATTERN);
     } catch (Exception e) {
       log.warn("Failed to killAllHadoopJobsSync", e);
     }
-    log.info("applicationIds to kill: " + allSpawnedJobs);
-
-    String yarnKillShell = getYarnKillShell(sysProps);
-    if (StringUtils.isBlank(yarnKillShell)) {
+    log.info("applicationIds to kill {}", allSpawnedJobs);
+    if (null == allSpawnedJobs || allSpawnedJobs.isEmpty()) {
+      log.info("not exists yarn id");
       return;
     }
+    String yarnKillShell = getYarnKillShell(sysProps);
     String appIds = StringUtils.join(allSpawnedJobs, " ");
+    if (StringUtils.isBlank(appIds)) {
+      return;
+    }
     killByCommandSync(String.format("timeout 300 sh %s %s", yarnKillShell, appIds), log);
   }
 
   public static void killAllHadoopJobs(Set<String> appSet, Logger log, Props sysProps)
-      throws IOException, InterruptedException {
+          throws IOException, InterruptedException {
     log.info("applicationIds to kill: " + appSet);
-    String yarnKillShell = getYarnKillShell(sysProps);
-    if (StringUtils.isBlank(yarnKillShell)) {
+    if (null == appSet || appSet.isEmpty()) {
+      log.info("not exists yarn id");
       return;
     }
+    String yarnKillShell = getYarnKillShell(sysProps);
     String appIds = StringUtils.join(appSet, " ");
+    if (StringUtils.isBlank(appIds)) {
+      return;
+    }
     killByCommandSync(String.format("timeout 300 sh %s %s", yarnKillShell, appIds), log);
   }
 
@@ -141,8 +154,8 @@ public class HadoopJobUtils {
         }
         log.info("bdp-client  kill: " + jobId);
         killByCommand(String.format("bdp-client -c %s job kill -u %s -pwd %s -j %s",
-                sysProps.getString(BDP_CLIENT_CONF_FILE, ""), BdpClientUser, BdpClientPwd, jobId),
-            log);
+                        sysProps.getString(BDP_CLIENT_CONF_FILE, ""), BdpClientUser, BdpClientPwd, jobId),
+                log);
       } catch (Throwable t) {
         log.warn("something happened while trying to kill this job: " + jobId, t);
       }
@@ -150,7 +163,7 @@ public class HadoopJobUtils {
   }
 
   public static void killBdpClientJobSync(String logFilePath, Logger log, Props sysProps)
-      throws IOException, InterruptedException {
+          throws IOException, InterruptedException {
     Set<String> jobIds = new HashSet<>();
     try {
       jobIds = findIdFromLog(logFilePath, log, BDP_CLIENT_JOB_ID_PATTERN);
@@ -166,13 +179,13 @@ public class HadoopJobUtils {
       }
       log.info("bdp-client  kill: " + jobId);
       killByCommandSync(String.format("bdp-client -c %s job kill -u %s -pwd %s -j %s",
-              sysProps.getString(BDP_CLIENT_CONF_FILE, ""), BdpClientUser, BdpClientPwd, jobId),
-          log);
+                      sysProps.getString(BDP_CLIENT_CONF_FILE, ""), BdpClientUser, BdpClientPwd, jobId),
+              log);
     }
   }
 
   public static void killBdpClientJob(Set<String> jobSet, String proxyUrl, Logger log,
-      Props sysProps) throws IOException, InterruptedException {
+                                      Props sysProps) throws IOException, InterruptedException {
     log.info("bdp client job ids: " + jobSet);
     String BdpClientUser = sysProps.getString(BDP_CLIENT_USER, "");
     String BdpClientPwd = sysProps.getString(BDP_CLIENT_PWD, "");
@@ -183,10 +196,10 @@ public class HadoopJobUtils {
       log.info("bdp-client  kill: " + jobId);
       if (StringUtils.isNotBlank(proxyUrl)) {
         killByCommandSync(String.format("bdp-client job kill -u %s -pwd %s -j %s -x %s",
-                        BdpClientUser, BdpClientPwd, jobId, proxyUrl), log);
+                BdpClientUser, BdpClientPwd, jobId, proxyUrl), log);
       } else {
         killByCommandSync(String.format("bdp-client -c %s job kill -u %s -pwd %s -j %s",
-                        sysProps.getString(BDP_CLIENT_CONF_FILE, ""), BdpClientUser, BdpClientPwd, jobId), log);
+                sysProps.getString(BDP_CLIENT_CONF_FILE, ""), BdpClientUser, BdpClientPwd, jobId), log);
       }
 
     }
@@ -198,9 +211,12 @@ public class HadoopJobUtils {
     String BdpClientUser = sysProps.getString(BDP_CLIENT_USER, "");
     String BdpClientPwd = sysProps.getString(BDP_CLIENT_PWD, "");
     for (BDPClientJobInfo jobId : bdpClientJobInfoList) {
+      if (null == jobId || StringUtils.isBlank(jobId.getJobId())) {
+        continue;
+      }
       log.info("bdp-client  kill: " + jobId);
       killByCommandSync(String.format("bdp-client job kill -u %s -pwd %s -j %s -x %s",
-                       BdpClientUser, BdpClientPwd, jobId.getJobId(), jobId.getProxyUrl()), log);
+              BdpClientUser, BdpClientPwd, jobId.getJobId(), jobId.getProxyUrl()), log);
     }
   }
 
@@ -213,7 +229,7 @@ public class HadoopJobUtils {
     }
     if (!logFile.isFile()) {
       throw new IllegalArgumentException("the logFilePath specified  is not a valid file: "
-          + logFilePath);
+              + logFilePath);
     }
     if (!logFile.canRead()) {
       throw new IllegalArgumentException("unable to read the logFilePath specified: " + logFilePath);
@@ -256,7 +272,7 @@ public class HadoopJobUtils {
    * If it finds multiple, it will return all of them, de-duped (this is possible in the case of pig jobs)
    * This can be used in conjunction with the @killJobOnCluster method in this file.
    * </pre>
-   * 
+   *
    * @param logFilePath
    * @return a Set. May be empty, but will never be null
    */
@@ -319,11 +335,11 @@ public class HadoopJobUtils {
   }
 
   public static void killByCommandSync(String cmd, Logger log)
-      throws IOException, InterruptedException {
+          throws IOException, InterruptedException {
     Process process = Runtime.getRuntime().exec(cmd);
     try (BufferedReader errorBr = new BufferedReader(new InputStreamReader(process.getErrorStream(),
-        StandardCharsets.UTF_8)); BufferedReader InputBr = new BufferedReader(
-        new InputStreamReader(process.getInputStream(), StandardCharsets.UTF_8))) {
+            StandardCharsets.UTF_8)); BufferedReader InputBr = new BufferedReader(
+            new InputStreamReader(process.getInputStream(), StandardCharsets.UTF_8))) {
       String errorLine;
       while ((errorLine = errorBr.readLine()) != null) {
         log.warn(errorLine);

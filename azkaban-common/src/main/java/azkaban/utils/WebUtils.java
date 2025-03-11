@@ -17,9 +17,12 @@
 package azkaban.utils;
 
 import azkaban.executor.Status;
+import azkaban.system.entity.WebankUser;
 import java.text.NumberFormat;
 import java.util.Date;
+import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
 import org.joda.time.DurationFieldType;
@@ -270,6 +273,34 @@ public class WebUtils {
       }
     }
     return new DateTime(0);
+  }
+
+  /**
+   * check email not in real-name list
+   * @param emailList
+   * @param isCheck
+   * @param userList
+   * @return
+   */
+  public static boolean checkEmailNotRealName(List<String> emailList, boolean isCheck,
+      List<WebankUser> userList) {
+    boolean isSetEmails = true;
+    if (emailList.isEmpty()) {
+      isSetEmails = false;
+    } else {
+      if (emailList.size() == 1 && org.apache.commons.lang.StringUtils.isEmpty(emailList.get(0))) {
+        isSetEmails = false;
+      }
+    }
+    if (null == userList) {
+      return false;
+    }
+    if (isCheck && isSetEmails && !userList.stream().anyMatch(
+        allUser -> emailList.stream().map(sla -> sla.split("@")[0]).collect(Collectors.toList())
+            .contains(allUser.urn))) {
+      return true;
+    }
+    return false;
   }
 
 }

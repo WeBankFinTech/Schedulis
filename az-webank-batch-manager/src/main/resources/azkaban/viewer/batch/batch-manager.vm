@@ -30,20 +30,20 @@
     var subsystemMap = {};
     var advQueryViewFirstShow = true;
 </script>
-<link href="/css/bootstrap-select.min.css?version=1.43.0" rel="stylesheet">
-<script type="text/javascript" src="/js/azkaban/i18n-config.js?version=1.43.0"></script>
-<script type="text/javascript" src="/js/azkaban/util/common.js?version=1.43.0"></script>
-<script type="text/javascript" src="/js/azkaban/util/ajax.js?version=1.43.0"></script>
-<script type="text/javascript" src="/js/jquery/jquery.tablesorter.js?version=1.43.0"></script>
-<script type="text/javascript" src="/js/azkaban/util/utils.js?version=1.43.0"></script>
-<script type="text/javascript" src="/js/azkaban/util/job-status.js?version=1.43.0"></script>
-<script type="text/javascript" src="/js/raphael.min.js?version=1.43.0"></script>
-<script type="text/javascript" src="/js/morris.min.js?version=1.43.0"></script>
-<script type="text/javascript" src="/batch/js/batch-manager.js?version=1.43.0"></script>
-<script type="text/javascript" src="/batch/js/hold-manager.js?version=1.43.0"></script>
-<script type="text/javascript" src="/js/bootstrap-select.js?version=1.43.0"></script>
-<script src="/js/select2/select2.js?version=1.43.0"></script>
-<script src="/js/select2/i18n/zh-CN.js?version=1.43.0"></script>
+<link href="/css/bootstrap-select.min.css?version=1.49.0" rel="stylesheet">
+<script type="text/javascript" src="/js/azkaban/i18n-config.js?version=1.49.0"></script>
+<script type="text/javascript" src="/js/azkaban/util/common.js?version=1.49.0"></script>
+<script type="text/javascript" src="/js/azkaban/util/ajax.js?version=1.49.0"></script>
+<script type="text/javascript" src="/js/jquery/jquery.tablesorter.js?version=1.49.0"></script>
+<script type="text/javascript" src="/js/azkaban/util/utils.js?version=1.49.0"></script>
+<script type="text/javascript" src="/js/azkaban/util/job-status.js?version=1.49.0"></script>
+<script type="text/javascript" src="/js/raphael.min.js?version=1.49.0"></script>
+<script type="text/javascript" src="/js/morris.min.js?version=1.49.0"></script>
+<script type="text/javascript" src="/batch/js/batch-manager.js?version=1.49.0"></script>
+<script type="text/javascript" src="/batch/js/hold-manager.js?version=1.49.0"></script>
+<script type="text/javascript" src="/js/bootstrap-select.js?version=1.49.0"></script>
+<script src="/js/select2/select2.js?version=1.49.0"></script>
+<script src="/js/select2/i18n/zh-CN.js?version=1.49.0"></script>
     
 </head>
 <body>

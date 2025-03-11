@@ -17,10 +17,10 @@
 
 package azkaban.project;
 
-import static java.util.Objects.requireNonNull;
-
 import azkaban.Constants;
 import azkaban.Constants.ConfigurationKeys;
+import azkaban.dataChecker.WebWBDataCheckerDao;
+import azkaban.dataChecker.WebWBDruidFactory;
 import azkaban.executor.ExecutableFlow;
 import azkaban.executor.ExecutionReference;
 import azkaban.executor.ExecutorLoader;
@@ -30,27 +30,34 @@ import azkaban.flow.Node;
 import azkaban.project.FlowLoaderUtils.DirFilter;
 import azkaban.project.FlowLoaderUtils.SuffixFilter;
 import azkaban.project.ProjectLogEvent.EventType;
-import azkaban.project.validator.ValidationReport;
-import azkaban.project.validator.ValidationStatus;
-import azkaban.project.validator.ValidatorConfigs;
-import azkaban.project.validator.ValidatorManager;
-import azkaban.project.validator.XmlValidatorManager;
+import azkaban.project.validator.*;
 import azkaban.storage.StorageManager;
 import azkaban.user.User;
 import azkaban.utils.Pair;
 import azkaban.utils.Props;
+import azkaban.utils.StringUtils;
 import azkaban.utils.Utils;
+import com.alibaba.druid.pool.DruidDataSource;
+import com.alibaba.fastjson.JSONObject;
+import org.apache.commons.collections.CollectionUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import javax.inject.Inject;
+import java.io.BufferedReader;
 import java.io.File;
+import java.io.FileReader;
 import java.io.IOException;
+import java.sql.Connection;
+import java.sql.SQLException;
 import java.util.*;
 import java.util.Map.Entry;
 import java.util.stream.Collectors;
 import java.util.zip.ZipFile;
-import javax.inject.Inject;
 
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import static azkaban.Constants.JOB_FILENAME_CHECK;
+import static azkaban.Constants.JOB_NUM_MAX;
+import static java.util.Objects.requireNonNull;
 
 /**
  * Handles the downloading and uploading of projects.
@@ -60,6 +67,8 @@ class AzkabanProjectLoader {
   private static final Logger log = LoggerFactory.getLogger(AzkabanProjectLoader.class);
 
   private static final String DIRECTORY_FLOW_REPORT_KEY = "Directory Flow";
+
+    private static final String FILE_NAME_CHECK = "File Name";
 
   private final Props props;
 
@@ -87,30 +96,37 @@ class AzkabanProjectLoader {
     } else {
       log.info("Using temp dir: " + this.tempDir.getAbsolutePath());
     }
-    this.projectVersionRetention = props.getInt(ConfigurationKeys.PROJECT_VERSION_RETENTION, 3);
+        this.projectVersionRetention = props.getInt(ConfigurationKeys.PROJECT_VERSION_RETENTION, 10);
     log.info("Project version retention is set to " + this.projectVersionRetention);
   }
 
   /**
    * check flow name
+     *
    * @param project
    * @param archive
    * @param fileType
    * @param additionalProps
    * @return
    */
-  public Boolean checkFlowName(final Project project,final File archive,
-                               final String fileType, final Props additionalProps) {
+    public Map<String, Boolean> checkFlowName(final Project project, final File archive,
+                                              final String fileType, final Props additionalProps) throws Exception {
     log.info("Check if the flow name is greater > 128 !!!");
+        Map<String, Boolean> map = new HashMap<>();
+        map.put("jobNumResult", true);
+        map.put("flowIdLengthResult", true);
     final Props prop = new Props(this.props);
     prop.putAll(additionalProps);
 
     File file = null;
     final FlowLoader loader;
+        try {
     file = unzipProject(archive, fileType);
     loader = this.flowLoaderFactory.createFlowLoader(file);
     loader.loadProjectFlow(project, file);
-
+        } finally {
+            FlowLoaderUtils.cleanUpDir(file);
+        }
     Boolean flag = true;
     final Map<String, Flow> flows = loader.getFlowMap();
     Set<String> flowIds = new HashSet<>();
@@ -125,25 +141,42 @@ class AzkabanProjectLoader {
         }
       }
     }
+
+        int jobNumMax = prop.getInt(JOB_NUM_MAX, 200);
+        if (flowIds.size() > jobNumMax) {
+            map.put("jobNumResult", false);
+        }
+
     for(String flowId:flowIds){
       //校验flowId长度是否大于128
       if (flowId.length() > 128) {
-        flag = false;
+                map.put("flowIdLengthResult", false);
         break;
       }
     }
-    if (!flag) {
-      return false;
-    }
-    return true;
+
+        return map;
   }
 
   /**
    * get all node id
+     *
    * @param project
    * @param nodeId
    * @param flowIds
    */
+    private void getNodeId(Project project, String nodeId, List<String> flowIds) {
+        Flow flow = project.getFlow(nodeId);
+        if (flow != null) {
+            for (Node node : flow.getNodes()) {
+                flowIds.add(node.getId());
+                if (node.getEmbeddedFlowId() != null) {
+                    this.getNodeId(project, node.getEmbeddedFlowId(), flowIds);
+                }
+            }
+        }
+    }
+
   private void getNodeId(Project project, String nodeId, Set<String> flowIds){
     Flow flow = project.getFlow(nodeId);
     if(flow != null ){
@@ -156,9 +189,38 @@ class AzkabanProjectLoader {
     }
   }
 
+
+    public void checkUpFileDataObject(File file, Project project, Props prop) throws SQLException {
+        try {
+            file = unzipProject(file, "zip");
+        } catch (Exception e) {
+            log.error("job文件异常：{}", e.getMessage());
+            return;
+        }
+        List<File> files = new ArrayList<>();
+        getAllFile(file, files);
+
+        //校验data.object
+        if (CollectionUtils.isNotEmpty(files)) {
+            for (File f : files) {
+                log.info("file name:{}", f.getName());
+
+                    String error = checkDataObject(f, project, prop);
+                    if (org.apache.commons.lang.StringUtils.isNotEmpty(error)) {
+                        log.info("项目:{},校验不合格的信息：{}",project.getName(), error);
+                        throw new RuntimeException("the project: " + project.getName() + ",the job: " + f.getName() + " the DB.TABLE: " + error + " is Virtual view table is not allowed to use DataChecker");
+                    }
+
+            }
+        }
+
+
+    }
+
+
   public Map<String, ValidationReport> uploadProject(final Project project,
       final File archive, final String fileType, final User uploader, final Props additionalProps)
-      throws ProjectManagerException, ExecutorManagerException {
+            throws Exception {
     log.info("Uploading files to " + project.getName());
     final Map<String, ValidationReport> reports;
 
@@ -178,6 +240,9 @@ class AzkabanProjectLoader {
 
       reports = validateProject(project, archive, file, prop);
 
+            if (prop.getBoolean(JOB_FILENAME_CHECK, false)) {
+                reports.put(FILE_NAME_CHECK, checkFileName(file, project, prop));
+            }
       loader = this.flowLoaderFactory.createFlowLoader(file);
       reports.put(DIRECTORY_FLOW_REPORT_KEY, loader.loadProjectFlow(project, file));
 
@@ -199,21 +264,120 @@ class AzkabanProjectLoader {
     return reports;
   }
 
+    private void getAllFile(File f, List<File> list) {
+        if (f.isDirectory()) {
+            for (File tmp : f.listFiles()) {
+                getAllFile(tmp, list);
+            }
+        } else {
+            String name = f.getName();
+            if (f.isFile() && name.endsWith(".job")) {
+                list.add(f);
+            }
+        }
+    }
+
+    private ValidationReport checkFileName(File file, Project project, Props prop) {
+        List<File> files = new ArrayList<>();
+        getAllFile(file, files);
+        Set<String> errors = new HashSet<>();
+
+        try {
+            for (File f : files) {
+                StringUtils.verifyFileName(f.getName());
+                log.info("job file name:{}", f.getName());
+
+            }
+        } catch (RuntimeException re) {
+            log.error("check file name failed.", re);
+            errors.add(re.getMessage());
+        }
+        return FlowLoaderUtils.generateFlowLoaderReport(errors);
+    }
+
+    private static String checkDataObject(File f, Project project, Props prop) throws SQLException {
+        Map<String, String> jobConfMap = new HashMap<>();
+        WebWBDataCheckerDao webWBDataCheckerDao = WebWBDataCheckerDao.getInstance();
+        DruidDataSource jobInstance = WebWBDruidFactory.getJobInstance(prop, log);
+        Connection connection = null;
+        try {
+
+            BufferedReader br = new BufferedReader(new FileReader(f));
+            String line;
+            while ((line = br.readLine()) != null) {
+                String[] parts = line.split("=");
+                if (parts.length == 2) {
+                    String key = parts[0].trim();
+                    String value = parts[1].trim();
+                    jobConfMap.put(key, value);
+                }
+            }
+            if (!jobConfMap.get("type").equals("datachecker")) {
+                return null;
+            }
+
+        } catch (IOException e) {
+            log.error("文件读取失败：{}", e.getMessage());
+        }
+
+
+        log.info("checker信息：{}", JSONObject.toJSONString(jobConfMap));
+        //source.type和data.object两两组装
+
+        String error = "";
+        for (String key : jobConfMap.keySet()) {
+            String value = jobConfMap.get(key);
+            if (key.contains("data.object")) {
+                String sortNo = "";
+                if (key.split("\\.").length > 2) {
+                    sortNo = key.split("\\.")[2];
+                }
+                //获取当前的sourceType和dataObject
+                String dataObject = value.toLowerCase();
+                String sourceType = jobConfMap.get("source.type." + sortNo);
+                log.info("dataObject:{},sourceType:{}", dataObject, sourceType);
+                try {
+                    connection = WebWBDruidFactory.getConnection(jobInstance, prop, log);
+                    if (org.apache.commons.lang3.StringUtils.isNotEmpty(sourceType)) {
+                        sourceType = sourceType.toLowerCase();
+                        if (sourceType.equals("job")) {
+                            error = webWBDataCheckerDao.handleHaveSourceType(sourceType, dataObject, connection, log);
+                            if (org.apache.commons.lang.StringUtils.isNotEmpty(error)){
+                                return error;
+                            }
+                        }
+
+                    } else {
+                        error = webWBDataCheckerDao.handleNotSourceType(dataObject, connection, log);
+                        if (org.apache.commons.lang.StringUtils.isNotEmpty(error)){
+                            return error;
+                        }
+                    }
+                } catch (SQLException e) {
+                    log.error("视图校验错误：{}", e.getMessage());
+                } finally {
+                    if (connection != null) {
+                        connection.close();
+                    }
+                }
+
+
+                }
+            }
+            return error;
+        }
+
   private File unzipProject(final File archive, final String fileType)
-      throws ProjectManagerException {
+            throws Exception {
     final File file;
 
       if (fileType == null) {
-        throw new ProjectManagerException("Unknown file type for "
+                throw new Exception("Unknown file type for "
             + archive.getName());
       } else if ("zip".equals(fileType)) {
-        try {
           file = unzipFile(archive);
-        } catch (final Exception e) {
-          throw new ProjectManagerException("Error unzipping file:" + archive.getName() + ", Please check if there are Chinese characters in the file name.", e);
-        }
       } else {
-        throw new ProjectManagerException("Unsupported archive type for file "
+                throw new Exception("Unsupported archive type for file "
             + archive.getName());
       }
     return file;
@@ -281,6 +445,9 @@ class AzkabanProjectLoader {
           uploader.getUserId());
       project.setFlows(flows);
 
+                log.info("Changing itsmId to db for project " + project.getItsmId());
+                this.projectLoader.changeProjectItsmId(project);
+
       if (loader instanceof DirectoryFlowLoader) {
         final DirectoryFlowLoader directoryFlowLoader = (DirectoryFlowLoader) loader;
         log.info("Uploading Job properties");
@@ -295,7 +462,7 @@ class AzkabanProjectLoader {
         throw new ProjectManagerException("Invalid type of flow loader.");
       }
 
-      this.projectLoader.postEvent(project, EventType.UPLOADED, uploader.getUserId(),
+                this.projectLoader.postEvent(project, EventType.UPLOADED, uploader.getUserId() + (org.apache.commons.lang.StringUtils.isEmpty(uploader.getNormalUser()) ? "" : ("(" + uploader.getNormalUser() + ")")),
           "Uploaded project files zip " + archive.getName());
     }
   }
@@ -347,5 +514,10 @@ class AzkabanProjectLoader {
     }
     return this.storageManager.getProjectFile(project.getId(), version);
   }
+
+        public File getProjectFiles (List < Project > projectList)
+            throws ProjectManagerException {
+            return this.storageManager.getProjectFiles(projectList);
+        }
 
 }

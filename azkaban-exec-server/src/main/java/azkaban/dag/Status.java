@@ -18,6 +18,10 @@ package azkaban.dag;
 
 import com.google.common.collect.ImmutableSet;
 
+/**
+ * @author WTSS
+ */
+
 public enum Status {
   READY, // ready to run
   DISABLED, // disabled by users. Treat as the node has the status of success

@@ -16,31 +16,33 @@
 
 package azkaban;
 
+import azkaban.batch.HoldBatchAlert;
+import azkaban.batch.HoldBatchOperate;
 import azkaban.executor.*;
 import azkaban.executor.ExecutorLogEvent.EventType;
+import azkaban.executor.entity.JobPredictionExecutionInfo;
 import azkaban.flow.Flow;
 import azkaban.history.ExecutionRecover;
 import azkaban.history.RecoverTrigger;
+import azkaban.jobhook.JobHook;
+import azkaban.log.LogFilterEntity;
 import azkaban.project.Project;
+import azkaban.sla.AlertMessageTime;
+import azkaban.system.entity.WtssUser;
 import azkaban.utils.FileIOUtils.LogData;
 import azkaban.utils.Pair;
 import azkaban.utils.Props;
-import com.webank.wedatasphere.schedulis.common.executor.DepartmentGroup;
-import com.webank.wedatasphere.schedulis.common.executor.ExecutionCycle;
-import com.webank.wedatasphere.schedulis.common.executor.UserVariable;
-import com.webank.wedatasphere.schedulis.common.log.LogFilterEntity;
-import com.webank.wedatasphere.schedulis.common.system.entity.WtssUser;
-import org.apache.commons.io.FileUtils;
-import org.slf4j.LoggerFactory;
-import org.slf4j.Logger;
-
 import java.io.File;
 import java.io.IOException;
+import java.sql.SQLException;
 import java.time.Duration;
 import java.util.*;
 import java.util.Map.Entry;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
+import org.apache.commons.io.FileUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Used in unit tests to mock the "DB layer" (the real implementation is JdbcExecutorLoader).
@@ -63,7 +65,7 @@ public class MockExecutorLoader implements ExecutorLoader {
 
   @Override
   public void uploadExecutableFlow(final ExecutableFlow flow)
-      throws ExecutorManagerException {
+          throws ExecutorManagerException {
     // Clone the flow node to mimick how it would be saved in DB.
     // If we would keep a handle to the original flow node, we would also see any changes made after
     // this method was called. We must only store a snapshot of the current state.
@@ -75,41 +77,35 @@ public class MockExecutorLoader implements ExecutorLoader {
 
   @Override
   public ExecutableFlow fetchExecutableFlow(final int execId)
-      throws ExecutorManagerException {
+          throws ExecutorManagerException {
     final ExecutableFlow flow = this.flows.get(execId);
     return ExecutableFlow.createExecutableFlowFromObject(flow.toObject());
   }
 
   @Override
-  public List<ExecutableFlow> fetchExecutableFlowByRepeatId(int repeatId)
-      throws ExecutorManagerException {
-    return null;
-  }
-
-  @Override
   public Map<Integer, Pair<ExecutionReference, ExecutableFlow>> fetchActiveFlows()
-      throws ExecutorManagerException {
+          throws ExecutorManagerException {
     return this.activeFlows;
   }
 
   @Override
   public Map<Integer, Pair<ExecutionReference, ExecutableFlow>> fetchUnfinishedFlows()
-      throws ExecutorManagerException {
+          throws ExecutorManagerException {
     return this.activeFlows;
   }
 
   @Override
   public Map<Integer, Pair<ExecutionReference, ExecutableFlow>> fetchUnfinishedFlowsMetadata()
-      throws ExecutorManagerException {
+          throws ExecutorManagerException {
     return this.activeFlows.entrySet().stream()
-        .collect(Collectors.toMap(Entry::getKey, e -> {
-          final ExecutableFlow metadata = getExecutableFlowMetadata(e.getValue().getSecond());
-          return new Pair<>(e.getValue().getFirst(), metadata);
-        }));
+            .collect(Collectors.toMap(Entry::getKey, e -> {
+              final ExecutableFlow metadata = getExecutableFlowMetadata(e.getValue().getSecond());
+              return new Pair<>(e.getValue().getFirst(), metadata);
+            }));
   }
 
   private ExecutableFlow getExecutableFlowMetadata(
-      final ExecutableFlow fullExFlow) {
+          final ExecutableFlow fullExFlow) {
     final Flow flow = new Flow(fullExFlow.getId());
     final Project project = new Project(fullExFlow.getProjectId(), null);
     project.setVersion(fullExFlow.getVersion());
@@ -133,26 +129,32 @@ public class MockExecutorLoader implements ExecutorLoader {
 
   @Override
   public List<ExecutableFlow> fetchFlowHistory(final int projectId, final String flowId,
-      final int skip, final int num) throws ExecutorManagerException {
+                                               final int skip, final int num) throws ExecutorManagerException {
+    return null;
+  }
+
+  @Override
+  public List<ExecutableFlow> fetchFlowHistory(int projectId, String flowId)
+          throws ExecutorManagerException {
     return null;
   }
 
   @Override
   public void addActiveExecutableReference(final ExecutionReference ref)
-      throws ExecutorManagerException {
+          throws ExecutorManagerException {
     this.refs.put(ref.getExecId(), ref);
   }
 
   @Override
   public void removeActiveExecutableReference(final int execId)
-      throws ExecutorManagerException {
+          throws ExecutorManagerException {
     this.refs.remove(execId);
   }
 
   @Override
   public void uploadLogFile(final int execId, final String name, final int attempt,
-      final File... files)
-      throws ExecutorManagerException {
+                            final File... files)
+          throws ExecutorManagerException {
     for (final File file : files) {
       try {
         final String logs = FileUtils.readFileToString(file, "UTF-8");
@@ -164,8 +166,14 @@ public class MockExecutorLoader implements ExecutorLoader {
   }
 
   @Override
+  public void uploadLogPath(int execId, String name, int attempt, String hdfsPath)
+          throws ExecutorManagerException {
+
+  }
+
+  @Override
   public void updateExecutableFlow(final ExecutableFlow flow)
-      throws ExecutorManagerException {
+          throws ExecutorManagerException {
     final ExecutableFlow toUpdate = this.flows.get(flow.getExecutionId());
 
     toUpdate.applyUpdateObject(flow.toUpdateObject(0));
@@ -173,8 +181,13 @@ public class MockExecutorLoader implements ExecutorLoader {
   }
 
   @Override
+  public int updateExecutableFlowRunDate(ExecutableFlow flow) throws SQLException {
+    return 0;
+  }
+
+  @Override
   public void uploadExecutableNode(final ExecutableNode node, final Props inputParams)
-      throws ExecutorManagerException {
+          throws ExecutorManagerException {
     // Clone the job node to mimick how it would be saved in DB.
     // If we would keep a handle to the original job node, we would also see any changes made after
     // this method was called. We must only store a snapshot of the current state.
@@ -188,7 +201,7 @@ public class MockExecutorLoader implements ExecutorLoader {
 
   @Override
   public void updateExecutableNode(final ExecutableNode node)
-      throws ExecutorManagerException {
+          throws ExecutorManagerException {
     final ExecutableNode foundNode = this.nodes.get(node.getId());
     foundNode.setEndTime(node.getEndTime());
     foundNode.setStartTime(node.getStartTime());
@@ -206,8 +219,24 @@ public class MockExecutorLoader implements ExecutorLoader {
   }
 
   @Override
+  public void updateExecutableNodeStatus(final ExecutableNode node)
+          throws ExecutorManagerException {
+    final ExecutableNode foundNode = this.nodes.get(node.getId());
+    foundNode.setStatus(node.getStatus());
+
+    Integer value = this.jobUpdateCount.get(node.getId());
+    if (value == null) {
+      throw new ExecutorManagerException("The node has not been uploaded");
+    } else {
+      this.jobUpdateCount.put(node.getId(), ++value);
+    }
+
+    this.flowUpdateCount++;
+  }
+
+  @Override
   public int fetchNumExecutableFlows(final int projectId, final String flowId)
-      throws ExecutorManagerException {
+          throws ExecutorManagerException {
     return 0;
   }
 
@@ -223,29 +252,29 @@ public class MockExecutorLoader implements ExecutorLoader {
 
   @Override
   public ExecutableJobInfo fetchJobInfo(final int execId, final String jobId, final int attempt)
-      throws ExecutorManagerException {
+          throws ExecutorManagerException {
     // TODO Auto-generated method stub
     return null;
   }
 
   @Override
   public boolean updateExecutableReference(final int execId, final long updateTime)
-      throws ExecutorManagerException {
+          throws ExecutorManagerException {
     // TODO Auto-generated method stub
     return true;
   }
 
   @Override
   public LogData fetchLogs(final int execId, final String name, final int attempt,
-      final int startByte,
-      final int endByte) throws ExecutorManagerException {
+                           final int startByte,
+                           final int endByte) throws ExecutorManagerException {
     // TODO Auto-generated method stub
     return null;
   }
 
   @Override
   public List<ExecutableFlow> fetchFlowHistory(final int skip, final int num)
-      throws ExecutorManagerException {
+          throws ExecutorManagerException {
     // TODO Auto-generated method stub
     return null;
   }
@@ -253,70 +282,95 @@ public class MockExecutorLoader implements ExecutorLoader {
 
   @Override
   public List<ExecutableJobInfo> fetchJobHistory(final int projectId, final String jobId,
-      final int skip, final int size) throws ExecutorManagerException {
+                                                 final int skip, final int size) throws ExecutorManagerException {
     // TODO Auto-generated method stub
     return null;
   }
 
   @Override
+  public List<ExecutableJobInfo> fetchDiagnosisJob(long startTime) throws ExecutorManagerException {
+    return null;
+  }
+
+  @Override
+  public List<ExecutableJobInfo> fetchQuickSearchJobExecutions(int projectId, String jobId, String searchTerm, int skip, int size) throws ExecutorManagerException {
+    return null;
+  }
+
+  @Override
+  public List<ExecutableJobInfo> searchJobExecutions(HistoryQueryParam historyQueryParam, int skip, int size) throws ExecutorManagerException {
+    return null;
+  }
+
+  @Override
   public int fetchNumExecutableNodes(final int projectId, final String jobId)
-      throws ExecutorManagerException {
+          throws ExecutorManagerException {
     // TODO Auto-generated method stub
     return 0;
   }
 
   @Override
+  public int quickSearchNumberOfJobExecutions(int projectId, String jobId, String searchTerm) throws ExecutorManagerException {
+    return 0;
+  }
+
+  @Override
+  public int searchNumberOfJobExecutions(HistoryQueryParam historyQueryParam) throws ExecutorManagerException {
+    return 0;
+  }
+
+  @Override
   public Props fetchExecutionJobInputProps(final int execId, final String jobId)
-      throws ExecutorManagerException {
+          throws ExecutorManagerException {
     // TODO Auto-generated method stub
     return null;
   }
 
   @Override
   public Props fetchExecutionJobOutputProps(final int execId, final String jobId)
-      throws ExecutorManagerException {
+          throws ExecutorManagerException {
     // TODO Auto-generated method stub
     return null;
   }
 
   @Override
   public Pair<Props, Props> fetchExecutionJobProps(final int execId, final String jobId)
-      throws ExecutorManagerException {
+          throws ExecutorManagerException {
     // TODO Auto-generated method stub
     return null;
   }
 
   @Override
   public List<ExecutableJobInfo> fetchJobInfoAttempts(final int execId, final String jobId)
-      throws ExecutorManagerException {
+          throws ExecutorManagerException {
     // TODO Auto-generated method stub
     return null;
   }
 
   @Override
   public int removeExecutionLogsByTime(final long millis)
-      throws ExecutorManagerException {
+          throws ExecutorManagerException {
     // TODO Auto-generated method stub
     return 0;
   }
 
   @Override
   public List<ExecutableFlow> fetchFlowHistory(final int projectId, final String flowId,
-      final int skip, final int num, final Status status) throws ExecutorManagerException {
+                                               final int skip, final int num, final Status status) throws ExecutorManagerException {
     // TODO Auto-generated method stub
     return null;
   }
 
   @Override
   public List<Object> fetchAttachments(final int execId, final String name, final int attempt)
-      throws ExecutorManagerException {
+          throws ExecutorManagerException {
     // TODO Auto-generated method stub
     return null;
   }
 
   @Override
   public void uploadAttachmentFile(final ExecutableNode node, final File file)
-      throws ExecutorManagerException {
+          throws ExecutorManagerException {
     // TODO Auto-generated method stub
 
   }
@@ -334,7 +388,7 @@ public class MockExecutorLoader implements ExecutorLoader {
 
   @Override
   public Executor fetchExecutor(final String host, final int port)
-      throws ExecutorManagerException {
+          throws ExecutorManagerException {
     for (final Executor executor : this.executors) {
       if (executor.getHost().equals(host) && executor.getPort() == port) {
         return executor;
@@ -355,7 +409,7 @@ public class MockExecutorLoader implements ExecutorLoader {
 
   @Override
   public Executor addExecutor(final String host, final int port)
-      throws ExecutorManagerException {
+          throws ExecutorManagerException {
     Executor executor = null;
     if (fetchExecutor(host, port) == null) {
       this.executorIdCounter++;
@@ -376,9 +430,9 @@ public class MockExecutorLoader implements ExecutorLoader {
 
   @Override
   public void postExecutorEvent(final Executor executor, final EventType type, final String user,
-      final String message) throws ExecutorManagerException {
+                                final String message) throws ExecutorManagerException {
     final ExecutorLogEvent event =
-        new ExecutorLogEvent(executor.getId(), user, new Date(), type, message);
+            new ExecutorLogEvent(executor.getId(), user, new Date(), type, message);
 
     if (!this.executorEvents.containsKey(executor.getId())) {
       this.executorEvents.put(executor.getId(), new ArrayList<>());
@@ -389,7 +443,7 @@ public class MockExecutorLoader implements ExecutorLoader {
 
   @Override
   public List<ExecutorLogEvent> getExecutorEvents(final Executor executor, final int num,
-      final int skip) throws ExecutorManagerException {
+                                                  final int skip) throws ExecutorManagerException {
     if (!this.executorEvents.containsKey(executor.getId())) {
       final List<ExecutorLogEvent> events = this.executorEvents.get(executor.getId());
       return events.subList(skip, Math.min(num + skip - 1, events.size() - 1));
@@ -411,7 +465,7 @@ public class MockExecutorLoader implements ExecutorLoader {
 
   @Override
   public void assignExecutor(final int executorId, final int execId)
-      throws ExecutorManagerException {
+          throws ExecutorManagerException {
     final ExecutionReference ref = this.refs.get(execId);
     ref.setExecutor(fetchExecutor(executorId));
     this.executionExecutorMapping.put(execId, executorId);
@@ -423,19 +477,19 @@ public class MockExecutorLoader implements ExecutorLoader {
       return fetchExecutor(this.executionExecutorMapping.get(execId));
     } else {
       throw new ExecutorManagerException(
-          "Failed to find executor with execution : " + execId);
+              "Failed to find executor with execution : " + execId);
     }
   }
 
   @Override
   public List<Pair<ExecutionReference, ExecutableFlow>> fetchQueuedFlows()
-      throws ExecutorManagerException {
+          throws ExecutorManagerException {
     final List<Pair<ExecutionReference, ExecutableFlow>> queuedFlows =
-        new ArrayList<>();
+            new ArrayList<>();
     for (final int execId : this.refs.keySet()) {
       if (!this.executionExecutorMapping.containsKey(execId)) {
         queuedFlows.add(new Pair<>(this.refs
-            .get(execId), this.flows.get(execId)));
+                .get(execId), this.flows.get(execId)));
       }
     }
     return queuedFlows;
@@ -448,13 +502,13 @@ public class MockExecutorLoader implements ExecutorLoader {
 
   @Override
   public List<ExecutableFlow> fetchRecentlyFinishedFlows(final Duration maxAge)
-      throws ExecutorManagerException {
+          throws ExecutorManagerException {
     return new ArrayList<>();
   }
 
   @Override
   public int selectAndUpdateExecution(final int executorId, final boolean isActive)
-      throws ExecutorManagerException {
+          throws ExecutorManagerException {
     return 1;
   }
 
@@ -468,17 +522,33 @@ public class MockExecutorLoader implements ExecutorLoader {
   }
 
   @Override
-  public List<ExecutableFlow> fetchMaintainedFlowHistory(String username, List<Integer> projectIds, int skip, int size) throws ExecutorManagerException {
+  public List<ExecutableFlow> fetchMaintainedFlowHistory(String userType, String username, List<Integer> projectIds, int skip, int size) throws ExecutorManagerException {
     return null;
   }
 
   @Override
-  public List<ExecutableFlow> fetchFlowHistory(String projContain, String flowContains, String execIdContain, String userNameContains, String status, long startData, long endData, int skip, int num, int flowType) throws ExecutorManagerException {
+  public List<ExecutableFlow> fetchFlowHistory(String projContain, String flowContains,
+                                               String execIdContain, String userNameContains, String status, long startData, long endData,
+                                               String runDate, int skip, int num, int flowType) throws ExecutorManagerException {
     return null;
   }
 
   @Override
-  public List<ExecutableFlow> fetchMaintainedFlowHistory(String projContain, String flowContains, String execIdContain, String userNameContains, String status, long startData, long endData, int skip, int num, int flowType, String username, List<Integer> projectIds) throws ExecutorManagerException {
+  public List<ExecutableFlow> fetchFlowHistory(HistoryQueryParam param, int skip, int num) throws ExecutorManagerException {
+    return null;
+  }
+
+  @Override
+  public List<ExecutableFlow> fetchMaintainedFlowHistory(String projContain, String flowContains,
+                                                         String execIdContain, String userNameContains, String status, long startData, long endData,
+                                                         String runDate, int skip, int num, int flowType, String username, List<Integer> projectIds)
+          throws ExecutorManagerException {
+    return null;
+  }
+
+  @Override
+  public List<ExecutableFlow> fetchMaintainedFlowHistory(HistoryQueryParam param, int skip, int size, List<Integer> projectIds)
+          throws ExecutorManagerException {
     return null;
   }
 
@@ -498,12 +568,37 @@ public class MockExecutorLoader implements ExecutorLoader {
   }
 
   @Override
+  public List<ExecutableFlow> fetchAllExecutableFlow() throws SQLException {
+    return null;
+  }
+
+  @Override
+  public List<ExecutableFlow> fetchExecutableFlows(long startTime) throws SQLException {
+    return null;
+  }
+
+  @Override
   public Long getJobLogOffset(int execId, String jobName, int attempt, Long length) throws ExecutorManagerException {
     return null;
   }
 
   @Override
+  public String getHdfsLogPath(int execId, String name, int attempt) throws ExecutorManagerException {
+    return null;
+  }
+
+  @Override
+  public int getLogEncType(int execId, String name, int attempt) throws ExecutorManagerException {
+    return 0;
+  }
+
+  @Override
   public List<ExecutableJobInfo> fetchJobAllHistory(int projectId, String jobId) throws ExecutorManagerException {
+    return null;
+  }
+
+  @Override
+  public List<ExecutableJobInfo> fetchExecutableJobInfo(long startTime) throws ExecutorManagerException {
     return null;
   }
 
@@ -523,7 +618,15 @@ public class MockExecutorLoader implements ExecutorLoader {
   }
 
   @Override
-  public List<ExecutableFlow> fetchUserFlowHistoryByAdvanceFilter(String projContain, String flowContains, String execIdContain, String userNameContains, String status, long startData, long endData, int skip, int num, int flowType) throws ExecutorManagerException {
+  public List<ExecutableFlow> fetchUserFlowHistoryByAdvanceFilter(String projContain,
+                                                                  String flowContains, String execIdContain, String userNameContains, String status,
+                                                                  long startData, long endData, String runDate, int skip, int num, int flowType)
+          throws ExecutorManagerException {
+    return null;
+  }
+
+  @Override
+  public List<ExecutableFlow> fetchUserFlowHistoryByAdvanceFilter(String projContain, String flowContains, String execIdContain, String userNameContains, String status, long startData, long endData, String subsystem, String busPath, String department, String runDate, int skip, int num, int flowType) throws ExecutorManagerException {
     return null;
   }
 
@@ -542,7 +645,6 @@ public class MockExecutorLoader implements ExecutorLoader {
     return null;
   }
 
-
   @Override
   public List<ExecutionRecover> listHistoryRecoverFlows(Map paramMap, int skip, int num) throws ExecutorManagerException {
     return null;
@@ -560,11 +662,6 @@ public class MockExecutorLoader implements ExecutorLoader {
 
   @Override
   public List<ExecutionRecover> fetchHistoryRecoverFlows() throws ExecutorManagerException {
-    return null;
-  }
-
-  @Override
-  public List<RecoverTrigger> fetchHistoryRecoverTriggers() {
     return null;
   }
 
@@ -614,12 +711,12 @@ public class MockExecutorLoader implements ExecutorLoader {
   }
 
   @Override
-  public int getExecHistoryTotal(Map<String, String> filterMap) throws ExecutorManagerException {
+  public int getExecHistoryTotal(HistoryQueryParam param) throws ExecutorManagerException {
     return 0;
   }
 
   @Override
-  public int getExecHistoryTotal(String username, Map<String, String> filterMap, List<Integer> projectIds) throws ExecutorManagerException {
+  public int getExecHistoryTotal(HistoryQueryParam param, List<Integer> projectIds) throws ExecutorManagerException {
     return 0;
   }
 
@@ -649,7 +746,7 @@ public class MockExecutorLoader implements ExecutorLoader {
   }
 
   @Override
-  public int getUserExecHistoryTotal(Map<String, String> filterMap) throws ExecutorManagerException {
+  public int getUserExecHistoryTotal(HistoryQueryParam param, String loginUser) throws ExecutorManagerException {
     return 0;
   }
 
@@ -659,7 +756,16 @@ public class MockExecutorLoader implements ExecutorLoader {
   }
 
   @Override
-  public List<ExecutableFlow> fetchUserFlowHistory(String loginUser, String projContain, String flowContains, String execIdContain, String userNameContains, String status, long startData, long endData, int skip, int num, int flowType) throws ExecutorManagerException {
+  public List<ExecutableFlow> fetchUserFlowHistory(String loginUser, String projContain,
+                                                   String flowContains, String execIdContain, String userNameContains, String status,
+                                                   long startData, long endData, String runDate, int skip, int num, int flowType)
+          throws ExecutorManagerException {
+    return null;
+  }
+
+  @Override
+  public List<ExecutableFlow> fetchUserFlowHistory(String loginUser, HistoryQueryParam param,
+                                                   int skip, int size) throws ExecutorManagerException {
     return null;
   }
 
@@ -779,6 +885,16 @@ public class MockExecutorLoader implements ExecutorLoader {
   }
 
   @Override
+  public int getExecutionCycleAllTotal(String userName, String searchTerm, HashMap<String, String> queryMap) throws ExecutorManagerException {
+    return 0;
+  }
+
+  @Override
+  public List<ExecutionCycle> getExecutionCycleAllPages(String userName, String searchTerm, int offset, int length,HashMap<String, String> queryMap) throws ExecutorManagerException {
+    return null;
+  }
+
+  @Override
   public int getExecutionCycleTotal(String username, List<Integer> projectIds) throws ExecutorManagerException {
     return 0;
   }
@@ -800,6 +916,11 @@ public class MockExecutorLoader implements ExecutorLoader {
 
   @Override
   public ExecutionCycle getExecutionCycleFlow(String projectId, String flowId) throws ExecutorManagerException {
+    return null;
+  }
+
+  @Override
+  public ExecutionCycle getExecutionCycleFlowDescId(String projectId, String flowId) throws ExecutorManagerException {
     return null;
   }
 
@@ -829,8 +950,332 @@ public class MockExecutorLoader implements ExecutorLoader {
   }
 
   @Override
-  public List<Integer> getRunningExecByLock(Integer projectName, String flowId)
-      throws ExecutorManagerException {
+  public List<ExecutableFlow> fetchExecutableFlowByRepeatId(int repeatId) throws ExecutorManagerException {
+    return null;
+  }
+
+  @Override
+  public List<RecoverTrigger> fetchHistoryRecoverTriggers() {
+    return null;
+  }
+
+  @Override
+  public UserVariable findUserVariableByKey(String key) throws ExecutorManagerException {
+    return null;
+  }
+
+  @Override
+  public boolean fetchGroupScheduleSwitch(String submitUser) {
+    return true;
+  }
+
+  @Override
+  public List<Integer> getRunningExecByLock(Integer projectName, String flowId) throws ExecutorManagerException {
+    return null;
+  }
+
+  @Override
+  public Set<DmsBusPath> getDmsBusPathFromDb(String jobCode) {
+    return null;
+  }
+
+  @Override
+  public Set<DmsBusPath> getDmsBusPathFromDb(String jobCode, String updateTime) {
+    return null;
+  }
+
+  @Override
+  public void insertOrUpdate(DmsBusPath dmsBusPath) {
+
+  }
+
+  @Override
+  public String getEventType(String topic, String msgName) {
+    return null;
+  }
+
+  @Override
+  public void addHoldBatchOpr(String id, int oprType, int oprLevel, String user, long createTime, String oprData)
+          throws ExecutorManagerException {
+
+  }
+
+  @Override
+  public void addHoldBatchAlert(String batchId, ExecutableFlow executableFlow, int resumeStatus) throws ExecutorManagerException {
+
+  }
+
+  @Override
+  public List<HoldBatchOperate> getLocalHoldBatchOpr() throws ExecutorManagerException {
+    return null;
+  }
+
+  @Override
+  public List<HoldBatchAlert> queryAlertByBatch(String batchId) throws ExecutorManagerException {
+    return null;
+  }
+
+  @Override
+  public void updateHoldBatchAlertStatus(HoldBatchAlert holdBatchAlert) throws ExecutorManagerException {
+
+  }
+
+  @Override
+  public List<Pair<ExecutionReference, ExecutableFlow>> fetchFlowByStatus(Status status) throws ExecutorManagerException {
+    return null;
+  }
+
+  @Override
+  public void linkJobHook(String jobCode, String prefixRules, String suffixRules, String username)
+          throws SQLException {
+
+  }
+
+  @Override
+  public JobHook getJobHook(String jobCode) {
+    return null;
+  }
+
+  @Override
+  public HoldBatchAlert queryBatchExecutableFlows(long id)
+          throws ExecutorManagerException {
+    return null;
+  }
+
+  @Override
+  public HoldBatchAlert querySubmittedExecutableFlows(long id)
+          throws ExecutorManagerException {
+    return null;
+  }
+
+  @Override
+  public void updateHoldBatchResumeStatus(String projectName, String flowName)
+          throws ExecutorManagerException {
+
+  }
+
+  @Override
+  public void addHoldBatchResume(String batchId, String oprData, String user)
+          throws ExecutorManagerException {
+
+  }
+
+  @Override
+  public void updateHoldBatchStatus(String batchId, int status) throws ExecutorManagerException {
+
+  }
+
+  @Override
+  public String getLocalHoldBatchResume(String batchId) throws ExecutorManagerException {
+    return null;
+  }
+
+  @Override
+  public void addHoldBatchFrequent(String batchId, ExecutableFlow executableFlow)
+          throws ExecutorManagerException {
+
+  }
+
+  @Override
+  public List<HoldBatchAlert> queryExecByBatch(String batchId) throws ExecutorManagerException {
+    return null;
+  }
+
+  @Override
+  public List<HoldBatchAlert> queryFrequentByBatch(String batchId)
+          throws ExecutorManagerException {
+    return null;
+  }
+
+  @Override
+  public void updateHoldBatchFrequentStatus(HoldBatchAlert holdBatchAlert)
+          throws ExecutorManagerException {
+
+  }
+
+  @Override
+  public List<HoldBatchAlert> queryExecingByBatch(String batchId) throws ExecutorManagerException {
+    return null;
+  }
+
+  @Override
+  public void updateHoldBatchResumeStatus(HoldBatchAlert holdBatchAlert)
+          throws ExecutorManagerException {
+
+  }
+
+  @Override
+  public void updateHoldBatchExpired(String batchId) throws ExecutorManagerException {
+
+  }
+
+  @Override
+  public void updateHoldBatchId(String batchId) throws ExecutorManagerException {
+
+  }
+
+  @Override
+  public List<HoldBatchOperate> getMissResumeBatch() throws ExecutorManagerException {
+    return null;
+  }
+
+  @Override
+  public List<Integer> queryWaitingFlow(String project, String flow) {
+    return null;
+  }
+
+  @Override
+  public HoldBatchAlert getHoldBatchAlert(long id) {
+    return null;
+  }
+
+  @Override
+  public List<HoldBatchAlert> queryWaitingAlert() {
+    return null;
+  }
+
+  @Override
+  public List<CfgWebankOrganization> fetchAllDepartment() {
+    return null;
+  }
+
+  @Override
+  public void updateHoldBatchNotResumeByExecId(int execId) {
+
+  }
+
+  @Override
+  public List<ExecutionRecover> getUserHistoryRerunConfiguration(int projectId, String flowName, String userId, int start, int size) throws ExecutorManagerException {
+    return null;
+  }
+
+  @Override
+  public List<ExecutionRecover> getMaintainedHistoryRerunConfiguration(int id, String flow, String userId, int start, int size) {
+    return null;
+  }
+
+  @Override
+  public List<ExecutionRecover> getAllHistoryRerunConfiguration(int id, String flow, int start, int size) {
+    return null;
+  }
+
+  @Override
+  public int getAllExecutionRecoverTotal(int projectId, String flowName) {
+    return 0;
+  }
+
+  @Override
+  public int getMaintainedExecutionRecoverTotal(int projectId, String flowName, String userId) {
+    return 0;
+  }
+
+  @Override
+  public int getUserExecutionRecoverTotal(int projectId, String flowName, String userId) {
+    return 0;
+  }
+
+  @Override
+  public long getFinalScheduleTime(long triggerInitTime) {
+    return 0;
+  }
+
+  @Override
+  public List<ExecutableFlow> fetchUnfinishedFlows(ExecutingQueryParam executingQueryParam) {
+    return null;
+  }
+
+  @Override
+  public List<Integer> selectUnfinishedFlows(int projectId, String flowId) throws ExecutorManagerException {
+    return null;
+  }
+
+  @Override
+  public List<Integer> selectUnfinishedFlows() throws ExecutorManagerException {
+    return null;
+  }
+
+  @Override
+  public long getAllUnfinishedFlows() {
+    return 0;
+  }
+
+  @Override
+  public long getUnfinishedFlowsTotal(ExecutingQueryParam executingQueryParam) {
+    return 0;
+  }
+
+  @Override
+  public List<ExecutableFlow> quickSearchFlowExecutions(int projectId, String flowId, int from, int length, String searchTerm) {
+    return null;
+  }
+
+  @Override
+  public int fetchQuickSearchNumExecutableFlows(int projectId, String flowId, String searchTerm) {
+    return 0;
+  }
+
+  @Override
+  public List<ExecutableFlow> userQuickSearchFlowExecutions(int projectId, String flowId, int from, int length, String searchTerm, String userId) {
+    return null;
+  }
+
+  @Override
+  public int fetchUserQuickSearchNumExecutableFlows(int projectId, String flowId, String searchTerm, String userId) {
+    return 0;
+  }
+
+  @Override
+  public List<Integer> selectQueuedFlows(Status status) throws ExecutorManagerException {
+    return null;
+  }
+
+  @Override
+  public Hosts getHostConfigByHostname(String hostname) throws ExecutorManagerException{
+    return null;
+  }
+
+  @Override
+  public int insertHostsConfig(Hosts hosts) throws ExecutorManagerException {
+    return 0;
+  }
+
+  @Override
+  public int executorOffline(int executorid) throws ExecutorManagerException {
+    return 0;
+  }
+
+  @Override
+  public int executorOnline(int executorid) throws ExecutorManagerException {
+    return 0;
+  }
+
+  @Override
+  public boolean checkIsOnline(int executorid) throws ExecutorManagerException {
+    return false;
+  }
+
+  @Override
+  public List<ExecutableFlow> getFlowTodayHistory(int projectId, String flowId) {
+    return null;
+  }
+
+
+  @Override
+  public JobPredictionExecutionInfo fetchJobPredictionExecutionInfo(int projectId, String flowId, String jobId) throws ExecutorManagerException {
+    return null;
+  }
+
+  @Override
+  public List<JobPredictionExecutionInfo> fetchJobPredictionExecutionInfoList(int projectId, String flowId) throws ExecutorManagerException {
+    return null;
+  }
+
+  @Override
+  public void deleteExecutionCycle(int projectId, String flowId) {
+
+  }
+  @Override
+  public List<ExecutionCycle> getRunningCycleFlows(Integer projectId, String flowId) {
     return null;
   }
 }

@@ -60,14 +60,8 @@
           <div class="form-group">
             <label for="description" class="col-sm-2 control-label">$dep</label>
             <div class="col-sm-8">
-##              <select id="update-wtss-department-select" class="form-control" style="width: 100%">
-##                <option value="">请选择</option>
-##              </select>
               <select id="update-wtss-department-select" class="form-control" style="width: 100%">
                 <option value="0">$selectDep</option>
-##                #foreach ($deparment in $webankDepartmentList)
-##                  <option value=$deparment.dpId>$deparment.dpName</option>
-##                #end
               </select>
             </div>
           </div>

@@ -24,16 +24,18 @@ import java.util.Map;
 
 public class ExecutableJobInfo {
 
-  private final int execId;
-  private final int projectId;
-  private final int version;
-  private final String flowId;
-  private final String jobId;
-  private final long startTime;
-  private final long endTime;
-  private final Status status;
-  private final int attempt;
+  private int execId;
+  private int projectId;
+  private int version;
+  private String flowId;
+  private String jobId;
+  private long startTime;
+  private long endTime;
+  private Status status;
+  private int attempt;
+  private String submitDepartmentId;
   private long runDate;
+  private int flowType;
 
   private ArrayList<Pair<String, String>> jobPath;
   private String immediateFlowId;
@@ -41,7 +43,7 @@ public class ExecutableJobInfo {
   public ExecutableJobInfo(final int execId, final int projectId, final int version,
       final String flowId, final String jobId, final long startTime, final long endTime,
       final Status status,
-      final int attempt) {
+      final int attempt, final int flowType) {
     this.execId = execId;
     this.projectId = projectId;
     this.startTime = startTime;
@@ -51,9 +53,12 @@ public class ExecutableJobInfo {
     this.flowId = flowId;
     this.jobId = jobId;
     this.attempt = attempt;
+    this.flowType = flowType;
 
     parseFlowId();
   }
+
+  public ExecutableJobInfo() {}
 
   public int getProjectId() {
     return this.projectId;
@@ -123,6 +128,7 @@ public class ExecutableJobInfo {
     this.immediateFlowId = this.jobPath.get(this.jobPath.size() - 1).getSecond();
   }
 
+
   public String getJobIdPath() {
     // Skip the first one because it's always just the root.
     String path = "";
@@ -145,6 +151,8 @@ public class ExecutableJobInfo {
     map.put("endTime", this.endTime);
     map.put("status", this.status.toString());
     map.put("attempt", this.attempt);
+    map.put("runDate", this.runDate);
+    map.put("flowType", this.flowType);
 
     return map;
   }
@@ -155,6 +163,38 @@ public class ExecutableJobInfo {
 
   public long getRunDate() {
     return runDate;
+  }
+
+  public int getFlowType() {
+    return flowType;
+  }
+
+  public void setFlowType(int flowType) {
+    this.flowType = flowType;
+  }
+
+  public void setExecId(int execId) {
+    this.execId = execId;
+  }
+
+  public void setFlowId(String flowId) {
+    this.flowId = flowId;
+  }
+
+  public void setJobId(String jobId) {
+    this.jobId = jobId;
+  }
+
+  public void setStatus(Status status) {
+    this.status = status;
+  }
+
+  public String getSubmitDepartmentId() {
+    return submitDepartmentId;
+  }
+
+  public void setSubmitDepartmentId(String submitDepartmentId) {
+    this.submitDepartmentId = submitDepartmentId;
   }
 
 }
