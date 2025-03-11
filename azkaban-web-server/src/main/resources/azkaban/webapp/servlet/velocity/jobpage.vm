@@ -24,7 +24,6 @@
   #parse ("azkaban/webapp/servlet/velocity/javascript.vm")
 
   <script type="text/javascript">
-    var contextURL = "${context}";
     var currentTime = ${currentTime};
     var timezone = "${timezone}";
     var errorMessage = null;
@@ -34,19 +33,26 @@
     var projectName = "$project.name";
     var flowId = "${flowid}";
     var jobName = "$jobid";
-    var jobId = "$jobId";
+    var jobId = "$jobid";
     var langType = "${currentlangType}";
     //var dataSeries = $dataSeries;
+    // load cmdb data switch
+    var isCmdbLoaded=false;
   </script>
-  <script type="text/javascript" src="${context}/js/echarts/echarts.min.js?version=1.10.0"></script>
-  <script type="text/javascript" src="${context}/js/raphael.min.js?version=1.10.0"></script>
-  <script type="text/javascript" src="${context}/js/morris.min.js?version=1.10.0"></script>
-  <script type="text/javascript" src="${context}/js/azkaban/i18n-config.js?version=1.10.0"></script>
-  <script type="text/javascript" src="${context}/js/azkaban/view/job-edit.js?version=1.10.0"></script>
-  <script type="text/javascript" src="${context}/js/azkaban/util/date.js?version=1.10.0"></script>
-  <script type="text/javascript" src="${context}/js/azkaban/util/job-status.js?version=1.10.0"></script>
-  <script type="text/javascript" src="${context}/js/azkaban/view/time-graph.js?version=1.10.0"></script>
-  
+  <link href="/css/bootstrap-select.min.css?version=1.49.0" rel="stylesheet">
+  <script type="text/javascript" src="/js/azkaban/util/utils.js?version=1.49.0"></script>
+  <script type="text/javascript" src="/js/echarts/echarts.min.js?version=1.49.0"></script>
+  <script type="text/javascript" src="/js/raphael.min.js?version=1.49.0"></script>
+  <script type="text/javascript" src="/js/morris.min.js?version=1.49.0"></script>
+  <script type="text/javascript" src="/js/azkaban/i18n-config.js?version=1.49.0"></script>
+  <script type="text/javascript" src="/js/azkaban/view/job-edit.js?version=1.49.0"></script>
+
+  <script type="text/javascript" src="/js/azkaban/util/job-status.js?version=1.49.0"></script>
+  <script type="text/javascript" src="/js/azkaban/view/time-graph.js?version=1.49.0"></script>
+  <script type="text/javascript" src="/js/bootstrap-select.js?version=1.49.0"></script>
+  <script type="text/javascript" src="/js/moment-2.29.4.min.js?version=1.49.0"></script>
+  <script type="text/javascript" src="/js/bootstrap-datetimepicker.min.js?version=1.49.0"></script>
+
 </head>
 <body>
 
@@ -63,14 +69,17 @@
     <div class="container-full">
       <div class="row">
         <div class="header-title">
-          <h1 style="word-break:break-all;"><a href="${context}/manager?project=${project.name}&flow=${flowid}&job=${jobid}">$job
+          <h1 style="word-break:break-all;"><a href="javascript:void(0);" onclick="checkHrefUrlXss('/manager?project=${project.name}&flow=${flowid}&job=${jobid}')">$job
             <small>$jobid</small>
           </a></h1>
         </div>
         <div class="header-control">
           <div class="pull-right header-form">
-            <a href="${context}/manager?project=${project.name}&job=$jobid&history"
+            <a href="javascript:void(0);" onclick="checkHrefUrlXss('/manager?project=${project.name}&job=$jobid&history')"
                class="btn btn-info btn-sm">$history</a>
+            <button id="job-business-btn" class="btn btn-sm btn-warning" onclick="handleJobBusiness()">
+              <span class="glyphicon glyphicon-pencil"></span> $jobBusiness
+            </button>
           </div>
           <div class="clearfix"></div>
         </div>
@@ -81,17 +90,17 @@
     <div class="container-full" style="word-break:break-all;">
       <ol class="breadcrumb">
         <li><a
-            href="${context}/manager?project=${project.name}"><strong>$program</strong> $project.name
+            href="javascript:void(0);" onclick="checkHrefUrlXss('/manager?project=${project.name}')"><strong>$program</strong> $project.name
         </a></li>
         <li><a
-            href="${context}/manager?project=${project.name}&flow=${flowid}"><strong>$flow</strong> $flowid
+            href="javascript:void(0);" onclick="checkHrefUrlXss('/manager?project=${project.name}&flow=${flowid}')"><strong>$flow</strong> $flowid
         </a></li>
         <li class="active"><strong>$job</strong> $jobid</li>
       </ol>
     </div>
   </div>
 
-  <script type="text/javascript" src="${context}/js/azkaban/view/hideHead.js?version=1.10.0"></script>
+  <script type="text/javascript" src="/js/azkaban/view/hideHead.js?version=1.49.0"></script>
 
   <div class="container-full">
 
@@ -104,6 +113,7 @@
             <ul class="nav nav-tabs nav-sm" id="headertabs">
               <li id="jobParam"><a href="#jobParam">$jobParam</a></li>
               <li id="jobExecutionsHistory"><a href="#jobExecutions">$exechistory</a></li>
+              <li id="applyJobLinkedData"><a href="#linkJobData">$associatedData</a></li>
             </ul>
           </div>
 
@@ -130,13 +140,6 @@
             </tr>
             </thead>
             <tbody id="job-param-tbody">
-##              #foreach ($parameter in $parameters)
-##              <tr>
-##                <td class="property-key" style="word-break:break-all;">$parameter.first</td>
-##                  <!-- word-break:break-all;让文本超出边界后自动换行 -->
-##                  <td style="word-break:break-all;">$parameter.second</td>
-##              </tr>
-##              #end
             </tbody>
           </table>
         </div>
@@ -165,18 +168,62 @@
                     <tbody id="execTableBody">
                     </tbody>
                   </table>
-                  <ul id="pageSelection" class="pagination">
-                    <li id="previous" class="first"><a><span class="arrow">&larr;</span>$previousPage</a></li>
-                    <li id="page1"><a href="#page1">1</a></li>
-                    <li id="page2"><a href="#page2">2</a></li>
-                    <li id="page3"><a href="#page3">3</a></li>
-                    <li id="page4"><a href="#page4">4</a></li>
-                    <li id="page5"><a href="#page5">5</a></li>
-                    <li id="next"><a>$nextPage<span class="arrow">&rarr;</span></a></li>
-                  </ul>
+
+                <table id="pageSelection">
+                    #parse ("azkaban/webapp/servlet/velocity/commonPagination.vm")
+                </table>
                 </div>
               </div><!-- /.container-fill -->
             </div>
+            <!-- applyJobLinkedView-->
+            <div class="panel" id="applyJobLinkedView">
+              <div class="alert alert-danger" id="link-data-error-msg" style=" display: none; "></div>
+              <div id="jobLinkInputBox">
+                <h3>$inputdata</h3>
+                <table class="table table-striped table-bordered table-condensed table-hover" >
+                  <thead>
+                    <tr>
+                      <th>#</th>
+                      <th >$datasourceType</th>
+                      <th >$schooling</th>
+                      <th >$database</th>
+                      <th >$datatable</th>
+                      <th >$subsystem</th>
+                      <th >$developmentDepartment</th>
+                      <th >$developmentDirector</th>
+                    </tr>
+                    </thead>
+                  <tbody id="jobLinkInputDataBody">
+                  </tbody>
+                </table>
+                      <table id="inputPageTable">
+                        #parse ("azkaban/webapp/servlet/velocity/commonPagination.vm")
+                      </table>
+                      </div>
+                      <div id="jobLinkOutBox">
+                <h3>$outputdata</h3>
+                <table class="table table-striped table-bordered table-condensed table-hover" >
+                  <thead>
+                    <tr>
+                      <th>#</th>
+                      <th >$datasourceType</th>
+                      <th >$schooling</th>
+                      <th >$database</th>
+                      <th >$datatable</th>
+                      <th >$subsystem</th>
+                      <th >$developmentDepartment</th>
+                      <th >$developmentDirector</th>
+                    </tr>
+                    </thead>
+                  <tbody id="jobLinkoutputDataBody">
+                  </tbody>
+                </table>
+                      <table id="outPageTable">
+                        #parse ("azkaban/webapp/servlet/velocity/commonPagination.vm")
+                      </table>
+                      </div>
+                        </div>
+                  <!-- /applyJobLinkedView-->
       </div><!-- /col-xs-8 -->
       <div class="col-xs-6 col-sm-3 sidebar-offcanvas" style="word-break:break-all;">
         <div class="well" id="job-summary">
@@ -206,7 +253,7 @@
             #if ($dependencies)
               #foreach($dependency in $dependencies)
                 <li class="list-group-item">
-                  <a href="${context}/manager?project=${project.name}&flow=${flowid}&job=$dependency">$dependency</a>
+                  <a href="javascript:void(0);" onclick="checkHrefUrlXss('/manager?project=${project.name}&flow=${flowid}&job=$dependency')">$dependency</a>
                 </li>
               #end
             #else
@@ -223,7 +270,7 @@
             #if ($dependents)
               #foreach($dependent in $dependents)
                 <li class="list-group-item">
-                  <a href="${context}/manager?project=${project.name}&flow=${flowid}&job=$dependent">$dependent</a>
+                  <a href="javascript:void(0);" onclick="checkHrefUrlXss('/manager?project=${project.name}&flow=${flowid}&job=$dependent')">$dependent</a>
                 </li>
               #end
             #else
@@ -239,7 +286,7 @@
             #if ($properties)
               #foreach($property in $properties)
                 <li class="list-group-item">
-                  <a href="${context}/manager?project=${project.name}&flow=${flowid}&job=${jobid}&prop=$property">$property</a>
+                  <a href="javascript:void(0);" onclick="checkHrefUrlXss('/manager?project=${project.name}&flow=${flowid}&job=${jobid}&prop=$property')">$property</a>
                 </li>
               #end
             #else
@@ -300,6 +347,195 @@
             </button>
             <button type="button" class="btn btn-primary" id="set-btn">$save
             </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+
+    ## 应用信息填写框
+    <div class="modal" id="merge-business-panel">
+      <div class="modal-dialog">
+        <div class="modal-content">
+          <div class="modal-header">
+            <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;
+            </button>
+            <h4 class="modal-title">$mergeBusinessTitle</h4>
+          </div>
+          <div class="modal-body">
+            <div class="alert alert-danger" id="merge-business-error-msg" style="word-break:break-all;"></div>
+            <div class="alert alert-info" id="merge-business-info-msg" style="word-break:break-all;"></div>
+            <input id="itsm-number"  type="hidden" value="" >
+            <fieldset class="form-horizontal" style="height:600px;overflow-y:scroll;overflow-x:hidden;padding-top:10px;">
+              <div class="form-group">
+                <label for="batch-group-select" class="col-sm-4 control-label">$batchGroup</label>
+                <div class="col-sm-7">
+                  <select id="batch-group-select" class="form-control" style="width: 100%"></select>
+                </div>
+              </div>
+              <div class="form-group">
+                <label for="bus-path-select" class="col-sm-4 control-label">$busPath</label>
+                <div class="col-sm-7">
+                  <select id="bus-path-select"  class="form-control" style="width: 100%"></select>
+                </div>
+              </div>
+              <div class="form-group">
+                <label for="bus-domain-select" class="col-sm-4 control-label"><span class="required">*</span>$busDomain</label>
+                <div class="col-sm-7">
+                  <select id="bus-domain-select"  class="form-control" style="width: 100%"></select>
+                </div>
+              </div>
+              <div class="form-group">
+                <label for="subsystem-select" class="col-sm-4 control-label"><span class="required">*</span>$subsystem</label>
+                <div class="col-sm-7">
+                  <select id="subsystem-select" class="form-control" style="width: 100%"></select>
+                </div>
+              </div>
+              <div class="form-group">
+                <label for="bus-res-lvl-select" class="col-sm-4 control-label"><span class="required">*</span>$busResLvl</label>
+                <div class="col-sm-7">
+                  <select id="bus-res-lvl-select" class="form-control selectpicker" title="${selectBusResLvl}">
+                    <option value="S">$busReslvS</option>
+                    <option value="A">$busReslvA</option>
+                    <option value="B">$busReslvB</option>
+                    <option value="C">$busReslvC</option>
+                  </select>
+                </div>
+              </div>
+              <div class="form-group">
+                <label for="plan-start-time" class="col-sm-4 control-label"><span class="required">*</span>$planStartTime</label>
+                <div class="col-sm-7">
+                  <input id="plan-start-time" type="text" class="ui-datetime-container form-control">
+                </div>
+              </div>
+              <div class="form-group">
+                <label for="plan-finish-time" class="col-sm-4 control-label"><span class="required">*</span>$planFinishTime</label>
+                <div class="col-sm-7">
+                  <input id="plan-finish-time" type="text" class="ui-datetime-container form-control">
+                </div>
+              </div>
+              <div class="form-group">
+                  <label for="last-start-time" class="col-sm-4 control-label"><span class="required">*</span>$lastStartTime</label>
+                  <div class="col-sm-7">
+                      <input id="last-start-time" type="text" class="ui-datetime-container form-control">
+                  </div>
+              </div>
+              <div class="form-group">
+                <label for="last-finish-time" class="col-sm-4 control-label"><span class="required">*</span>$lastFinishTime</label>
+                <div class="col-sm-7">
+                  <input id="last-finish-time" type="text" class="ui-datetime-container form-control">
+                </div>
+              </div>
+              <!--<div class="form-group">
+                <label for="alert-level" class="col-sm-4 control-label">$alertLevel</label>
+                <div class="col-sm-7">
+                  <select id="alert-level" class="form-control selectpicker" title="${selectAlertLevel}">
+                    <option value="1">critical</option>
+                    <option value="2">major</option>
+                    <option value="3">minor</option>
+                    <option value="4">warn</option>
+                  </select>
+                </div>
+              </div>
+              <div class="form-group">
+                <label for="dcn-number" class="col-sm-4 control-label">$dcnNumber</label>
+                <div class="col-sm-7">
+                  <input id="dcn-number" type="text" class="form-control" maxlength="500">
+                </div>
+              </div>
+              <div class="form-group">
+                <label for="ims-updater-select" class="col-sm-4 control-label">$imsUpdater</label>
+                <div class="col-sm-7">
+                  <select id="ims-updater-select" class="form-control selectpicker" data-live-search="true" title="${selectImsUpdater}" data-size="8" multiple></select>
+                </div>
+              </div>
+              <div class="form-group">
+                <label for="ims-remark" class="col-sm-4 control-label">$imsRemark</label>
+                <div class="col-sm-7">
+                  <div class="alert-warning" style="margin:5px">$imsRemarkTips</div>
+                  <input id="ims-remark" type="text" class="form-control" maxlength="500">
+                </div>
+              </div>-->
+              <div class="form-group">
+                <label for="bus-type-first-select" class="col-sm-4 control-label">$busTypeFirst</label>
+                <div class="col-sm-7">
+                  <select id="bus-type-first-select" class="form-control" style="width: 100%"></select>
+                </div>
+              </div>
+              <div class="form-group">
+                <label for="bus-type-second-select" class="col-sm-4 control-label">$busTypeSecond</label>
+                <div class="col-sm-7">
+                  <select id="bus-type-second-select" class="form-control" style="width: 100%"></select>
+                </div>
+              </div>
+              <div class="form-group">
+                <label for="bus-desc" class="col-sm-4 control-label">$busDesc</label>
+                <div class="col-sm-7">
+                  <input id="bus-desc" type="text" class="form-control" maxlength="500">
+                </div>
+              </div>
+              <div class="form-group">
+                <label for="bus-dev-dept-select" class="col-sm-4 control-label"><span class="required">*</span>$devDept</label>
+                <div class="col-sm-7">
+                  <select id="bus-dev-dept-select" class="form-control selectpicker" data-live-search="true" title="${selectDevDept}" data-size="8"></select>
+                </div>
+              </div>
+              <div class="form-group">
+                <label for="bus-ops-dept-select" class="col-sm-4 control-label"><span class="required">*</span>$opsDept</label>
+                <div class="col-sm-7">
+                  <select id="bus-ops-dept-select" class="form-control selectpicker" data-live-search="true" title="${selectOpsDept}" data-size="8"></select>
+                </div>
+              </div>
+              <div class="form-group">
+                <label for="scan-partition-num" class="col-sm-4 control-label"><span class="required">*</span>$scanPartitionNum</label>
+                <div class="col-sm-7">
+                  <input id="scan-partition-num" type="text" class="form-control" maxlength="500">
+                </div>
+              </div>
+              <div class="form-group">
+                <label for="scan-data-size" class="col-sm-4 control-label"><span class="required">*</span>$scanDataSize</label>
+                <div class="col-sm-7">
+                  <input id="scan-data-size" type="text" class="form-control" maxlength="500">
+                </div>
+              </div>
+
+              #*
+              <div class="form-group">
+                <label for="batch-time-quat" class="col-sm-4 control-label">$batchTimeQuat</label>
+                <div class="col-sm-7">
+                  <input id="batch-time-quat" type="text" class="form-control" maxlength="120">
+                </div>
+              </div>
+              <div class="form-group">
+                <label for="bus-err-inf" class="col-sm-4 control-label">$busErrInf</label>
+                <div class="col-sm-7">
+                  <input id="bus-err-inf" type="text" class="form-control" maxlength="180">
+                </div>
+              </div>
+              <div class="form-group">
+                <label for="upper-dep" class="col-sm-4 control-label">$upperDep</label>
+                <div class="col-sm-7">
+                  <input id="upper-dep" type="text" class="form-control" maxlength="120">
+                </div>
+              </div>
+              <div class="form-group">
+                <label for="lower-dep" class="col-sm-4 control-label">$lowerDep</label>
+                <div class="col-sm-7">
+                  <input id="lower-dep" type="text" class="form-control" maxlength="120">
+                </div>
+              </div>
+              <div class="form-group">
+                <label for="related_product" class="col-sm-4 control-label">$relatedProduct</label>
+                <div class="col-sm-7">
+                  <input id="related_product" type="text" class="form-control" maxlength="120">
+                </div>
+              </div>
+              *#
+            </fieldset>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-default" data-dismiss="modal">$cancel</button>
+            <button type="button" class="btn btn-primary" id="business-merge-btn">$merge</button>
           </div>
         </div>
       </div>

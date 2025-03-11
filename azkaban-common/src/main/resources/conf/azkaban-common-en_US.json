@@ -11,6 +11,7 @@
     "projectDescLength": "The length of project description can not exceed 2048."
   },
   "azkaban.system.SystemManager": {
-    "errorFormatProxy": "Error format Proxy User Name, accept combined letters or number or underline, and multi proxy use comma as separate."
+    "errorFormatProxy": "Error format Proxy User Name, accept combined letters or number or underline, and multi proxy use comma as separate.",
+    "errorProxyTips": "The close user name and real name can not be same. "
   }
 }

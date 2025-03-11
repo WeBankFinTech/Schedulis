@@ -20,7 +20,7 @@ var slaView;
 var tableSorterView;
 $(function () {
   slaView = new azkaban.ChangeSlaView({el: $('#sla-options')});
-  //var requestURL = contextURL + "/manager";
+  //var requestURL =  "/manager";
 
   // Set up the Flow options view. Create a new one every time :p
   //$('#addSlaBtn').click( function() {

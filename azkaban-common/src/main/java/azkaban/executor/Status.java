@@ -17,8 +17,15 @@
 package azkaban.executor;
 
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
 import java.util.Arrays;
+import java.util.Set;
+import java.util.TreeSet;
 
+/**
+ *
+ * @author WTSS
+ */
 public enum Status {
   READY(10),
   PREPARING(20),
@@ -39,12 +46,17 @@ public enum Status {
   // FIXME Added the state FAILED_SKIPPED, which means that the task is skipped after it fails to execute.
   FAILED_SKIPPED(95),
   DISABLED(100),
+  /**
+   * 预失败
+   */
+  PRE_FAILED(105),
   QUEUED(110),
+  SYSTEM_PAUSED(115),
   FAILED_SUCCEEDED(120),
   CANCELLED(125);
   // status is TINYINT in DB and the value ranges from -128 to 127
 
-  private static final ImmutableMap<Integer, Status> numValMap = Arrays.stream(Status.values())
+  private static final ImmutableMap<Integer, Status> NUM_VAL_MAP = Arrays.stream(Status.values())
       .collect(ImmutableMap.toImmutableMap(status -> status.getNumVal(), status -> status));
 
   private final int numVal;
@@ -54,7 +66,7 @@ public enum Status {
   }
 
   public static Status fromInteger(final int x) {
-    return numValMap.getOrDefault(x, READY);
+    return NUM_VAL_MAP.getOrDefault(x, READY);
   }
 
   public static boolean isStatusFinished(final Status status) {
@@ -89,7 +101,6 @@ public enum Status {
     switch (status) {
       case FAILED:
       case KILLED:
-      case CANCELLED:
         return true;
       default:
         return false;
@@ -134,4 +145,23 @@ public enum Status {
   public int getNumVal() {
     return this.numVal;
   }
+
+  private static final ImmutableMap<Integer, Status> numValMap = Arrays.stream(Status.values())
+          .collect(ImmutableMap.toImmutableMap(status -> status.getNumVal(), status -> status));
+
+  public static final Set<Status> StatusBeforeRunningSet = new TreeSet<>(
+          Arrays.asList(Status.READY, Status.PREPARING, Status.QUEUED));
+
+  public static final Set<Status> nonFinishingStatusAfterFlowStartsSet = new TreeSet<>(
+          Arrays.asList(Status.RUNNING, Status.QUEUED, Status.PAUSED, Status.FAILED_FINISHING));
+
+  public static final ImmutableSet<Status> RESTARTABLE_NON_TERMINAL_STATUSES =
+          ImmutableSet.of(Status.READY, Status.PREPARING);
+
+  public static final ImmutableSet<Status> RESTARTABLE_TERMINAL_STATUSES =
+          ImmutableSet.of(Status.FAILED);
+
+  public static final ImmutableSet<Status> TERMINAL_STATUSES = ImmutableSet.of(Status.SUCCEEDED,
+          Status.KILLED, Status.FAILED);
+
 }

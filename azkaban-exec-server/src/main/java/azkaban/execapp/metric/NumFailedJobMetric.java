@@ -21,13 +21,13 @@ import azkaban.event.EventListener;
 import azkaban.executor.Status;
 import azkaban.metric.MetricException;
 import azkaban.metric.MetricReportManager;
-import azkaban.metric.TimeBasedReportingMetric;
+import azkaban.metric.AbstractTimeBasedReportingMetric;
 import azkaban.spi.EventType;
 
 /**
  * Metric to keep track of number of failed jobs in between the tracking events
  */
-public class NumFailedJobMetric extends TimeBasedReportingMetric<Integer> implements EventListener {
+public class NumFailedJobMetric extends AbstractTimeBasedReportingMetric<Integer> implements EventListener {
 
   public static final String NUM_FAILED_JOB_METRIC_NAME = "NumFailedJobMetric";
   private static final String NUM_FAILED_JOB_METRIC_TYPE = "uint16";
@@ -41,7 +41,7 @@ public class NumFailedJobMetric extends TimeBasedReportingMetric<Integer> implem
   /**
    * Listen for events to maintain correct value of number of failed jobs {@inheritDoc}
    *
-   * @see EventListener#handleEvent(Event)
+   * @see azkaban.event.EventListener#handleEvent(azkaban.event.Event)
    */
   @Override
   public synchronized void handleEvent(final Event event) {

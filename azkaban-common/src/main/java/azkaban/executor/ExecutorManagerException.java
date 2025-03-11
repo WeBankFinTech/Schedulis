@@ -44,6 +44,11 @@ public class ExecutorManagerException extends Exception {
     super(message, cause);
   }
 
+  public ExecutorManagerException(final String message, final Throwable cause, final Reason reason) {
+    super(message, cause);
+    this.reason = reason;
+  }
+
   public ExecutableFlow getExecutableFlow() {
     return this.flow;
   }
@@ -52,7 +57,11 @@ public class ExecutorManagerException extends Exception {
     return this.reason;
   }
 
+  /**
+   * the reason of reception
+   */
   public enum Reason {
-    SkippedExecution
+    SkippedExecution,
+    API_INVOKE
   }
 }

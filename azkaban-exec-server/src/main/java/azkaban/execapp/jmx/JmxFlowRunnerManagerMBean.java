@@ -18,7 +18,15 @@ package azkaban.execapp.jmx;
 
 import azkaban.jmx.DisplayName;
 
+import java.util.concurrent.atomic.AtomicInteger;
+
 public interface JmxFlowRunnerManagerMBean {
+
+  @DisplayName("OPERATION: getStartTime")
+  public long getStartTime();
+
+  @DisplayName("OPERATION: getFailedFlowNum")
+  public int getFailedFlowNum();
 
   @DisplayName("OPERATION: getLastCleanerThreadCheckTime")
   public long getLastCleanerThreadCheckTime();

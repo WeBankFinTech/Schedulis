@@ -17,12 +17,13 @@
 package azkaban.database;
 
 import azkaban.utils.Props;
+
+import azkaban.utils.RSAUtils;
 import org.slf4j.LoggerFactory;
 import org.slf4j.Logger;
 
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.Base64;
 
 
 public class DataSourceUtils {
@@ -38,11 +39,11 @@ public class DataSourceUtils {
   /**
    * Create Datasource from parameters in the properties
    */
-  public static AzkabanDataSource getDataSource(final Props props) {
+  public static AbstractAzkabanDataSource getDataSource(final Props props) {
     final String databaseType = props.getString("database.type");
 
-    AzkabanDataSource dataSource = null;
-    if (databaseType.equals("mysql")) {
+    AbstractAzkabanDataSource dataSource = null;
+    if ("mysql".equals(databaseType)) {
       final int port = props.getInt("mysql.port");
       final String host = props.getString("mysql.host");
       final String database = props.getString("mysql.database");
@@ -50,15 +51,17 @@ public class DataSourceUtils {
       final int numConnections = props.getInt("mysql.numconnections");
       String pwd = null;
       try {
-        pwd = new String(Base64.getDecoder().decode(props.getString("mysql.password").getBytes()),"UTF-8");
+        String privateKey = props.getString("password.private.key");
+        String ciphertext = props.getString("mysql.password");
+        pwd = RSAUtils.decrypt(privateKey, ciphertext);
       } catch (Exception e){
-        logger.error("password decore failed" + e);
+        logger.error("password decore failed", e);
       }
       final String password = pwd;
       dataSource =
           getMySQLDataSource(host, port, database, user, password,
               numConnections);
-    } else if (databaseType.equals("h2")) {
+    } else if ("h2".equals(databaseType)) {
       final String path = props.getString("h2.path");
       final Path h2DbPath = Paths.get(path).toAbsolutePath();
       logger.info("h2 DB path: " + h2DbPath);
@@ -71,7 +74,7 @@ public class DataSourceUtils {
   /**
    * Create a MySQL DataSource
    */
-  public static AzkabanDataSource getMySQLDataSource(final String host, final Integer port,
+  public static AbstractAzkabanDataSource getMySQLDataSource(final String host, final Integer port,
       final String dbName, final String user, final String password, final Integer numConnections) {
     return new MySQLBasicDataSource(host, port, dbName, user, password,
         numConnections);
@@ -80,7 +83,7 @@ public class DataSourceUtils {
   /**
    * Create H2 DataSource
    */
-  public static AzkabanDataSource getH2DataSource(final Path file) {
+  public static AbstractAzkabanDataSource getH2DataSource(final Path file) {
     return new EmbeddedH2BasicDataSource(file);
   }
 
@@ -98,8 +101,6 @@ public class DataSourceUtils {
 
     public static PropertyType fromInteger(final int x) {
       switch (x) {
-        case 1:
-          return DB;
         default:
           return DB;
       }
@@ -113,7 +114,7 @@ public class DataSourceUtils {
   /**
    * MySQL data source based on AzkabanDataSource
    */
-  public static class MySQLBasicDataSource extends AzkabanDataSource {
+  public static class MySQLBasicDataSource extends AbstractAzkabanDataSource {
 
     private final String url;
 
@@ -147,7 +148,7 @@ public class DataSourceUtils {
   /**
    * H2 Datasource
    */
-  public static class EmbeddedH2BasicDataSource extends AzkabanDataSource {
+  public static class EmbeddedH2BasicDataSource extends AbstractAzkabanDataSource {
 
     private EmbeddedH2BasicDataSource(final Path filePath) {
       super();

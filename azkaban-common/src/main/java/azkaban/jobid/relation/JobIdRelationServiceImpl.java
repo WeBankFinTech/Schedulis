@@ -7,6 +7,7 @@ import org.slf4j.LoggerFactory;
 import javax.inject.Inject;
 import javax.inject.Singleton;
 import java.util.List;
+import java.util.Map;
 
 @Singleton
 public class JobIdRelationServiceImpl implements JobIdRelationService {
@@ -29,11 +30,48 @@ public class JobIdRelationServiceImpl implements JobIdRelationService {
   }
 
   @Override
+  public JobIdRelation getJobIdRelation(Integer execId, String jobNamePath, Integer attempt) throws Exception {
+    return jobIdRelationDao.getJobIdRelation(execId, jobNamePath, attempt);
+  }
+
+  @Override
   public void addJobIdRelation(JobIdRelation jobIdRelation) throws Exception {
     try {
       jobIdRelationDao.addJobIdRelation(jobIdRelation);
     } catch (Exception e){
       logger.error("add jobIdRelation failed." , e);
+    }
+  }
+
+  @Override
+  public void addJobIdRelation(Map<String, String> jobIdRelation) throws Exception {
+    try {
+      jobIdRelationDao.addJobIdRelation(jobIdRelation);
+    } catch (Exception e){
+      logger.error("add jobIdRelation failed." , e);
+    }
+  }
+
+  @Override
+  public void updateJobIdRelation(JobIdRelation jobIdRelation) throws Exception {
+    jobIdRelationDao.updateJobIdRelation(jobIdRelation);
+  }
+
+  @Override
+  public void updateJobIdRelation(Map<String,String> jobIdRelation, String... params) {
+    try {
+      jobIdRelationDao.updateJobIdRelation(jobIdRelation, params);
+    } catch (Exception e) {
+      logger.error("update jobIdRelation failed." , e);
+    }
+  }
+
+  @Override
+  public void updateProxyUrl(JobIdRelation jobIdRelation) {
+    try {
+      jobIdRelationDao.updateProxyUrl(jobIdRelation);
+    } catch (Exception e){
+      logger.error("update proxyUrl failed." , e);
     }
   }
 }

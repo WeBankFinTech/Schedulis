@@ -45,10 +45,10 @@ public class DatabaseSetup {
   private static final String CREATE_SCRIPT_PREFIX = "create.";
   private static final String SQL_SCRIPT_SUFFIX = ".sql";
 
-  private final AzkabanDataSource dataSource;
+  private final AbstractAzkabanDataSource dataSource;
   private String scriptPath = null;
 
-  public DatabaseSetup(final AzkabanDataSource ds, final String path) {
+  public DatabaseSetup(final AbstractAzkabanDataSource ds, final String path) {
     this.dataSource = ds;
     this.scriptPath = path;
   }

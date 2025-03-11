@@ -17,8 +17,8 @@
 package azkaban.executor.selector;
 
 import azkaban.utils.Pair;
-import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.slf4j.Logger;
 
 import java.util.Collection;
 import java.util.Comparator;

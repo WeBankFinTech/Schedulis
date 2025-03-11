@@ -17,6 +17,12 @@ import azkaban.scheduler.ScheduleManagerException;
 import azkaban.server.HttpRequestUtils;
 import azkaban.server.session.Session;
 import azkaban.sla.SlaOption;
+import azkaban.system.SystemManager;
+import azkaban.system.SystemUserManagerException;
+import azkaban.system.common.TransitionService;
+import azkaban.system.entity.WebankUser;
+import azkaban.system.entity.WtssUser;
+import azkaban.user.Permission;
 import azkaban.user.Permission.Type;
 import azkaban.user.User;
 import azkaban.utils.GsonUtils;
@@ -27,6 +33,25 @@ import azkaban.webapp.AzkabanWebServer;
 import com.google.common.collect.Lists;
 import com.google.common.reflect.TypeToken;
 import com.google.gson.JsonObject;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.io.OutputStream;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Map.Entry;
+import java.util.Set;
+import java.util.stream.Collectors;
+import javax.servlet.ServletConfig;
+import javax.servlet.ServletException;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.collections4.MapUtils;
 import org.apache.commons.io.IOUtils;
@@ -37,18 +62,6 @@ import org.joda.time.Minutes;
 import org.joda.time.ReadablePeriod;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import javax.servlet.ServletConfig;
-import javax.servlet.ServletException;
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.IOException;
-import java.io.OutputStream;
-import java.util.*;
-import java.util.Map.Entry;
-import java.util.stream.Collectors;
 
 /**
  * @author lebronwang
@@ -268,7 +281,7 @@ public class EventScheduleServlet extends AbstractLoginAzkabanServlet {
       }
 
       final Project project = this.projectManager.getProject(sched.getProjectId());
-      if (!hasPermission(project, user, Type.SCHEDULE)) {
+      if (!hasPermission(project, user, Permission.Type.SCHEDULE)) {
         ret.put("error", "User " + user
             + " does not have permission to set SLA for this flow.");
         return;
@@ -390,13 +403,15 @@ public class EventScheduleServlet extends AbstractLoginAzkabanServlet {
       final String topic = getParam(req, "topic");
       final String msgName = getParam(req, "msgName");
       final String saveKey = getParam(req, "saveKey");
+      final String comment = getParam(req, "comment");
+      final String token = getParam(req, "token");
 
       final EventSchedule schedule = this.eventScheduleService.eventScheduleFlow(scheduleId,
           project.getId(), project.getName(), flow.getId(), "ready", DateTime.now().getMillis(),
           DateTime.now().getMillis(), user.getUserId(), user.getUserId(), topic, msgName, saveKey,
-          flowOptions, slaOptions, otherOptions);
+          flowOptions, slaOptions, otherOptions, comment, token);
       this.projectManager.postProjectEvent(project, EventType.SCHEDULE,
-          user.getUserId() + (StringUtils.isEmpty(user.getNormalUser()) ? "" : ("(" + user.getNormalUser() + ")")), "Schedule flow " + sched.getFlowName()
+          user.getUserId() + (org.apache.commons.lang.StringUtils.isEmpty(user.getNormalUser()) ? "" : ("(" + user.getNormalUser() + ")")), "Schedule flow " + sched.getFlowName()
               + " has been changed.");
 
 
@@ -424,7 +439,7 @@ public class EventScheduleServlet extends AbstractLoginAzkabanServlet {
       }
 
       final Project project = this.projectManager.getProject(sched.getProjectId());
-      if (!hasPermission(project, user, Type.SCHEDULE)) {
+      if (!hasPermission(project, user, Permission.Type.SCHEDULE)) {
         ret.put("errorMsg", "User " + user
             + " does not have permission to set IMS Report Properties for this flow.");
         return;
@@ -437,10 +452,11 @@ public class EventScheduleServlet extends AbstractLoginAzkabanServlet {
         return;
       }
 
+      Map<String, String> dataMap = loadEventScheduleServletI18nData();
       //check is set business
       if (getApplication().getServerProps().getBoolean("wtss.set.business.check", true)
           && this.projectManager.getFlowBusiness(project.getId(), flow.getId(), "") == null) {
-        ret.put("errorMsg", "This flow '" + flow.getId() + "' need to set application information for signal schedule");
+        ret.put("errorMsg", dataMap.get("flow") + flow.getId() + dataMap.get("setBusiness"));
         return;
       }
 
@@ -481,7 +497,7 @@ public class EventScheduleServlet extends AbstractLoginAzkabanServlet {
 
       this.eventScheduleService.addEventSchedule(sched);
       this.projectManager.postProjectEvent(project, EventType.IMS_PROPERTIES,
-          user.getUserId() + (StringUtils.isEmpty(user.getNormalUser()) ? ""
+          user.getUserId() + (org.apache.commons.lang.StringUtils.isEmpty(user.getNormalUser()) ? ""
               : ("(" + user.getNormalUser() + ")")),
           "IMS Report Properties for flow " + sched.getFlowName()
               + " has been " + opr + ".");
@@ -509,7 +525,7 @@ public class EventScheduleServlet extends AbstractLoginAzkabanServlet {
       }
 
       final Project project = this.projectManager.getProject(sched.getProjectId());
-      if (!hasPermission(project, user, Type.SCHEDULE)) {
+      if (!hasPermission(project, user, Permission.Type.SCHEDULE)) {
         ret.put("errorMsg", "User " + user
                 + " does not have permission to set IMS Report Properties for this flow.");
         return;
@@ -1375,7 +1391,7 @@ public class EventScheduleServlet extends AbstractLoginAzkabanServlet {
     }
 
     final Project project = this.projectManager.getProject(sched.getProjectId());
-    if (!hasPermission(project, user, Type.SCHEDULE)) {
+    if (!hasPermission(project, user, Permission.Type.SCHEDULE)) {
       logger.error("User " + user + " does not have permission to set SLA for this flow.");
       ret.put("error", "User " + user + " does not have permission to set SLA for this flow.");
       return false;
@@ -1416,7 +1432,7 @@ public class EventScheduleServlet extends AbstractLoginAzkabanServlet {
 
     this.eventScheduleService.addEventSchedule(sched);
     this.projectManager.postProjectEvent(project, EventType.SLA,
-        user.getUserId() + (StringUtils.isEmpty(user.getNormalUser()) ? ""
+        user.getUserId() + (org.apache.commons.lang.StringUtils.isEmpty(user.getNormalUser()) ? ""
             : ("(" + user.getNormalUser() + ")")),
         "SLA for flow " + sched.getFlowName() + " has been added/changed.");
 
@@ -1506,6 +1522,8 @@ public class EventScheduleServlet extends AbstractLoginAzkabanServlet {
 
           jsonObj.put("projectName", schedule.getProjectName());
           jsonObj.put("flowId", schedule.getFlowName());
+          jsonObj.put("comment", schedule.getComment());
+          jsonObj.put("token", schedule.getToken());
           final DateTimeZone timezone = DateTimeZone.getDefault();
           //final DateTime firstSchedTime = getPresentTimeByTimezone(timezone);
           final long endSchedTime = getLongParam(req, "endSchedTime",
@@ -1519,7 +1537,7 @@ public class EventScheduleServlet extends AbstractLoginAzkabanServlet {
                   schedule.getSender(), schedule.getTopic(), schedule.getMsgName(),
                   schedule.getSaveKey(),
                   schedule.getExecutionOptions(), schedule.getSlaOptions(),
-                  schedule.getOtherOption());
+                  schedule.getOtherOption(), schedule.getComment(), schedule.getToken());
 
           final Project project = this.projectManager.getProject(schedule.getProjectId());
           this.projectManager
@@ -1564,7 +1582,7 @@ public class EventScheduleServlet extends AbstractLoginAzkabanServlet {
       for (EventSchedule eventSchedule : eventSchedules) {
         final Project project = this.projectManager.getProject(eventSchedule.getProjectId());
         scheduleProjectHashMap.put(eventSchedule, project);
-        if (!hasPermission(project, session.getUser(), Type.SCHEDULE)) {
+        if (!hasPermission(project, session.getUser(), Permission.Type.SCHEDULE)) {
           HashMap<String, String> map = new HashMap<>();
           map.put("scheduleId", String.valueOf(eventSchedule.getScheduleId()));
           map.put("errorInfo", session.getUser() + " does not have permission to set SLA for this flow : " + eventSchedule.getFlowName());
@@ -1601,7 +1619,7 @@ public class EventScheduleServlet extends AbstractLoginAzkabanServlet {
         this.eventScheduleService.addEventSchedule(eventSchedule);
         Project project = scheduleProjectHashMap.get(eventSchedule);
         this.projectManager.postProjectEvent(project, EventType.SLA,
-                session.getUser().getUserId() + (StringUtils.isEmpty(session.getUser().getNormalUser()) ? ""
+                session.getUser().getUserId() + (org.apache.commons.lang.StringUtils.isEmpty(session.getUser().getNormalUser()) ? ""
                         : ("(" + session.getUser().getNormalUser() + ")")), "SLA for flow " + eventSchedule.getFlowName()
                         + " has been added/changed.");
       }
@@ -1627,7 +1645,7 @@ public class EventScheduleServlet extends AbstractLoginAzkabanServlet {
       }
 
       final Project project = this.projectManager.getProject(sched.getProjectId());
-      if (!hasPermission(project, user, Type.SCHEDULE)) {
+      if (!hasPermission(project, user, Permission.Type.SCHEDULE)) {
         ret.put("error", "User " + user
             + " does not have permission to set SLA for this flow.");
         return;
@@ -1714,7 +1732,7 @@ public class EventScheduleServlet extends AbstractLoginAzkabanServlet {
 
       this.eventScheduleService.addEventSchedule(sched);
       this.projectManager.postProjectEvent(project, EventType.SLA,
-          user.getUserId() + (StringUtils.isEmpty(user.getNormalUser()) ? ""
+          user.getUserId() + (org.apache.commons.lang.StringUtils.isEmpty(user.getNormalUser()) ? ""
               : ("(" + user.getNormalUser() + ")")), "SLA for flow " + sched.getFlowName()
               + " has been added/changed.");
 
@@ -1730,7 +1748,7 @@ public class EventScheduleServlet extends AbstractLoginAzkabanServlet {
   //解析前端规则字符串 转换成SlaOption对象
   private SlaOption parseFinishSetting(String type, final String set, final Flow flow,
       final Project project) throws ScheduleManagerException {
-    logger.info("Tryint to set sla with the following set: " + set);
+    logger.info("Trying to set sla with the following set: " + set);
 
     final String slaType;
     final List<String> slaActions = new ArrayList<>();
@@ -1807,7 +1825,7 @@ public class EventScheduleServlet extends AbstractLoginAzkabanServlet {
   //解析前端规则字符串 转换成SlaOption对象
   private SlaOption parseSlaSetting(String type, final String set, final Flow flow,
       final Project project) throws ScheduleManagerException {
-    logger.info("Tryint to set sla with the following set: " + set);
+    logger.info("Trying to set sla with the following set: " + set);
 
     final String slaType;
     final List<String> slaActions = new ArrayList<>();
@@ -1927,7 +1945,7 @@ public class EventScheduleServlet extends AbstractLoginAzkabanServlet {
       }
 
       final Project project = this.projectManager.getProject(sched.getProjectId());
-      if (!hasPermission(project, user, Type.SCHEDULE)) {
+      if (!hasPermission(project, user, Permission.Type.SCHEDULE)) {
         ret.put("error", "User " + user
             + " does not have permission to set SLA for this flow.");
         return;
@@ -1946,8 +1964,7 @@ public class EventScheduleServlet extends AbstractLoginAzkabanServlet {
           || this.projectManager.getFlowBusiness(project.getId(), flow.getId(), "") != null;
       if (getApplication().getServerProps().getBoolean("wtss.set.business.check", true)
           && !hasBusiness) {
-        ret.put("error",
-            "This flow '" + flow.getId() + "' need to set application information for signal schedule");
+        ret.put("error", dataMap.get("flow") + flow.getId() + dataMap.get("setBusiness"));
         return;
       }
 
@@ -2076,7 +2093,7 @@ public class EventScheduleServlet extends AbstractLoginAzkabanServlet {
           user.getUserId(), topic,
           msgName, saveKey, flowOptions, slaOptions, otherOptions, comment, token);
       this.projectManager.postProjectEvent(project, EventType.SCHEDULE,
-          user.getUserId() + (StringUtils.isEmpty(user.getNormalUser()) ? ""
+          user.getUserId() + (org.apache.commons.lang.StringUtils.isEmpty(user.getNormalUser()) ? ""
               : ("(" + user.getNormalUser() + ")")), "Event Schedule flow " + sched.getFlowName()
               + " has been changed.");
 
@@ -2229,7 +2246,7 @@ public class EventScheduleServlet extends AbstractLoginAzkabanServlet {
   }
 
   protected Project getProjectAjaxByPermission(final Map<String, Object> ret,
-      final int projectId, final User user, final Type type) {
+      final int projectId, final User user, final Permission.Type type) {
     final Project project = this.projectManager.getProject(projectId);
 
     if (project == null) {
@@ -2280,8 +2297,7 @@ public class EventScheduleServlet extends AbstractLoginAzkabanServlet {
         || this.projectManager.getFlowBusiness(project.getId(), flow.getId(), "") != null;
     if (getApplication().getServerProps().getBoolean("wtss.set.business.check", true)
         && !hasBusiness) {
-      ret.put("error",
-          "This flow '" + flow.getId() + "' need to set application information for signal schedule");
+      ret.put("error", dataMap.get("flow") + flow.getId() + dataMap.get("setBusiness"));
       return;
     }
 
@@ -2423,7 +2439,7 @@ public class EventScheduleServlet extends AbstractLoginAzkabanServlet {
       logger.info("User '" + user.getUserId() + "' has scheduled " + "["
           + projectName + flowName + " (" + projectId + ")" + "].");
       this.projectManager.postProjectEvent(project, EventType.SCHEDULE,
-          user.getUserId() + (StringUtils.isEmpty(user.getNormalUser()) ?
+          user.getUserId() + (org.apache.commons.lang.StringUtils.isEmpty(user.getNormalUser()) ?
               "" : ("(" + user.getNormalUser() + ")")), "Event Schedule " + eventSchedule.toString()
               + " has been added.");
       ret.put("status", "success");

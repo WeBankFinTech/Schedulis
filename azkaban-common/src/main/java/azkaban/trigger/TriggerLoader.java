@@ -28,8 +28,6 @@ public interface TriggerLoader {
 
   public List<Trigger> loadTriggers() throws TriggerLoaderException;
 
-  public List<Integer> loadTriggersId() throws TriggerLoaderException;
-
   public Trigger loadTrigger(int triggerId) throws TriggerLoaderException;
 
   public List<Trigger> getUpdatedTriggers(long lastUpdateTime)

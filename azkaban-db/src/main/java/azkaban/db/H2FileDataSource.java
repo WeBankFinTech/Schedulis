@@ -22,7 +22,7 @@ import javax.inject.Inject;
 import javax.inject.Singleton;
 
 @Singleton
-public class H2FileDataSource extends AzkabanDataSource {
+public class H2FileDataSource extends AbstractAzkabanDataSource {
 
   @Inject
   public H2FileDataSource(final Props props) {

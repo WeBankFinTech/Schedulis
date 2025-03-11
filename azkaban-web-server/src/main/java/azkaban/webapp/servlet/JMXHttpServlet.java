@@ -18,10 +18,10 @@ package azkaban.webapp.servlet;
 
 import azkaban.executor.ConnectorParams;
 import azkaban.executor.ExecutorManagerAdapter;
+import azkaban.i18n.utils.LoadJsonUtils;
 import azkaban.server.session.Session;
 import azkaban.trigger.TriggerManager;
 import azkaban.webapp.AzkabanWebServer;
-import com.webank.wedatasphere.schedulis.common.i18nutils.LoadJsonUtils;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
@@ -40,7 +40,7 @@ import org.slf4j.Logger;
 /**
  * Limited set of jmx calls for when you cannot attach to the jvm
  */
-public class JMXHttpServlet extends LoginAbstractAzkabanServlet implements ConnectorParams {
+public class JMXHttpServlet extends AbstractLoginAzkabanServlet implements ConnectorParams {
 
   /**
    *
@@ -167,11 +167,11 @@ public class JMXHttpServlet extends LoginAbstractAzkabanServlet implements Conne
 
     Map<String, String> subPageMap1 = new HashMap<>();
     String languageType = LoadJsonUtils.getLanguageType();
-    if (languageType.equalsIgnoreCase("zh_CN")) {
-      subPageMap1 = LoadJsonUtils.transJson("/com.webank.wedatasphere.schedulis.i18n.conf/azkaban-web-server-zh_CN.json",
+    if ("zh_CN".equalsIgnoreCase(languageType)) {
+      subPageMap1 = LoadJsonUtils.transJson("/conf/azkaban-web-server-zh_CN.json",
               "azkaban.webapp.servlet.velocity.nav.vm");
     } else {
-      subPageMap1 = LoadJsonUtils.transJson("/com.webank.wedatasphere.schedulis.i18n.conf/azkaban-web-server-en_US.json",
+      subPageMap1 = LoadJsonUtils.transJson("/conf/azkaban-web-server-en_US.json",
               "azkaban.webapp.servlet.velocity.nav.vm");
     }
 

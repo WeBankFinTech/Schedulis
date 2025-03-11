@@ -16,16 +16,16 @@
 
 package azkaban.jobExecutor;
 
-import azkaban.server.AzkabanServer;
+import azkaban.Constants.JobProperties;
+import azkaban.server.AbstractAzkabanServer;
 import azkaban.utils.MemConfValue;
 import azkaban.utils.Pair;
 import azkaban.utils.Props;
 import azkaban.utils.Utils;
-import org.slf4j.Logger;
-
 import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
+import org.slf4j.Logger;
 
 public class JavaProcessJob extends ProcessJob {
 
@@ -94,7 +94,14 @@ public class JavaProcessJob extends ProcessJob {
       }
     }
 
-    if (classPaths == null) {
+    // 开关控制是否去加载 job 文件所在目录下的 jar
+    boolean jobTypeLoadJobPathJar = getJobProps().getBoolean(
+        JobProperties.JOB_TYPE_LOAD_JOB_PATH_JAR,
+        true);
+    getLog().info("Load jar from job path: " + jobTypeLoadJobPathJar);
+    if (jobTypeLoadJobPathJar) {
+      if (classPaths == null || classPaths.isEmpty()) {
+        // job path
       final File path = new File(getPath());
       // File parent = path.getParentFile();
       getLog().info(
@@ -107,6 +114,9 @@ public class JavaProcessJob extends ProcessJob {
             classpathList.add(file.getName());
           }
         }
+        }
+      } else {
+        classpathList.addAll(classPaths);
       }
     } else {
       classpathList.addAll(classPaths);
@@ -158,7 +168,7 @@ public class JavaProcessJob extends ProcessJob {
     final long xms = Utils.parseMemString(strXms);
     final long xmx = Utils.parseMemString(strXmx);
 
-    final Props azkabanProperties = AzkabanServer.getAzkabanProperties();
+    final Props azkabanProperties = AbstractAzkabanServer.getAzkabanProperties();
     if (azkabanProperties != null) {
       final MemConfValue maxXms = MemConfValue.parseMaxXms(azkabanProperties);
       final MemConfValue maxXmx = MemConfValue.parseMaxXmx(azkabanProperties);

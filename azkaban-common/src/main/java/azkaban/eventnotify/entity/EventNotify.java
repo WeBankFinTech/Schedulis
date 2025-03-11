@@ -1,5 +1,9 @@
 package azkaban.eventnotify.entity;
 
+
+import azkaban.system.entity.DepartmentMaintainer;
+import azkaban.system.entity.WtssUser;
+
 public class EventNotify {
 
   private Integer sourcePid;

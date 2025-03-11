@@ -55,10 +55,17 @@ $(function () {
     updateRecoverTimeTopTen();
   });
   var recoverNum = $('#repeat-num');
+
   recoverNum.click(function () {
     updateRecoverTimeTopTen();
   });
-  recoverNum.keyup(function () {
+  recoverNum.keyup(function (e) {
+    var value = e.target.value
+    if (value.length > 1) {
+      e.target.value = value.replace(/[^\d]/g, '')
+    } else {
+      e.target.value = value.replace(/[^1-9]/g, '')
+    }
     updateRecoverTimeTopTen();
   });
 
@@ -66,12 +73,36 @@ $(function () {
   recoverInterval.click(function () {
     updateRecoverTimeTopTen();
   });
-
+    function handleRunDateTime (val) {
+        // 中文逗号替换成英文，去掉空格,横杆替换成斜杆
+        const runDateArr = val.replaceAll('，', ',').replaceAll(' ', '').replaceAll('-', '/').split(',');
+        const resDate = [];
+        for(let i = 0; i < runDateArr.length; i++) {
+            if (moment(runDateArr[i],'YYYY/MM/DD',true).isValid() === true || moment(runDateArr[i],'YYYY/M/DD',true).isValid() === true || moment(runDateArr[i],'YYYYMMDD',true).isValid() === true) {
+                const runDate = moment(runDateArr[i]).format('YYYY/MM/DD');
+                !resDate.includes(runDate) && resDate.push(runDate);
+            } else {
+                messageBox.show('输入时间格式不正确，请重新输入', 'warning');
+                return '';
+            }
+        }
+        return resDate.toString().replaceAll(",", ", ");
+    }
   var rdt = $('#runDateTime');
-  rdt.blur(function () {
+  rdt.blur(function (e) {
+    const val = e.target.value;
+    if (val) {
+        e.target.value = handleRunDateTime(val);
+    }
     updateRecoverTimeTopTen();
   });
-
+  $("#skipRunDateTime").blur(function (e) {
+    const val = e.target.value;
+    if (val) {
+        e.target.value = handleRunDateTime(val);
+    }
+    updateRecoverTimeTopTen();
+  });
   $("#id-show-start-five-date").click(function (evt) {
     $("#show-start-five-date").prop("checked", true);
     $("#show-last-five-date").prop("checked", false);
@@ -98,6 +129,8 @@ function getHistoryRecoverOptionData (executingData, reverseExecuteFlag) {
 
   var beginTime = $('#datetimebegin').val();
   var endTime = $('#datetimeend').val();
+  var executeTimeBegin = $('#executeTimeBegin').val();
+  var executeTimeEnd = $('#executeTimeEnd').val();
   var monthNum = $('#repeat-month').val();
   var dayNum = $('#repeat-day').val();
   var hourNum = $('#repeat-hour').val();
@@ -107,8 +140,17 @@ function getHistoryRecoverOptionData (executingData, reverseExecuteFlag) {
   var recoverInterval = $('#recover-interval').val();
   var recoverErrorOption = $('#recover-error-option').val();
   var runDateTimeList = [];
+  var skipDateTimeList = [];
   if ($("#runDateTime").val()) {
     runDateTimeList = $("#runDateTime").val().split(",").map(function (x) { return Date.parse(x); });
+  }
+
+  if ($("#skipRunDateTime").val()) {
+    skipDateTimeList = $("#skipRunDateTime").val().split(",").map(function (x) { return Date.parse(x); });
+  }
+  var currentVersionFlag = false;
+  if ($("#enable-recover-current-version").is(':checked')) {
+    currentVersionFlag = true;
   }
 
   // 历史重跑告警信息
@@ -164,6 +206,8 @@ function getHistoryRecoverOptionData (executingData, reverseExecuteFlag) {
   recoverData.ajax = "";
   recoverData.begin = beginTime;
   recoverData.end = endTime;
+  recoverData.executeTimeBegin = executeTimeBegin;
+  recoverData.executeTimeEnd = executeTimeEnd;
   recoverData.month = monthNum;
   recoverData.day = dayNum;
   recoverData.hour = hourNum;
@@ -173,12 +217,13 @@ function getHistoryRecoverOptionData (executingData, reverseExecuteFlag) {
   recoverData.recoverInterval = recoverInterval;
   recoverData.recoverErrorOption = recoverErrorOption;
   recoverData.runDateTimeList = runDateTimeList;
+  recoverData.skipDateTimeList = skipDateTimeList;
   recoverData.reverseExecuteFlag = reverseExecuteFlag;
+  recoverData.currentVersionFlag = currentVersionFlag;
   recoverData.historyRerunAlertLevel = historyRerunAlertLevel;
   recoverData.historyRerunAlertEmails = historyRerunAlertEmails;
   recoverData.taskSize = $('#recover-Concurrent-option').val();
   recoverData.finishedAlert = $("#enable-history-recover-finished-alert").is(':checked');
-
   return recoverData;
 }
 
@@ -190,6 +235,8 @@ function HistoryRecoverExecute (executingData) {
   var recoverData = this.getHistoryRecoverOptionData(executingData, reverseExecuteFlag);
   if (recoverData) {
     this.checkRecoverParam(recoverData, repeatFlow);
+  } else {
+    $("#execute-btn").attr("disabled", false).removeClass("button-disable");
   }
 }
 
@@ -215,6 +262,7 @@ function checkRecoverParam (recoverData, repeatFun) {
   var successHandler = function (data) {
     if (data.error) {
       messageDialogView.show(wtssI18n.view.historyRerunError, data.error);
+      $("#execute-btn").attr("disabled", false).removeClass("button-disable");
       return false;
     } else {
       flowExecuteDialogView.hideExecutionOptionPanel();
@@ -227,17 +275,8 @@ function checkRecoverParam (recoverData, repeatFun) {
 
     }
   };
-
-  $.ajax({
-    type: "GET",
-    contentType: "application/json",
-    url: executeURL,
-    data: recoverData,
-    dataType: 'json',
-    success: successHandler,
-    error: function (XMLHttpRequest, textStatus, errorThrown) {
-      //alert('请求后台异常！' + errorThrown);
-    }
+  $.get(executeURL, recoverData, successHandler, "json").fail(function (data) {
+        $("#execute-btn").attr("disabled", false).removeClass("button-disable");
   });
 
 }
@@ -249,10 +288,10 @@ function updateRecoverTimeTopTen () {
   var monthNum = $('#repeat-month').val();
   var dayNum = $('#repeat-day').val();
 
-  var recoverNum = $('#repeat-num').val();
+  var recoverNum = parseInt($('#repeat-num').val());
   var recoverInterval = $('#recover-interval').val();
 
-  if (beginTime && endTime && 0 != recoverNum) {
+  if (beginTime && endTime && recoverNum > 0) {
     var recoverTimeList = loadRecoverTimeList();
     var flowDateList = loadFlowDateTimeList();
 
@@ -270,6 +309,16 @@ function updateRecoverTimeTopTen () {
       recoverTimeList.sort();
       flowDateList.sort();
     }
+
+    if ($("#skipRunDateTime").val()) {
+        var _skipFlowDateList = $("#skipRunDateTime").val().split(", ").map(function (x) { return x.replace(/\//g, ""); });
+        for (var i = flowDateList.length -1 ; i >= 0;i--) {
+            if (_skipFlowDateList.indexOf(flowDateList[i]) > -1) {
+                recoverTimeList.splice(i, 1);
+                flowDateList.splice(i, 1);
+            }
+        }
+      }
 
     var tableRecoverTime = $("<table></table>");
 
@@ -575,6 +624,14 @@ function setHistoryRecoverRunNum () {
     _recoverTimeList.forEach(function (x) { recoverTimeList.push(x); });
     recoverTimeList = Array.from(new Set(recoverTimeList));
     recoverTimeList.sort();
+  }
+  if ($("#skipRunDateTime").val()) {
+    var _skipFlowDateList = $("#skipRunDateTime").val().split(", ").map(function (x) { return x.replace(/\//g, ""); });
+    for (var i = recoverTimeList.length -1 ; i >= 0;i--) {
+        if (_skipFlowDateList.indexOf(recoverTimeList[i]) > -1) {
+            recoverTimeList.splice(i, 1);
+        }
+    }
   }
 
   $("#history-run-num").text(recoverTimeList.length + wtssI18n.view.times);

@@ -18,15 +18,19 @@ package com.webank.wedatasphere.dss.plugins.azkaban.linkis.jobtype.job;
 
 import com.webank.wedatasphere.dss.linkis.node.execution.conf.LinkisJobExecutionConfiguration;
 import com.webank.wedatasphere.dss.linkis.node.execution.entity.BMLResource;
-import com.webank.wedatasphere.dss.linkis.node.execution.job.Builder;
-import com.webank.wedatasphere.dss.linkis.node.execution.job.CommonLinkisJob;
-import com.webank.wedatasphere.dss.linkis.node.execution.job.Job;
-import com.webank.wedatasphere.dss.linkis.node.execution.job.LinkisJob;
+import com.webank.wedatasphere.dss.linkis.node.execution.exception.LinkisJobExecutionErrorException;
+import com.webank.wedatasphere.dss.linkis.node.execution.job.*;
 import com.webank.wedatasphere.dss.linkis.node.execution.utils.LinkisJobExecutionUtils;
 import com.webank.wedatasphere.dss.plugins.azkaban.linkis.jobtype.conf.LinkisJobTypeConf;
+import org.apache.commons.lang.StringUtils;
+import org.apache.linkis.common.utils.JsonUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
@@ -38,7 +42,11 @@ public class AzkanbanBuilder extends Builder {
     private static final Logger LOGGER = LoggerFactory.getLogger(AzkanbanBuilder.class);
 
     private static final String RUN_DATE_KEY = "run_date";
-    private static final String RUN_DATE_HOUR_KEY = "run_today_h";
+    private static final String RUN_DATE_H_KEY = "run_today_h";
+    private static final String RUN_DATE_HOUR_KEY = "run_today_hour";
+    public static final String FLOW_DIR = "flow.dir";
+    public static final String INLINE_CODE = "inline_code";
+    public static final String RELATIVE_FILE = "relative_file";
     private Map<String, String> jobProps;
 
     public AzkanbanBuilder setJobProps(Map<String, String> jobProps) {
@@ -67,7 +75,11 @@ public class AzkanbanBuilder extends Builder {
 
     @Override
     protected void fillJobInfo(Job job) {
+        if (isInlineCode()) {
+            job.setCode(this.fillInlineCode());
+        } else {
         job.setCode(jobProps.get(LinkisJobTypeConf.COMMAND));
+        }
 
         Map<String, Object> params = new HashMap<>();
         if (jobProps.containsKey("run_date")) {
@@ -84,6 +96,10 @@ public class AzkanbanBuilder extends Builder {
 
         runtimeMap.put(LinkisJobTypeConf.DSS_LABELS_KEY, jobProps.get(LinkisJobTypeConf.DSS_LABELS_KEY));
         job.setRuntimeParams(runtimeMap);
+    }
+
+    private boolean isInlineCode() {
+        return Boolean.parseBoolean(jobProps.getOrDefault(INLINE_CODE, "false"));
     }
 
     @Override
@@ -103,9 +119,37 @@ public class AzkanbanBuilder extends Builder {
         // 只有工作流参数中没有设置,我们才会去进行替换
         // 改为不管工作流是否设置，在 Schedulis 这边都需要统一使用 Schedulis 设置的 run_date和un_date_h,防止出现批量调度的误导作用
         setNewRunDateVariable(variables, RUN_DATE_KEY);
+        setNewRunDateVariable(variables, RUN_DATE_H_KEY);
         setNewRunDateVariable(variables, RUN_DATE_HOUR_KEY);
         linkisJob.setVariables(variables);
         linkisJob.setSource(getSource());
+    }
+
+    private String fillInlineCode() {
+        if (!jobProps.containsKey(FLOW_DIR)) {
+            return null;
+        }
+
+        String path = jobProps.get(FLOW_DIR);
+        String fileName = jobProps.get(RELATIVE_FILE);
+        Path file = Paths.get(path, fileName);
+        try {
+            List<String> lines = Files.readAllLines(file);
+            StringBuilder sbuilder = new StringBuilder();
+            for (String line : lines) {
+                sbuilder.append(line);
+                sbuilder.append(System.lineSeparator());
+            }
+
+            String code = sbuilder.toString();
+            if (StringUtils.isBlank(code)) {
+                throw new IllegalArgumentException("job code empty");
+            }
+            return code;
+        } catch (IOException e) {
+            LOGGER.error("read file error " + file, e);
+            throw new RuntimeException("read script file error");
+        }
     }
 
     private void setNewRunDateVariable(Map<String, Object> variables, String replaceVar) {
@@ -203,5 +247,58 @@ public class AzkanbanBuilder extends Builder {
         return flowNameAndResources;
     }
 
+    @Override
+    public Job build() throws Exception {
+        if (!isInlineCode()) {
+            return super.build();
+        }
+
+        // 下面的代码与super.build对比只是少了ContextID的处理.linkis并不需要这个参数.
+        LinkisJob job = null;
+        String jobType = getJobType();
+        String[] jobTypeSplit = jobType.split("\\.");
+        if (jobTypeSplit.length < 3) {
+            throw new LinkisJobExecutionErrorException(90100, "This is not Linkis job type, this jobtype is " + jobType);
+        }
+        String engineType = jobTypeSplit[1];
+        String runType = StringUtils.substringAfterLast(jobType, jobTypeSplit[0] + "." + jobTypeSplit[1] + ".");
+
+        if (LinkisJobExecutionConfiguration.LINKIS_CONTROL_EMPTY_NODE.equalsIgnoreCase(jobType)) {
+            job = new AbstractCommonLinkisJob() {
+                @Override
+                public String getSubmitUser() {
+                    return null;
+                }
+
+                @Override
+                public String getUser() {
+                    return null;
+                }
+
+                @Override
+                public String getJobName() {
+                    return null;
+                }
+            };
+
+            job.setJobType(JobTypeEnum.EmptyJob);
+            return job;
+        }
+        if (LinkisJobExecutionUtils.isCommonAppConnJob(engineType)) {
+            job = creatLinkisJob(false);
+            job.setJobType(JobTypeEnum.CommonJob);
+        } else {
+            job = creatLinkisJob(true);
+            job.setJobType(JobTypeEnum.CommonJob);
+            fillCommonLinkisJobInfo((CommonLinkisJob) job);
+        }
+
+        job.setEngineType(engineType);
+        job.setRunType(runType);
+        fillJobInfo(job);
+        fillLinkisJobInfo(job);
+
+        return job;
+    }
 
 }

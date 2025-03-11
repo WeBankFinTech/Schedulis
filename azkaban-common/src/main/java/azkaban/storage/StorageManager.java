@@ -21,27 +21,31 @@ import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkState;
 import static java.util.Objects.requireNonNull;
 
-import com.webank.wedatasphere.schedulis.common.function.CheckedSupplier;
+import azkaban.function.CheckedSupplier;
 import azkaban.project.Project;
 import azkaban.project.ProjectFileHandler;
 import azkaban.project.ProjectLoader;
+import azkaban.project.ProjectManagerException;
 import azkaban.spi.Storage;
 import azkaban.spi.StorageException;
 import azkaban.spi.StorageMetadata;
 import azkaban.user.User;
 import azkaban.utils.Md5Hasher;
 import azkaban.utils.Props;
+import azkaban.utils.Utils;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
+import java.util.List;
+import java.util.Random;
 import javax.inject.Inject;
 import javax.inject.Singleton;
 import org.apache.commons.io.IOUtils;
-import org.slf4j.LoggerFactory;
 import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 
 /**
@@ -165,13 +169,52 @@ public class StorageManager {
         final String resourceId = requireNonNull(pfh.getResourceId(),
                 String.format("URI is null. project ID: %d version: %d",
                         pfh.getProjectId(), pfh.getVersion()));
-        return getProjectFileFromFileSystem(pfh, () -> this.storage.get(resourceId));
+        return getProjectFileFromFileSystem(pfh, () -> this.storage.get(resourceId), this.tempDir);
     }
   }
 
-  private ProjectFileHandler getProjectFileFromFileSystem(ProjectFileHandler pfh, CheckedSupplier<InputStream, IOException> supplier) {
+  public File getProjectFiles(List<Project> projectList) {
+    if (this.storage instanceof DatabaseStorage) {
+      return ((DatabaseStorage) this.storage).get(projectList);
+    } else {
+      File dir = null;
+      File zipFile;
+      try {
+        String fileName = "schedules" + System.currentTimeMillis() + new Random().nextInt(100);
+        dir = new File(this.tempDir, fileName);
+        if (!dir.exists()) {
+          dir.mkdirs();
+        }
+        for (Project project : projectList) {
+          /* Fetch meta data from db */
+          final ProjectFileHandler pfh = this.projectLoader
+              .fetchProjectMetaData(project.getId(), project.getVersion());
+          /* Fetch project file from storage and copy to local file */
+          final String resourceId = requireNonNull(pfh.getResourceId(),
+              String.format("URI is null. project ID: %d version: %d",
+                  pfh.getProjectId(), pfh.getVersion()));
+          getProjectFileFromFileSystem(pfh, () -> this.storage.get(resourceId), dir);
+        }
+        zipFile = new File(this.tempDir, fileName + ".zip");
+        Utils.zip(dir, zipFile);
+      } catch (Exception e) {
+        throw new ProjectManagerException("get project files error", e);
+      } finally {
+        if (dir != null) {
+          for (File file : dir.listFiles()) {
+            file.delete();
+          }
+          dir.delete();
+        }
+      }
+      return zipFile;
+
+    }
+  }
+
+  private ProjectFileHandler getProjectFileFromFileSystem(ProjectFileHandler pfh, CheckedSupplier<InputStream, IOException> supplier, File dir) {
     try (InputStream is = supplier.get()) {
-      final File file = createTempOutputFile(pfh);
+      final File file = createTempOutputFile(pfh, dir);
 
       /* Copy from storage to output stream */
       try (FileOutputStream fos = new FileOutputStream(file)) {
@@ -200,10 +243,10 @@ public class StorageManager {
     );
   }
 
-  private File createTempOutputFile(final ProjectFileHandler projectFileHandler)
+  private File createTempOutputFile(final ProjectFileHandler projectFileHandler, File file)
       throws IOException {
     return File.createTempFile(
         projectFileHandler.getFileName(),
-        String.valueOf(projectFileHandler.getVersion()), this.tempDir);
+        String.valueOf(projectFileHandler.getVersion()), file);
   }
 }

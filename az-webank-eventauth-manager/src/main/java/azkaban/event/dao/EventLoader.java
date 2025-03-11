@@ -1,5 +1,6 @@
 package azkaban.event.dao;
 
+import azkaban.event.entity.EventQueue;
 import org.apache.commons.dbutils.ResultSetHandler;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -29,7 +30,7 @@ public interface EventLoader<T> {
      */
     int getEventTotal(String searchValue) throws SQLException;
 
-    int getEventTotal(String searchValue, String...filterValue) throws SQLException;
+    int getEventTotal(String searchValue, boolean authType, String... filterValue) throws SQLException;
 
     /**
      * get all events
@@ -46,7 +47,7 @@ public interface EventLoader<T> {
      * @return
      * @throws SQLException
      */
-    List<T> getEventAuth(String topic, String sender, String msgName) throws SQLException;
+    List<T> getEvent(String topic, String sender, String msgName) throws SQLException;
 
     /**
      * 设置积压告警人
@@ -66,7 +67,7 @@ public interface EventLoader<T> {
      */
     List<T> getEventListBySearch(String searchKey, String searchTerm) throws SQLException;
 
-    int getEventTotal4Page(String searchValue, int index, int sum, String... filterValue) throws SQLException;
+    int getEventTotal4Page(String searchValue, boolean authType, int index, int sum, String... filterValue) throws SQLException;
 
     /**
      *
@@ -81,14 +82,16 @@ public interface EventLoader<T> {
 
     /**
      *
+     * @param type
      * @param searchValue
+     * @param authType
      * @param startIndex
      * @param count
      * @param filterValue
      * @return
      * @throws SQLException
      */
-    List<T> findEventList(String searchValue, int startIndex, int count, String... filterValue) throws SQLException;
+    List<T> findEventList(String searchValue, boolean authType, int startIndex, int count, String... filterValue) throws SQLException;
 
     /**
      * 查询消息数量
@@ -99,6 +102,7 @@ public interface EventLoader<T> {
      */
     int queryMessageNum(String... filterValue) throws SQLException;
 
+    List<EventQueue> queryMessage(String topic,String sender,String msgName,String msgBody,String isLike,Integer pageNo,Integer pageSize) throws SQLException;
     default int getEventTotal(ResultSet rs) throws SQLException {
         if (!rs.next()) {
             return 0;

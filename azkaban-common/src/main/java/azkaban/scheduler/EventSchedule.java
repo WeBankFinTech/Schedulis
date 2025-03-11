@@ -20,14 +20,13 @@ import azkaban.executor.ExecutionOptions;
 import azkaban.sla.SlaOption;
 import azkaban.utils.JSONUtils;
 import azkaban.utils.Pair;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import javax.inject.Singleton;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import javax.inject.Singleton;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 
 @Singleton

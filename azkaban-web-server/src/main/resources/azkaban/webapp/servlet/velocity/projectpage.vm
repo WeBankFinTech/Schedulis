@@ -25,7 +25,6 @@
   #parse ("azkaban/webapp/servlet/velocity/svgflowincludes.vm")
 
   <script type="text/javascript">
-    var contextURL = "${context}";
     var currentTime = ${currentTime};
     var timezone = "${timezone}";
     var errorMessage = null;
@@ -38,28 +37,35 @@
     var loginUser = "${loginUser}";
     var scheduleAccess = ${schedulePerm};
     var langType = "${currentlangType}";
-
+    // load cmdb data switch
+    var isCmdbLoaded=false;
   </script>
-  <script type="text/javascript" src="${context}/js/moment.min.js?version=1.10.0"></script>
-  <script type="text/javascript" src="${context}/js/bootstrap-datetimepicker.min.js?version=1.10.0"></script>
-  <script type="text/javascript" src="${context}/js/azkaban/i18n-config.js?version=1.10.0"></script>
-  <script type="text/javascript" src="${context}/js/azkaban/view/flow-execute-dialog.js?version=1.10.0"></script>
-  <script type="text/javascript" src="${context}/js/azkaban/view/project.js?version=1.10.0"></script>
-  <script type="text/javascript" src="${context}/js/azkaban/view/project-modals.js?version=1.10.0"></script>
-  <script type="text/javascript" src="${context}/js/azkaban/view/history-recover.js?version=1.10.0"></script>
-  <script type="text/javascript" src="${context}/js/azkaban/view/cycle-execution.js?version=1.10.0"></script>
-  <script type="text/javascript" src="${context}/js/azkaban/view/flow-schedule-dialog.js?version=1.10.0"></script>
-  <script type="text/javascript" src="${context}/js/azkaban/view/schedule-context-menu.js?version=1.10.0"></script>
+  <link href="/css/bootstrap-select.min.css?version=1.49.0" rel="stylesheet">
+  <script type="text/javascript" src="/js/moment-2.29.4.min.js?version=1.49.0"></script>
+  <script type="text/javascript" src="/js/bootstrap-datetimepicker.min.js?version=1.49.0"></script>
+  <script type="text/javascript" src="/js/azkaban/i18n-config.js?version=1.49.0"></script>
 
-  <link rel="stylesheet" href="${context}/css/kalendae.css?version=1.10.0" type="text/css">
-  <script type='text/javascript' src='${context}/js/kalendae.standalone.js?version=1.10.0'></script>
+  <script type="text/javascript" src="/js/azkaban/view/execute-job-list.js?version=1.49.0"></script>
 
-  <script src="${context}/js/select2/select2.js?version=1.10.0"></script>
-  <script src="${context}/js/select2/i18n/zh-CN.js?version=1.10.0"></script>
-  <link href="${context}/css/select2/select2.css?version=1.10.0" rel="stylesheet" />
-  
-  <link rel="stylesheet" type="text/css" href="${context}/css/bootstrap-datetimepicker.css?version=1.10.0"/>
-  <link rel="stylesheet" type="text/css" href="${context}/css/jquery-ui.css?version=1.10.0">
+  <script type="text/javascript" src="/js/azkaban/view/flow-execute-dialog.js?version=1.49.0"></script>
+  <script type="text/javascript" src="/js/azkaban/view/project.js?version=1.49.0"></script>
+  <script type="text/javascript" src="/js/azkaban/view/project-modals.js?version=1.49.0"></script>
+  <script type="text/javascript" src="/js/azkaban/view/history-recover.js?version=1.49.0"></script>
+  <script type="text/javascript" src="/js/azkaban/view/cycle-execution.js?version=1.49.0"></script>
+  <script type="text/javascript" src="/js/azkaban/view/flow-schedule-dialog.js?version=1.49.0"></script>
+  <script type="text/javascript" src="/js/azkaban/view/flow-event-schedule-dialog.js?version=1.49.0"></script>
+  <script type="text/javascript" src="/js/azkaban/view/schedule-context-menu.js?version=1.49.0"></script>
+  <script type="text/javascript" src="/js/bootstrap-select.js?version=1.49.0"></script>
+  <script type='text/javascript' src='/js/lodash.min.js?version=1.40.0'></script>
+
+  <link rel="stylesheet" href="/css/kalendae.css?version=1.49.0" type="text/css">
+  <script type='text/javascript' src='/js/kalendae.standalone.js?version=1.40.0'></script>
+
+  <script src="/js/select2/select2.js?version=1.49.0"></script>
+  <script src="/js/select2/i18n/zh-CN.js?version=1.49.0"></script>
+
+  <link rel="stylesheet" type="text/css" href="/css/bootstrap-datetimepicker.css?version=1.49.0"/>
+  <link rel="stylesheet" type="text/css" href="/css/jquery-ui.css?version=1.49.0">
   <style type="text/css">
     .input-box {
       position: relative;
@@ -117,7 +123,7 @@
         #set ($project_page = "flows")
         #parse ("azkaban/webapp/servlet/velocity/projectnav.vm")
 
-        <div id="flow-tabs">
+        <div id="flow-list">
           #if ($flows)
             #foreach ($flow in $flows)
               <div class="panel panel-default" flow="${flow.id}" project="${project.name}">
@@ -125,7 +131,10 @@
                   <div class="pull-right">
                     #if(${schedulePerm})
                       <button type="button" class="btn btn-xs btn-success schedule-flow"
-                              flowId="${flow.id}">$sch
+                              flowId="${flow.id}" id="event">$eventSch
+                      </button>
+                      <button type="button" class="btn btn-xs btn-success schedule-flow"
+                              flowId="${flow.id}" id="time">$sch
                       </button>
                     #end
                     #if (${exec})
@@ -133,16 +142,17 @@
                               flowId="${flow.id}">$execFlow
                       </button>
 
-                      <a href="${context}/manager?project=${project.name}&flow=${flow.id}#executions"
+                      <a href="javascript:void(0);" onclick="checkHrefUrlXss('/manager?project=${project.name}&flow=${flow.id}#executions')"
                          class="btn btn-info btn-xs">$exechistory</a>
-                      <!--
-                        <a href="${context}/manager?project=${project.name}&flow=${flow.id}#summary"
-                           class="btn btn-info btn-xs">摘要</a>-->
                     #end
+
+                    <button type="button" class="btn btn-xs btn-warning" id="flowBusinessBtn"
+                            value="${flow.id}">$flowBusiness
+                    </button>
 
                   </div>
                   <span class="glyphicon glyphicon-chevron-down flow-expander-icon"></span>
-                  <a href="${context}/manager?project=${project.name}&flow=${flow.id}" style="word-break:break-all;">${flow.id}</a>
+                  <a href="javascript:void(0);" onclick="checkHrefUrlXss('/manager?project=${project.name}&flow=${flow.id}')" style="word-break:break-all;">${flow.id}</a>
                 </div>
                 <div id="${flow.id}-child" class="panel-collapse panel-list collapse">
                   <ul class="list-group list-group-collapse expanded-flow-job-list"
@@ -170,6 +180,7 @@
     #parse ("azkaban/webapp/servlet/velocity/messagedialog.vm")
     #parse ("azkaban/webapp/servlet/velocity/repeatcollectionpanel.vm")
     #parse ("azkaban/webapp/servlet/velocity/flow-schedule-panel.vm")
+    #parse ("azkaban/webapp/servlet/velocity/flow-event-schedule-panel.vm")
 
   </div><!-- /container -->
   #end

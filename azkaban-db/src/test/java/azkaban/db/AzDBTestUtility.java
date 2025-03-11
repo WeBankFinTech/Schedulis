@@ -13,16 +13,19 @@
  * License for the specific language governing permissions and limitations under
  * the License.
  *
- */
+ *//*
+
 package azkaban.db;
 
 import java.io.File;
 import org.apache.commons.dbutils.QueryRunner;
 
+import importbsp.encrypt.EncryptUtil;
+
 public class AzDBTestUtility {
 
   public static DatabaseOperator initQuartzDB() throws Exception {
-    final AzkabanDataSource dataSource = new EmbeddedMysqlDataSource();
+    final AbstractAzkabanDataSource dataSource = new EmbeddedMysqlDataSource();
 
     final String sqlScriptsDir = new File("../azkaban-web-server/src/test/resources/")
         .getCanonicalPath();
@@ -32,7 +35,7 @@ public class AzDBTestUtility {
     return new DatabaseOperator(new QueryRunner(dataSource));
   }
 
-  public static class EmbeddedH2BasicDataSource extends AzkabanDataSource {
+  public static class EmbeddedH2BasicDataSource extends AbstractAzkabanDataSource {
 
     public EmbeddedH2BasicDataSource() {
       super();
@@ -52,11 +55,11 @@ public class AzDBTestUtility {
     }
   }
 
-  public static class EmbeddedMysqlDataSource extends AzkabanDataSource {
+  public static class EmbeddedMysqlDataSource extends AbstractAzkabanDataSource {
 
-    public EmbeddedMysqlDataSource() {
+    public EmbeddedMysqlDataSource() throws Exception {
       super();
-      final String url = "jdbc:mysql://localhost:port/bdp_scheduler_01?useUnicode=true&characterEncoding=UTF-8";
+      final String url = "";
       setDriverClassName("com.mysql.jdbc.Driver");
       setUrl(url);
       setUsername("username");
@@ -74,3 +77,4 @@ public class AzDBTestUtility {
     }
   }
 }
+*/

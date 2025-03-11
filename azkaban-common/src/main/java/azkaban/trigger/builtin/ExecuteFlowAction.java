@@ -16,6 +16,7 @@
 
 package azkaban.trigger.builtin;
 
+import azkaban.Constants;
 import azkaban.executor.ExecutableFlow;
 import azkaban.executor.ExecutionOptions;
 import azkaban.executor.ExecutorManagerAdapter;
@@ -24,20 +25,22 @@ import azkaban.flow.FlowUtils;
 import azkaban.project.Project;
 import azkaban.project.ProjectManager;
 import azkaban.sla.SlaOption;
-import com.webank.wedatasphere.schedulis.common.system.SystemManager;
-import com.webank.wedatasphere.schedulis.common.system.SystemUserManagerException;
-import com.webank.wedatasphere.schedulis.common.system.entity.WtssUser;
+import azkaban.system.SystemManager;
+import azkaban.system.SystemUserManagerException;
+import azkaban.system.entity.WtssUser;
 import azkaban.trigger.TriggerAction;
 import azkaban.trigger.TriggerManager;
-
-import java.util.*;
-
-import org.slf4j.LoggerFactory;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class ExecuteFlowAction implements TriggerAction {
 
-  public static final String type = "ExecuteFlowAction";
+  public static final String TYPE = "ExecuteFlowAction";
 
   public static final String EXEC_ID = "ExecuteFlowAction.execid";
 
@@ -121,8 +124,8 @@ public class ExecuteFlowAction implements TriggerAction {
   public static TriggerAction createFromJson(final HashMap<String, Object> obj) {
     final Map<String, Object> jsonObj = (HashMap<String, Object>) obj;
     final String objType = (String) jsonObj.get("type");
-    if (!objType.equals(type)) {
-      throw new RuntimeException("Cannot create action of " + type + " from "
+    if (!objType.equals(TYPE)) {
+      throw new RuntimeException("Cannot create action of " + TYPE + " from "
           + objType);
     }
     final String actionId = (String) jsonObj.get("actionId");
@@ -147,6 +150,8 @@ public class ExecuteFlowAction implements TriggerAction {
     if(jsonObj.containsKey("otherOptions")){
       otherOptionsMap = (Map<String, Object>) jsonObj.get("otherOptions");
     }
+    otherOptionsMap
+        .put(Constants.EXECUTE_FLOW_TRIGGER_ID, jsonObj.get(Constants.EXECUTE_FLOW_TRIGGER_ID));
     return new ExecuteFlowAction(actionId, projectId, projectName, flowName,
         submitUser, executionOptions, slaOptions, otherOptionsMap);
   }
@@ -167,7 +172,7 @@ public class ExecuteFlowAction implements TriggerAction {
     return this.flowName;
   }
 
-  protected void setFlowName(final String flowName) {
+  public void setFlowName(final String flowName) {
     this.flowName = flowName;
   }
 
@@ -205,7 +210,7 @@ public class ExecuteFlowAction implements TriggerAction {
 
   @Override
   public String getType() {
-    return type;
+    return TYPE;
   }
 
   @Override
@@ -217,7 +222,7 @@ public class ExecuteFlowAction implements TriggerAction {
   public Object toJson() {
     final Map<String, Object> jsonObj = new HashMap<>();
     jsonObj.put("actionId", this.actionId);
-    jsonObj.put("type", type);
+    jsonObj.put("type", TYPE);
     jsonObj.put("projectId", String.valueOf(this.projectId));
     jsonObj.put("projectName", this.projectName);
     jsonObj.put("flowName", this.flowName);
@@ -259,7 +264,7 @@ public class ExecuteFlowAction implements TriggerAction {
     try {
       wtssUser = systemManager.getSystemUserByUserName(this.submitUser);
     } catch (SystemUserManagerException e){
-      logger.error("get wtssUser failed, " + e);
+      logger.error("get wtssUser failed, ", e);
     }
     if(wtssUser != null && wtssUser.getProxyUsers() != null) {
       String[] proxySplit = wtssUser.getProxyUsers().split("\\s*,\\s*");
@@ -271,9 +276,11 @@ public class ExecuteFlowAction implements TriggerAction {
       this.executionOptions = new ExecutionOptions();
     }
     if (!this.executionOptions.isFailureEmailsOverridden()) {
+      this.executionOptions.setLastFailureEmails(this.executionOptions.getFailureEmails());
       this.executionOptions.setFailureEmails(flow.getFailureEmails());
     }
     if (!this.executionOptions.isSuccessEmailsOverridden()) {
+      this.executionOptions.setLastSuccessEmails(this.executionOptions.getSuccessEmails());
       this.executionOptions.setSuccessEmails(flow.getSuccessEmails());
     }
     exflow.setExecutionOptions(this.executionOptions);
@@ -295,7 +302,18 @@ public class ExecuteFlowAction implements TriggerAction {
     }
 
     logger.info("Invoking flow " + project.getName() + "." + this.flowName);
-    executorManagerAdapter.submitExecutableFlow(exflow, this.submitUser);
+    Map<String, Object> result = new HashMap<>(4);
+    try {
+      executorManagerAdapter.submitExecutableFlow(exflow, this.submitUser, result);
+      Integer code = (Integer) result.get("code");
+      if (code == null || code != 200) {
+        this.getOtherOption().put(Constants.SCHEDULE_MISSED_TIME, System.currentTimeMillis());
+      }
+    } catch (Exception e) {
+      this.getOtherOption().put(Constants.SCHEDULE_MISSED_TIME, System.currentTimeMillis());
+      throw e;
+    }
+
     logger.info("Invoked flow " + project.getName() + "." + this.flowName);
   }
 

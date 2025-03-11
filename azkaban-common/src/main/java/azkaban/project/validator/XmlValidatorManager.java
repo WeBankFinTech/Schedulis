@@ -1,7 +1,7 @@
 package azkaban.project.validator;
 
 import azkaban.project.Project;
-import com.webank.wedatasphere.schedulis.common.utils.XmlResolveUtils;
+import azkaban.utils.XmlResolveUtils;
 import azkaban.utils.Props;
 import java.io.File;
 import java.io.IOException;
@@ -14,6 +14,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import javax.xml.XMLConstants;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.ParserConfigurationException;
@@ -48,7 +49,7 @@ public class XmlValidatorManager implements ValidatorManager {
   public static final String CLASSNAME_ATTR = "classname";
   public static final String ITEM_TAG = "property";
   private static final Logger logger = LoggerFactory.getLogger(XmlValidatorManager.class);
-  private static final Map<String, Long> resourceTimestamps = new HashMap<>();
+  private static final Map<String, Long> RESOURCE_TIMESTAMPS = new HashMap<>();
   private static ValidatorClassLoader validatorLoader;
   private final String validatorDirPath;
   private Map<String, ProjectValidator> validators;
@@ -89,11 +90,11 @@ public class XmlValidatorManager implements ValidatorManager {
         for (final File f : validatorDir.listFiles()) {
           if (f.getName().endsWith(".jar")) {
             resources.add(f.toURI().toURL());
-            if (resourceTimestamps.get(f.getName()) == null
-                || resourceTimestamps.get(f.getName()) != f.lastModified()) {
+            if (RESOURCE_TIMESTAMPS.get(f.getName()) == null
+                || RESOURCE_TIMESTAMPS.get(f.getName()) != f.lastModified()) {
               reloadResources = true;
               logger.info("Resource " + f.getName() + " is updated. Reload the classloader.");
-              resourceTimestamps.put(f.getName(), f.lastModified());
+              RESOURCE_TIMESTAMPS.put(f.getName(), f.lastModified());
             }
           }
         }
@@ -125,7 +126,7 @@ public class XmlValidatorManager implements ValidatorManager {
    *
    * {@inheritDoc}
    *
-   * @see ValidatorManager#loadValidators(Props,
+   * @see azkaban.project.validator.ValidatorManager#loadValidators(azkaban.utils.Props,
    * Logger)
    */
   @Override
@@ -150,7 +151,8 @@ public class XmlValidatorManager implements ValidatorManager {
 
       // FIXME Prevent XML External Entity (XXE) attacks.
       XmlResolveUtils.avoidXEE(docBuilderFactory);
-
+      docBuilderFactory.setAttribute(XMLConstants.ACCESS_EXTERNAL_DTD, "");
+      docBuilderFactory.setAttribute(XMLConstants.ACCESS_EXTERNAL_SCHEMA, "");
       builder = docBuilderFactory.newDocumentBuilder();
     } catch (final ParserConfigurationException e) {
       throw new ValidatorManagerException(

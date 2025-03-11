@@ -38,9 +38,9 @@ public class Project {
   private final int id;
   private final String name;
   private final LinkedHashMap<String, Permission> userPermissionMap =
-      new LinkedHashMap<>();
+          new LinkedHashMap<>();
   private final LinkedHashMap<String, Permission> groupPermissionMap =
-      new LinkedHashMap<>();
+          new LinkedHashMap<>();
   private final HashSet<String> proxyUsers = new HashSet<>();
   private boolean active = true;
   private String description;
@@ -52,6 +52,21 @@ public class Project {
   private Map<String, Flow> flows = new HashMap<>();
   private Map<String, Object> metadata = new HashMap<>();
   private String createUser;
+
+  private String principal;
+  /**
+   * 项目来源 DSS or WTSS
+   */
+  private String fromType;
+
+  private int jobExecuteLimit;
+
+  private long itsmId;
+
+  /**
+   * 项目锁，项目交接时，该项目不可以二次交接、提交
+   */
+  private int projectLock;
 
   public Project(final int id, final String name) {
     this.id = id;
@@ -66,14 +81,16 @@ public class Project {
     final String lastModifiedUser = (String) projectObject.get("lastModifiedUser");
     final long createTimestamp = coerceToLong(projectObject.get("createTimestamp"));
     final long lastModifiedTimestamp =
-        coerceToLong(projectObject.get("lastModifiedTimestamp"));
+            coerceToLong(projectObject.get("lastModifiedTimestamp"));
     final String source = (String) projectObject.get("source");
     Boolean active = (Boolean) projectObject.get("active");
     active = active == null ? true : active;
     final int version = (Integer) projectObject.get("version");
     final Map<String, Object> metadata =
-        (Map<String, Object>) projectObject.get("metadata");
+            (Map<String, Object>) projectObject.get("metadata");
     final String createUser = (String) projectObject.get("createUser");
+    final String principal = (String) projectObject.get("principal");
+    final String fromType = (String) projectObject.get("fromType");
 
     final Project project = new Project(id, name);
     project.setVersion(version);
@@ -83,6 +100,8 @@ public class Project {
     project.setLastModifiedUser(lastModifiedUser);
     project.setActive(active);
     project.setCreateUser(createUser);
+    project.setFromType(fromType);
+    project.setPrincipal(principal);
 
     if (source != null) {
       project.setSource(source);
@@ -105,6 +124,30 @@ public class Project {
     }
 
     return (Long) obj;
+  }
+
+  public int getProjectLock() {
+    return projectLock;
+  }
+
+  public void setProjectLock(int projectLock) {
+    this.projectLock = projectLock;
+  }
+
+  public long getItsmId() {
+    return itsmId;
+  }
+
+  public void setItsmId(long itsmId) {
+    this.itsmId = itsmId;
+  }
+
+  public String getFromType() {
+    return fromType;
+  }
+
+  public void setFromType(String fromType) {
+    this.fromType = fromType;
   }
 
   public String getName() {
@@ -181,11 +224,19 @@ public class Project {
   public boolean hasPermission(final User user, final Type type) {
     final Permission perm = this.userPermissionMap.get(user.getUserId());
     if (perm != null
-        && (perm.isPermissionSet(Type.ADMIN) || perm.isPermissionSet(type))) {
+            && (perm.isPermissionSet(Type.ADMIN) || perm.isPermissionSet(type))) {
       return true;
     }
 
     return hasGroupPermission(user, type);
+  }
+
+  public boolean checkPermission(final User user, Type targetType) throws RuntimeException{
+    final Permission perm = this.userPermissionMap.get(user.getUserId());
+    if (perm != null && (perm.isPermissionSet(targetType))){
+      return true;
+    }
+    return false;
   }
 
   public boolean hasUserPermission(final User user, final Type type) {
@@ -236,11 +287,11 @@ public class Project {
 
   public List<Pair<String, Permission>> getGroupPermissions() {
     final ArrayList<Pair<String, Permission>> permissions =
-        new ArrayList<>();
+            new ArrayList<>();
 
     for (final Map.Entry<String, Permission> entry : this.groupPermissionMap.entrySet()) {
       permissions.add(new Pair<>(entry.getKey(), entry
-          .getValue()));
+              .getValue()));
     }
 
     return permissions;
@@ -264,6 +315,10 @@ public class Project {
 
   public Permission getUserPermission(final User user) {
     return this.userPermissionMap.get(user.getUserId());
+  }
+
+  public Permission getUserPermissionByName(final String userName) {
+    return this.userPermissionMap.get(userName);
   }
 
   public Permission getGroupPermission(final String group) {
@@ -348,16 +403,16 @@ public class Project {
     int result = 1;
     result = prime * result + (this.active ? 1231 : 1237);
     result =
-        prime * result + (int) (this.createTimestamp ^ (this.createTimestamp >>> 32));
+            prime * result + (int) (this.createTimestamp ^ (this.createTimestamp >>> 32));
     result =
-        prime * result + ((this.description == null) ? 0 : this.description.hashCode());
+            prime * result + ((this.description == null) ? 0 : this.description.hashCode());
     result = prime * result + this.id;
     result =
-        prime * result
-            + (int) (this.lastModifiedTimestamp ^ (this.lastModifiedTimestamp >>> 32));
+            prime * result
+                    + (int) (this.lastModifiedTimestamp ^ (this.lastModifiedTimestamp >>> 32));
     result =
-        prime * result
-            + ((this.lastModifiedUser == null) ? 0 : this.lastModifiedUser.hashCode());
+            prime * result
+                    + ((this.lastModifiedUser == null) ? 0 : this.lastModifiedUser.hashCode());
     result = prime * result + ((this.name == null) ? 0 : this.name.hashCode());
     result = prime * result + ((this.source == null) ? 0 : this.source.hashCode());
     result = prime * result + this.version;
@@ -469,6 +524,14 @@ public class Project {
     this.createUser = createUser;
   }
 
+  public int getJobExecuteLimit() {
+    return jobExecuteLimit;
+  }
+
+  public void setJobExecuteLimit(int jobExecuteLimit) {
+    this.jobExecuteLimit = jobExecuteLimit;
+  }
+
   public List<Flow> getAllRootFlows(){
     final List<Flow> flows = this.getFlows().stream().filter(flow -> !flow.isEmbeddedFlow())
             .collect(Collectors.toList());
@@ -499,7 +562,7 @@ public class Project {
   }
 
   private void getProjectChildNode(final Project project, final String flowId,
-                                         final List<Map<String, Object>> childTreeList) {
+                                   final List<Map<String, Object>> childTreeList) {
     final Flow flow = project.getFlow(flowId);
 
     final ArrayList<Map<String, Object>> nodeList =
@@ -513,5 +576,13 @@ public class Project {
         childTreeList.add(nodeObj);
       }
     }
+  }
+
+  public String getPrincipal() {
+    return principal;
+  }
+
+  public void setPrincipal(String principal) {
+    this.principal = principal;
   }
 }

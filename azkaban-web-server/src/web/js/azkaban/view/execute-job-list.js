@@ -22,11 +22,11 @@ azkaban.ExecuteJobListView = Backbone.View.extend({
   events: {
     "keyup input": "filterJobs",
     "click li.listElement": "handleJobClick",
-    "click #executeResetPanZoomBtn": "handleResetPanZoom",
-    "click #executeAutoPanZoomBtn": "handleAutoPanZoom",
+    "click .executeResetPanZoomBtn": "handleResetPanZoom",
+    "click .executeAutoPanZoomBtn": "handleAutoPanZoom",
     "contextmenu li.listElement": "handleContextMenuClick",
     "click .expandarrow": "handleToggleMenuExpand",
-    "click #execute-close-btn": "handleClose"
+    "click .execute-close-btn": "handleClose"
   },
 
   initialize: function (settings) {
@@ -34,12 +34,14 @@ azkaban.ExecuteJobListView = Backbone.View.extend({
     this.model.bind('change:disabled', this.handleDisabledChange, this);
     this.model.bind('change:graph', this.render, this);
     this.model.bind('change:update', this.handleStatusUpdate, this);
+    const that = this;
+    $(`#${settings.openBtnName}`).click(function(e) {
+        that.handleOpen(e, that);
+    });
+    settings.el.hide();
 
-    $("#open-execute-joblist-btn").click(this.handleOpen);
-    $("#execute-joblist-panel").hide();
-
-    this.filterInput = $(this.el).find("#executeFilter");
-    this.list = $(this.el).find("#executeJoblist");
+    this.filterInput = $(this.el).find(".executeFilter");
+    this.list = $(this.el).find(".executeJoblist");
     this.contextMenu = settings.contextMenuCallback;
     this.listNodes = {};
   },
@@ -243,7 +245,7 @@ azkaban.ExecuteJobListView = Backbone.View.extend({
 
   handleContextMenuClick: function (evt) {
     if (this.contextMenu) {
-      this.contextMenu(evt, this.model, evt.currentTarget.node);
+      this.contextMenu(evt, this.model, evt.currentTarget.node, true);
       return false;
     }
   },
@@ -339,9 +341,9 @@ azkaban.ExecuteJobListView = Backbone.View.extend({
   },
 
   handleClose: function (evt) {
-    $("#execute-joblist-panel").fadeOut();
+    $(this.el).fadeOut();
   },
-  handleOpen: function (evt) {
-    $("#execute-joblist-panel").fadeIn();
+  handleOpen: function (evt, that) {
+    $(that.el).fadeIn();
   }
 });

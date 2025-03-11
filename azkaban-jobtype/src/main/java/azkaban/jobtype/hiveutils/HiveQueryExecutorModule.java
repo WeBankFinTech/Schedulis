@@ -44,7 +44,7 @@ class HiveQueryExecutorModule {
     troublesomeConfig(SCRATCHDIR, hiveConf);
 
     if (System.getenv(HADOOP_TOKEN_FILE_LOCATION) != null) {
-      System.out.println("Setting hadoop tokens ... ");
+     // System.out.println("Setting hadoop tokens ... ");
       hiveConf.set(MAPREDUCE_JOB_CREDENTIALS_BINARY,
           System.getenv(HADOOP_TOKEN_FILE_LOCATION));
       System.setProperty(MAPREDUCE_JOB_CREDENTIALS_BINARY,

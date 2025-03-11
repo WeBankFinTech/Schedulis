@@ -25,7 +25,7 @@ import javax.servlet.http.HttpServletResponse;
 /**
  * The main page
  */
-public class IndexRedirectServlet extends LoginAbstractAzkabanServlet {
+public class IndexRedirectServlet extends AbstractLoginAzkabanServlet {
 
   private static final long serialVersionUID = -1;
   private String defaultServletPath;
@@ -33,7 +33,7 @@ public class IndexRedirectServlet extends LoginAbstractAzkabanServlet {
   public IndexRedirectServlet(final String defaultServletPath) {
     this.defaultServletPath = defaultServletPath;
     if (this.defaultServletPath.isEmpty()
-        || this.defaultServletPath.equals("/")) {
+        || "/".equals(this.defaultServletPath)) {
       this.defaultServletPath = "/index";
     }
   }

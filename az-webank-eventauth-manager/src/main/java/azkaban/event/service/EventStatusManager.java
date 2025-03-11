@@ -25,9 +25,9 @@ public class EventStatusManager {
                 () -> eventStatusLoader.getEventTotal(search));
     }
 
-    public int getEventStatusTotal(String search, String... filterValue) {
+    public int getEventStatusTotal(String search, boolean authType, String... filterValue) {
         return exceptionHandler(0,
-                () -> eventStatusLoader.getEventTotal(search, filterValue));
+                () -> eventStatusLoader.getEventTotal(search, authType, filterValue));
     }
 
     public List<EventStatus> findEventStatusList(String search, int pageNum, int pageSize) {
@@ -36,10 +36,10 @@ public class EventStatusManager {
                 () -> eventStatusLoader.findEventList(search, startIndex, pageSize));
     }
 
-    public List<EventStatus> findEventStatusList(String search, int pageNum, int pageSize, String... filterValue) {
+    public List<EventStatus> findEventStatusList(String search, boolean authType, int pageNum, int pageSize, String... filterValue) {
         int startIndex = (pageNum - 1) * pageSize;
         return exceptionHandler(new ArrayList<>(),
-                () -> eventStatusLoader.findEventList(search, startIndex, pageSize, filterValue));
+                () -> eventStatusLoader.findEventList(search, authType, startIndex, pageSize,filterValue));
     }
 
     private <T> T exceptionHandler(T defaultValue, CheckedSupplier<T, SQLException> supplier) {

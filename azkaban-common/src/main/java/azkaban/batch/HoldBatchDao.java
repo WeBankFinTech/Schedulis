@@ -22,19 +22,18 @@ import azkaban.executor.ExecutableFlow;
 import azkaban.executor.ExecutorManagerException;
 import azkaban.utils.GZIPUtils;
 import azkaban.utils.JSONUtils;
-import org.apache.commons.collections.CollectionUtils;
-import org.apache.commons.dbutils.ResultSetHandler;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import javax.inject.Inject;
-import javax.inject.Singleton;
 import java.io.IOException;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
+import javax.inject.Inject;
+import javax.inject.Singleton;
+import org.apache.commons.collections.CollectionUtils;
+import org.apache.commons.dbutils.ResultSetHandler;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @Singleton
 public class HoldBatchDao {

@@ -39,14 +39,14 @@ azkaban.PermissionTableView = Backbone.View.extend({
     if (currentTargetId.indexOf("admin-remove-") != -1) {
       var userid = currentTargetId.substring(13, currentTargetId.length);
 
-      var requestURL = contextURL + "/manager?ajax=checkRemoveProjectManagePermission&project=" + projectName;
+      var requestURL = "/manager?ajax=checkRemoveProjectManagePermission&project=" + projectName;
       $.ajax({
         url: requestURL,
         type: "get",
         async: false,
         dataType: "json",
-        success: function(data){
-          if(data["removeManageFlag"] == 1){
+        success: function (data) {
+          if (data["removeManageFlag"] == 1) {
             console.log("have permission, click remove manage");
             removeProjectAdminView.show(userid);
           } else {
@@ -58,14 +58,14 @@ azkaban.PermissionTableView = Backbone.View.extend({
 
     } else if (currentTargetId.indexOf("user-update-") != -1) {
 
-      var requestURL = contextURL + "/manager?ajax=checkUpdateProjectUserPermission&project=" + projectName;
+      var requestURL = "/manager?ajax=checkUpdateProjectUserPermission&project=" + projectName;
       $.ajax({
         url: requestURL,
         type: "get",
         async: false,
         dataType: "json",
-        success: function(data){
-          if(data["updateProUserFlag"] == 1){
+        success: function (data) {
+          if (data["updateProUserFlag"] == 1) {
             console.log("have permission, click modify project user");
             var userid = currentTargetId.substring(12, currentTargetId.length)
             changeProjectUserView.display(userid, false);
@@ -119,7 +119,7 @@ azkaban.RemoveProxyView = Backbone.View.extend({
   },
 
   handleRemoveProxy: function () {
-    var requestURL = contextURL + "/manager";
+    var requestURL = "/manager";
     var proxyName = this.el.proxyName;
     var requestData = {
       "project": projectName,
@@ -133,7 +133,7 @@ azkaban.RemoveProxyView = Backbone.View.extend({
         $("#remove-proxy-error-msg").slideDown();
         return;
       }
-      var replaceURL = requestURL + "?project=" + projectName + "&permissions";
+      var replaceURL = filterXSS(requestURL + "?project=" + projectName + "&permissions");
       window.location.replace(replaceURL);
     };
 
@@ -158,7 +158,7 @@ azkaban.AddProxyView = Backbone.View.extend({
   },
 
   handleAddProxy: function () {
-    var requestURL = contextURL + "/manager";
+    var requestURL = "/manager";
     var name = $('#proxy-user-box').val().trim();
     var requestData = {
       "project": projectName,
@@ -174,7 +174,7 @@ azkaban.AddProxyView = Backbone.View.extend({
         return;
       }
 
-      var replaceURL = requestURL + "?project=" + projectName + "&permissions";
+      var replaceURL = filterXSS(requestURL + "?project=" + projectName + "&permissions");
       window.location.replace(replaceURL);
     };
     $.get(requestURL, requestData, successHandler, "json");
@@ -312,7 +312,7 @@ azkaban.ChangePermissionView = Backbone.View.extend({
     $("#change-btn").attr("disabled", null);
 
     if (perm.admin || perm.read || perm.write || perm.execute
-        || perm.schedule) {
+      || perm.schedule) {
       $("#change-btn").text("Commit");
     }
     else {
@@ -327,7 +327,7 @@ azkaban.ChangePermissionView = Backbone.View.extend({
   },
 
   handleChangePermissions: function (evt) {
-    var requestURL = contextURL + "/manager";
+    var requestURL = "/manager";
     var name = $('#user-box').val().trim();
     var command = this.newPerm ? "addPermission" : "changePermission";
     var group = this.group;
@@ -354,7 +354,7 @@ azkaban.ChangePermissionView = Backbone.View.extend({
         return;
       }
 
-      var replaceURL = requestURL + "?project=" + projectName + "&permissions";
+      var replaceURL = filterXSS(requestURL + "?project=" + projectName + "&permissions");
       window.location.replace(replaceURL);
     };
 
@@ -364,19 +364,19 @@ azkaban.ChangePermissionView = Backbone.View.extend({
   loadSystemUserData: function () {
 
     $("#system-user-select").select2({
-      placeholder:wtssI18n.system.userPro,//默认文字提示
-      multiple : false,
+      placeholder: wtssI18n.system.userPro,//默认文字提示
+      multiple: false,
       width: 'resolve',
       //language: "zh-CN",
       //tags: true,//允许手动添加
       allowClear: true,//允许清空
       escapeMarkup: function (markup) { return markup; }, //自定义格式化防止XSS注入
       minimumInputLengt: 1,//最少输入多少字符后开始查询
-      formatResult: function formatRepo(repo){return repo.text;},//函数用来渲染结果
-      formatSelection: function formatRepoSelection(repo){return repo.text;},//函数用于呈现当前的选择
+      formatResult: function formatRepo (repo) { return repo.text; },//函数用来渲染结果
+      formatSelection: function formatRepoSelection (repo) { return repo.text; },//函数用于呈现当前的选择
       ajax: {
         type: 'GET',
-        url: contextURL + "/system",
+        url: "/system",
         dataType: 'json',
         delay: 250,
         data: function (params) {
@@ -397,7 +397,7 @@ azkaban.ChangePermissionView = Backbone.View.extend({
             }
           }
         },
-        cache:true
+        cache: true
       },
 
     });
@@ -463,14 +463,14 @@ $(function () {
   // 项目权限, 点击添加项目管理员
   $('#addProjectAdmin').bind('click', function () {
 
-    var requestURL = contextURL + "/manager?ajax=checkAddProjectManagePermission&project=" + projectName;
+    var requestURL = "/manager?ajax=checkAddProjectManagePermission&project=" + projectName;
     $.ajax({
       url: requestURL,
       type: "get",
       async: false,
       dataType: "json",
-      success: function(data){
-        if(data["addManageFlag"] == 1){
+      success: function (data) {
+        if (data["addManageFlag"] == 1) {
           console.log("have permission, click add manage");
           changeProjectAdminView.display("", true);
         } else {
@@ -483,14 +483,14 @@ $(function () {
 
   // 项目权限, 点击添加项目用户
   $('#addProjectUser').bind('click', function () {
-    var requestURL = contextURL + "/manager?ajax=checkAddProjectUserPermission&project=" + projectName;
+    var requestURL = "/manager?ajax=checkAddProjectUserPermission&project=" + projectName;
     $.ajax({
       url: requestURL,
       type: "get",
       async: false,
       dataType: "json",
-      success: function(data){
-        if(data["addProjectUserFlag"] == 1){
+      success: function (data) {
+        if (data["addProjectUserFlag"] == 1) {
           console.log("have permission, click add manage");
           addProjectUserView.display("", true);
         } else {
@@ -593,7 +593,7 @@ azkaban.ChangeProjectAdminView = Backbone.View.extend({
     $("#change-btn").attr("disabled", null);
 
     if (perm.admin || perm.read || perm.write || perm.execute
-        || perm.schedule) {
+      || perm.schedule) {
       $("#change-btn").text(wtssI18n.view.submit);
     }
     else {
@@ -608,7 +608,7 @@ azkaban.ChangeProjectAdminView = Backbone.View.extend({
   },
 
   handleChangePermissions: function (evt) {
-    var requestURL = contextURL + "/manager";
+    var requestURL = "/manager";
     var userId = $('#project-admin-system-user-select').val().trim();
     var command = this.newPerm ? "ajaxAddProjectAdmin" : "changePermission";
     var group = this.group;
@@ -645,19 +645,19 @@ azkaban.ChangeProjectAdminView = Backbone.View.extend({
   loadSystemUserData: function () {
 
     $("#project-admin-system-user-select").select2({
-      placeholder:wtssI18n.system.userPro,//默认文字提示
-      multiple : false,
+      placeholder: wtssI18n.system.userPro,//默认文字提示
+      multiple: false,
       width: 'resolve',
       //language: "zh-CN",
       //tags: true,//允许手动添加
       allowClear: true,//允许清空
       escapeMarkup: function (markup) { return markup; }, //自定义格式化防止XSS注入
       minimumInputLengt: 1,//最少输入多少字符后开始查询
-      formatResult: function formatRepo(repo){return repo.text;},//函数用来渲染结果
-      formatSelection: function formatRepoSelection(repo){return repo.text;},//函数用于呈现当前的选择
+      formatResult: function formatRepo (repo) { return repo.text; },//函数用来渲染结果
+      formatSelection: function formatRepoSelection (repo) { return repo.text; },//函数用于呈现当前的选择
       ajax: {
         type: 'GET',
-        url: contextURL + "/system",
+        url: "/system",
         dataType: 'json',
         delay: 250,
         data: function (params) {
@@ -678,7 +678,7 @@ azkaban.ChangeProjectAdminView = Backbone.View.extend({
             }
           }
         },
-        cache:true
+        cache: true
       },
 
     });
@@ -746,11 +746,11 @@ azkaban.AddProjectUserView = Backbone.View.extend({
     //
     //   this.loadThisUserProjectPerm(userid);
 
-      //this.permission.admin = $(adminInput).is(":checked");
-      //this.permission.read = $(readInput).is(":checked");
-      //this.permission.write = $(writeInput).is(":checked");
-      //this.permission.execute = $(executeInput).is(":checked");
-      //this.permission.schedule = $(scheduleInput).is(":checked");
+    //this.permission.admin = $(adminInput).is(":checked");
+    //this.permission.read = $(readInput).is(":checked");
+    //this.permission.write = $(writeInput).is(":checked");
+    //this.permission.execute = $(executeInput).is(":checked");
+    //this.permission.schedule = $(scheduleInput).is(":checked");
     //}
 
     //this.changeCheckbox();
@@ -795,7 +795,7 @@ azkaban.AddProjectUserView = Backbone.View.extend({
     $("#add-change-btn").attr("disabled", null);
 
     if (perm.admin || perm.read || perm.write || perm.execute
-        || perm.schedule) {
+      || perm.schedule) {
       $("#change-btn").text(wtssI18n.view.submit);
     }
     else {
@@ -810,7 +810,7 @@ azkaban.AddProjectUserView = Backbone.View.extend({
   },
 
   handleAddProjectUser: function (evt) {
-    var requestURL = contextURL + "/manager";
+    var requestURL = "/manager";
     var userId = $('#project-user-system-user-select').val().trim();
 
     var permissionMap = {};
@@ -845,19 +845,19 @@ azkaban.AddProjectUserView = Backbone.View.extend({
   loadSystemUserData: function () {
 
     $("#project-user-system-user-select").select2({
-      placeholder:wtssI18n.system.userPro,//默认文字提示
-      multiple : false,
+      placeholder: wtssI18n.system.userPro,//默认文字提示
+      multiple: false,
       width: 'resolve',
       //language: "zh-CN",
       //tags: true,//允许手动添加
       allowClear: true,//允许清空
       escapeMarkup: function (markup) { return markup; }, //自定义格式化防止XSS注入
       minimumInputLengt: 1,//最少输入多少字符后开始查询
-      formatResult: function formatRepo(repo){return repo.text;},//函数用来渲染结果
-      formatSelection: function formatRepoSelection(repo){return repo.text;},//函数用于呈现当前的选择
+      formatResult: function formatRepo (repo) { return repo.text; },//函数用来渲染结果
+      formatSelection: function formatRepoSelection (repo) { return repo.text; },//函数用于呈现当前的选择
       ajax: {
         type: 'GET',
-        url: contextURL + "/system",
+        url: "/system",
         dataType: 'json',
         delay: 250,
         data: function (params) {
@@ -878,7 +878,7 @@ azkaban.AddProjectUserView = Backbone.View.extend({
             }
           }
         },
-        cache:true
+        cache: true
       },
 
     });
@@ -959,7 +959,7 @@ azkaban.ChangeProjectUserView = Backbone.View.extend({
     $("#change-change-btn").attr("disabled", null);
 
     if (perm.admin || perm.read || perm.write || perm.execute
-        || perm.schedule) {
+      || perm.schedule) {
       $("#change-btn").text(wtssI18n.view.submit);
     }
     else {
@@ -974,7 +974,7 @@ azkaban.ChangeProjectUserView = Backbone.View.extend({
   },
 
   handleChangeProjectUser: function (evt) {
-    var requestURL = contextURL + "/manager";
+    var requestURL = "/manager";
     var userId = $('#project-user-div').text();
     var permissionMap = {};
     permissionMap.admin = $("#change-user-admin-change").is(":checked");
@@ -998,7 +998,7 @@ azkaban.ChangeProjectUserView = Backbone.View.extend({
         return;
       }
 
-      var replaceURL = requestURL + "?project=" + projectName + "&permissions";
+      var replaceURL = filterXSS(requestURL + "?project=" + projectName + "&permissions");
       window.location.replace(replaceURL);
     };
 
@@ -1006,7 +1006,7 @@ azkaban.ChangeProjectUserView = Backbone.View.extend({
   },
 
   loadThisUserProjectPerm: function (userId) {
-    var requestURL = contextURL + "/manager";
+    var requestURL = "/manager";
     var requestData = {
       "project": projectName,
       "userId": userId,
@@ -1029,7 +1029,7 @@ azkaban.ChangeProjectUserView = Backbone.View.extend({
   },
 
   handleRemoveProjectUser: function () {
-    var requestURL = contextURL + "/manager";
+    var requestURL = "/manager";
     var userId = $('#project-user-div').text();
     var requestData = {
       "project": projectName,
@@ -1071,7 +1071,7 @@ azkaban.RemoveProjectAdminView = Backbone.View.extend({
   },
 
   handleRemoveProjectAdmin: function () {
-    var requestURL = contextURL + "/manager";
+    var requestURL = "/manager";
     var userId = this.el.userId;
     var requestData = {
       "project": projectName,

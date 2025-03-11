@@ -10,7 +10,7 @@
   <parent>
     <groupId>com.webank.wedatasphere.schedulis</groupId>
     <artifactId>schedulis</artifactId>
-    <version>0.9.0</version>
+    <version>1.50.0</version>
   </parent>
 
   <dependencies>
@@ -58,12 +58,17 @@
     <dependency>
       <groupId>org.json</groupId>
       <artifactId>json</artifactId>
-      <version>20070829</version>
+      <version>20231013</version>
     </dependency>
     <dependency>
       <groupId>commons-codec</groupId>
       <artifactId>commons-codec</artifactId>
       <version>1.11</version>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.commons</groupId>
+      <artifactId>commons-lang3</artifactId>
+      <version>3.7</version>
     </dependency>
     <dependency>
       <groupId>commons-collections</groupId>
@@ -84,6 +89,16 @@
       <groupId>com.alibaba</groupId>
       <artifactId>easyexcel</artifactId>
       <version>2.2.3</version>
+      <exclusions>
+        <exclusion>
+          <artifactId>poi</artifactId>
+          <groupId>org.apache.poi</groupId>
+        </exclusion>
+        <exclusion>
+          <artifactId>poi-ooxml-schemas</artifactId>
+          <groupId>org.apache.poi</groupId>
+        </exclusion>
+      </exclusions>
     </dependency>
     <dependency>
       <groupId>com.google.guava</groupId>
@@ -91,11 +106,6 @@
       <version>${guava.version}</version>
     </dependency>
 
-    <dependency>
-      <groupId>org.apache.commons</groupId>
-      <artifactId>commons-lang3</artifactId>
-      <version>${commons.lang3.version}</version>
-    </dependency>
   </dependencies>
 
   <build>

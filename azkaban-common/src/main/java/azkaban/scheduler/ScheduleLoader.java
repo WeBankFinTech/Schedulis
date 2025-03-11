@@ -18,8 +18,6 @@ package azkaban.scheduler;
 
 import java.util.List;
 
-import azkaban.trigger.TriggerLoaderException;
-
 public interface ScheduleLoader {
 
   public void insertSchedule(Schedule s) throws ScheduleManagerException;
@@ -31,6 +29,13 @@ public interface ScheduleLoader {
   public void updateNextExecTime(Schedule s) throws ScheduleManagerException;
 
   public List<Schedule> loadUpdatedSchedules() throws ScheduleManagerException;
+
+    long getTriggerInitTime();
+
+    List<Schedule> loadAllSchedules() throws ScheduleManagerException;
+
+    List<Integer> loadRemovedTriggers();
+
 
 
 }

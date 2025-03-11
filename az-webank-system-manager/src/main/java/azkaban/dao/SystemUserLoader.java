@@ -1,13 +1,20 @@
 package azkaban.dao;
 
-import azkaban.entity.*;
+
+import azkaban.dto.PrivilegeReportDto;
+import azkaban.entity.DepartmentMaintainer;
+import azkaban.entity.WebankDepartment;
+import azkaban.entity.WebankUser;
+import azkaban.entity.WtssPermissions;
+import azkaban.entity.WtssRole;
+import azkaban.entity.WtssUser;
 import azkaban.exception.SystemUserManagerException;
 
 import java.util.List;
 import java.util.Map;
 
 /**
- * Created by kirkzhou on 7/6/18.
+ * Created by johnnwang on 7/6/18.
  */
 public interface SystemUserLoader {
 

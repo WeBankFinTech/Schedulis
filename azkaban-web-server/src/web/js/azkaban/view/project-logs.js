@@ -30,7 +30,9 @@ var typeMapping = {
   "DESCRIPTION": "Description Set",
   "SCHEDULE": "Schedule",
   "UPLOADED": "Uploaded",
-  "PROPERTY_OVERRIDE": "Property Override"
+  "PROPERTY_OVERRIDE": "Property Override",
+  "IMS_PROPERTIES": "IMS Report",
+  "JOB_EXECUTE_LIMIT": "Job Execute Limit"
 };
 
 var projectLogView;
@@ -40,13 +42,20 @@ azkaban.ProjectLogView = Backbone.View.extend({
   },
 
   initialize: function (settings) {
-    this.model.set({"current": 0});
+    var search = window.location.search.substring(1);
+    var paramArr = search.split('&');
+    var param = {}
+    for (var i = 0; i < paramArr.length; i++) {
+        var tem = paramArr[i].split('=');
+        param[tem[0]] = tem[1] || '';
+    }
+    this.model.set({ "current": 0, projectId: param.projectId || '' });
     this.handleUpdate();
   },
 
   handleUpdate: function (evt) {
     var current = this.model.get("current");
-    var requestURL = contextURL + "/manager";
+    var requestURL = "/manager";
     var model = this.model;
     var requestData = {
       "project": projectName,
@@ -54,7 +63,9 @@ azkaban.ProjectLogView = Backbone.View.extend({
       "size": 1000,
       "skip": 0
     };
-
+    if (model.get('projectId')) {
+        requestData.projectId = model.get('projectId')
+    }
     var successHandler = function (data) {
       console.log("fetchLogs");
       if (data.error) {
@@ -82,7 +93,7 @@ azkaban.ProjectLogView = Backbone.View.extend({
 
         var containerTime = document.createElement("td");
         $(containerTime).addClass("time");
-        $(containerTime).text(getDateFormat(new Date(time)));
+        $(containerTime).text(getProjectModifyDateFormat(new Date(time)));
 
         var containerUser = document.createElement("td");
         $(containerUser).addClass("user");
@@ -94,10 +105,10 @@ azkaban.ProjectLogView = Backbone.View.extend({
         // If the event is a property override change, highlight by red color.
         if (type == "PROPERTY_OVERRIDE") {
           $(containerMessage).css("color", "red");
-          $(containerMessage).css("white-space", "pre-wrap");
+          $(containerMessage).css("white-space", "pre-wrap")
           $(containerType).css("color", "red");
         }
-
+        $(containerMessage).css("word-break", "break-all");
         $(containerType).addClass("type");
         $(containerType).addClass(type);
         $(containerType).text(typeMapping[type] ? typeMapping[type] : type);

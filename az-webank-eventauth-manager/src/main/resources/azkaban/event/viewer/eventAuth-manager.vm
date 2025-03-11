@@ -10,10 +10,10 @@
             eventAuthTable.tablesorter();
         });
     </script>
-    <script type="text/javascript" src="/js/azkaban/i18n-config.js?version=1.43.0"></script>
-    <script type="text/javascript" src="/js/jquery/jquery.tablesorter.js?version=1.43.0"></script>
-    <script type="text/javascript" src="/js/azkaban/util/utils.js?version=1.43.0"></script>
-    <script type="text/javascript" src="/event/js/eventauth-manager.js?version=1.43.0"></script>
+    <script type="text/javascript" src="/js/azkaban/i18n-config.js?version=1.49.0"></script>
+    <script type="text/javascript" src="/js/jquery/jquery.tablesorter.js?version=1.49.0"></script>
+    <script type="text/javascript" src="/js/azkaban/util/utils.js?version=1.49.0"></script>
+    <script type="text/javascript" src="/event/js/eventauth-manager.js?version=1.49.0"></script>
 </head>
 <body>
     #set ($current_page=$signalManage)
@@ -45,7 +45,10 @@
     #parse ("azkaban/webapp/servlet/velocity/alerts.vm")
     <div class="row" id="eventAuthList">
         <div class="col-xs-12">
-            <i>$clickNameToRank</i>
+            <ul class="nav nav-tabs nav-sm" id="header-tabs">
+                <li id="auth-message-view-link" class="active"><a href="javasctipt:void(0)" name="auth">$authorizedSignal</a></li>
+                <li id="internal-message-view-link"><a href="javasctipt:void(0)" name="internal">$internalSignal</a></li>
+            </ul>
             <table class="table table-striped table-bordered table-condensed table-hover" id="eventAuthTable">
                 <thead>
                 <tr>

@@ -16,6 +16,7 @@
 
 package azkaban.trigger;
 
+import azkaban.trigger.builtin.BasicTimeChecker;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -23,33 +24,46 @@ import java.util.Map;
 import org.apache.commons.jexl2.Expression;
 import org.apache.commons.jexl2.JexlEngine;
 import org.apache.commons.jexl2.MapContext;
-import org.slf4j.LoggerFactory;
-import org.slf4j.Logger;
 import org.joda.time.DateTime;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class Condition {
 
   private static final Logger logger = LoggerFactory.getLogger(Condition.class);
 
-  private static final JexlEngine jexl = new JexlEngine();
+  private static final JexlEngine JEXL = new JexlEngine();
   private static CheckerTypeLoader checkerLoader = null;
   private final MapContext context = new MapContext();
   private Expression expression;
   private Map<String, ConditionChecker> checkers =
       new HashMap<>();
   private Long nextCheckTime = -1L;
+  private List<Long> missedCheckTimes = new ArrayList<>();
 
+  /**
+   * Used when creating a new trigger instance (both triggerCond and expireCond) from schedule, it
+   * does not need to count missed schedules.
+   *
+   * @param checkers
+   * @param expr
+   */
   public Condition(final Map<String, ConditionChecker> checkers, final String expr) {
     setCheckers(checkers);
-    this.expression = jexl.createExpression(expr);
+    this.expression = JEXL.createExpression(expr);
     updateNextCheckTime();
   }
 
+  /**
+   * Used when reload Trigger from DB.
+   * It's possible to have missed schedule from last check point.
+   */
   public Condition(final Map<String, ConditionChecker> checkers, final String expr,
-      final long nextCheckTime) {
+      final long nextCheckTime, final List<Long> missedCheckTime) {
     this.nextCheckTime = nextCheckTime;
+    this.missedCheckTimes = missedCheckTime;
     setCheckers(checkers);
-    this.expression = jexl.createExpression(expr);
+    this.expression = JEXL.createExpression(expr);
   }
 
   public synchronized static void setCheckerLoader(final CheckerTypeLoader loader) {
@@ -63,7 +77,7 @@ public class Condition {
 
     final Map<String, Object> jsonObj = (HashMap<String, Object>) obj;
     Condition cond = null;
-
+    List<Long> missedCheckTimes = new ArrayList<>();
     try {
       final Map<String, ConditionChecker> checkers =
           new HashMap<>();
@@ -76,14 +90,18 @@ public class Condition {
             checkerLoader.createCheckerFromJson(type,
                 oneChecker.get("checkerJson"));
         checkers.put(ck.getId(), ck);
+
+        // there is only one BasicTimeChecker associated with each condition
+        if (ck instanceof BasicTimeChecker && ck.getId().equals("BasicTimeChecker_1")) {
+          missedCheckTimes = ((BasicTimeChecker) ck).getMissedCheckTimeBeforeNow();
+        }
       }
       final String expr = (String) jsonObj.get("expression");
       final Long nextCheckTime = Long.valueOf((String) jsonObj.get("nextCheckTime"));
 
-      cond = new Condition(checkers, expr, nextCheckTime);
+      cond = new Condition(checkers, expr, nextCheckTime, missedCheckTimes);
 
     } catch (final Exception e) {
-      e.printStackTrace();
       logger.error("Failed to recreate condition from json.", e);
       throw new Exception("Failed to recreate condition from json.", e);
     }
@@ -93,6 +111,10 @@ public class Condition {
 
   public long getNextCheckTime() {
     return this.nextCheckTime;
+  }
+
+  public List<Long> getMissedCheckTimes() {
+    return this.missedCheckTimes;
   }
 
   public Map<String, ConditionChecker> getCheckers() {
@@ -118,6 +140,9 @@ public class Condition {
   public void resetCheckers() {
     for (final ConditionChecker checker : this.checkers.values()) {
       checker.reset();
+      if (checker instanceof BasicTimeChecker) {
+        this.missedCheckTimes = ((BasicTimeChecker) checker).getMissedCheckTimeBeforeNow();
+      }
     }
     updateNextCheckTime();
     logger.info("Done resetting checkers. The next check time will be "
@@ -129,7 +154,7 @@ public class Condition {
   }
 
   public void setExpression(final String expr) {
-    this.expression = jexl.createExpression(expr);
+    this.expression = JEXL.createExpression(expr);
   }
 
   public boolean isMet() {

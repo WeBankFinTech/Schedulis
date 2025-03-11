@@ -5,15 +5,14 @@ import azkaban.flow.Node;
 import azkaban.project.Project;
 import azkaban.scheduler.ScheduleManagerException;
 import azkaban.sla.SlaOption;
-import org.joda.time.Minutes;
-import org.joda.time.ReadablePeriod;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import org.joda.time.Minutes;
+import org.joda.time.ReadablePeriod;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Created by v_wbkefan on 2019/8/6.
@@ -23,7 +22,7 @@ public class AlertUtil {
 
     //解析前端规则字符串 转换成SlaOption对象
     public static SlaOption parseSlaSetting(final String set, final Flow flow, final Project project) throws ScheduleManagerException {
-        logger.info("Tryint to set sla with the following set: " + set);
+        logger.info("Trying to set sla with the following set: " + set);
         final String slaType;
         final List<String> slaActions = new ArrayList<>();
         final Map<String, Object> slaInfo = new HashMap<>();

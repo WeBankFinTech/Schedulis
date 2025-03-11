@@ -36,15 +36,15 @@
     // load cmdb data switch
     var isCmdbLoaded=false;
   </script>
-  <script type="text/javascript" src="/js/azkaban/i18n-config.js?version=1.18.0"></script>
-  <script type="text/javascript" src="/js/azkaban/util/date.js?version=1.18.0"></script>
-  <script type="text/javascript" src="/js/azkaban/util/ajax.js?version=1.18.0"></script>
-  <script type="text/javascript" src="/js/azkaban/view/project-versions.js?version=1.18.0"></script>
-  <script type="text/javascript" src="/js/azkaban/view/project-modals.js?version=1.18.0"></script>
-  <link href="/css/bootstrap-select.min.css?version=1.18.0" rel="stylesheet">
-  <script type="text/javascript" src="/js/bootstrap-select.js?version=1.18.0"></script>
-  <script type="text/javascript" src="/js/moment.min.js?version=1.18.0"></script>
-  <script type="text/javascript" src="/js/bootstrap-datetimepicker.min.js?version=1.18.0"></script>
+  <script type="text/javascript" src="/js/azkaban/i18n-config.js?version=1.49.0"></script>
+  <script type="text/javascript" src="/js/azkaban/util/utils.js?version=1.49.0"></script>
+  <script type="text/javascript" src="/js/azkaban/util/ajax.js?version=1.49.0"></script>
+  <script type="text/javascript" src="/js/azkaban/view/project-versions.js?version=1.49.0"></script>
+  <script type="text/javascript" src="/js/azkaban/view/project-modals.js?version=1.49.0"></script>
+  <link href="/css/bootstrap-select.min.css?version=1.49.0" rel="stylesheet">
+  <script type="text/javascript" src="/js/bootstrap-select.js?version=1.49.0"></script>
+  <script type="text/javascript" src="/js/moment-2.29.4.min.js?version=1.49.0"></script>
+  <script type="text/javascript" src="/js/bootstrap-datetimepicker.min.js?version=1.49.0"></script>
   
 </head>
 <body>

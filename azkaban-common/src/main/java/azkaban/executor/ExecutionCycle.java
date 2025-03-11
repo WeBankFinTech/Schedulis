@@ -12,6 +12,8 @@ public class ExecutionCycle {
     private Status status;
     private int currentExecId;
     private int projectId;
+
+    private String projectName;
     private String flowId;
     private String submitUser;
     private long submitTime;
@@ -26,6 +28,14 @@ public class ExecutionCycle {
     private String cycleErrorOption;
     private Map<String, Object> otherOption = new HashMap<>();
     private List<SlaOption> slaOptions = new ArrayList<>();
+
+    public String getProjectName() {
+        return projectName;
+    }
+
+    public void setProjectName(String projectName) {
+        this.projectName = projectName;
+    }
 
     public int getId() {
         return id;

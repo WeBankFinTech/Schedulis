@@ -16,7 +16,7 @@
 
 package azkaban.database;
 
-import azkaban.server.AzkabanServer;
+import azkaban.server.AbstractAzkabanServer;
 import azkaban.utils.Props;
 import java.io.IOException;
 import java.sql.SQLException;
@@ -44,7 +44,7 @@ public class AzkabanDatabaseUpdater {
         parser.acceptsAll(Arrays.asList("u", "update"),
             "Will update if necessary");
 
-    final Props props = AzkabanServer.loadProps(args, parser);
+    final Props props = AbstractAzkabanServer.loadProps(args, parser);
 
     if (props == null) {
       logger.error("Properties not found. Need it to connect to the db.");

@@ -1,12 +1,11 @@
 package azkaban.webapp;
 
+import static azkaban.Constants.ConfigurationKeys.SYSTEM_SCHEDULE_SWITCH_ACTIVE_KEY;
+import static azkaban.Constants.ConfigurationKeys.WTSS_QUERY_SERVER_ENABLE;
 import azkaban.server.AbstractAzkabanServer;
 import azkaban.utils.Props;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import static azkaban.Constants.ConfigurationKeys.SYSTEM_SCHEDULE_SWITCH_ACTIVE_KEY;
-import static azkaban.Constants.ConfigurationKeys.WTSS_QUERY_SERVER_ENABLE;
 
 
 /**

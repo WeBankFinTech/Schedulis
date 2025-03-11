@@ -5,19 +5,18 @@ import azkaban.db.EncodingType;
 import azkaban.db.SQLTransaction;
 import azkaban.utils.GZIPUtils;
 import azkaban.utils.JSONUtils;
-import org.apache.commons.dbutils.ResultSetHandler;
-import org.joda.time.DateTime;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import javax.inject.Inject;
-import javax.inject.Singleton;
 import java.io.IOException;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import javax.inject.Inject;
+import javax.inject.Singleton;
+import org.apache.commons.dbutils.ResultSetHandler;
+import org.joda.time.DateTime;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * @author lebronwang

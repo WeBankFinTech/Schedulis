@@ -16,26 +16,30 @@
 
 package azkaban.utils;
 
-import org.apache.http.HttpEntity;
-import org.apache.http.HttpResponse;
-import org.apache.http.NameValuePair;
-import org.apache.http.client.entity.UrlEncodedFormEntity;
-import org.apache.http.client.methods.HttpEntityEnclosingRequestBase;
-import org.apache.http.client.methods.HttpPost;
-import org.apache.http.client.methods.HttpUriRequest;
-import org.apache.http.client.utils.URIBuilder;
-import org.apache.http.impl.client.CloseableHttpClient;
-import org.apache.http.impl.client.HttpClients;
-import org.apache.http.message.BasicNameValuePair;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
+import azkaban.Constants.ConfigurationKeys;
+import azkaban.server.AbstractAzkabanServer;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
+import org.apache.http.HttpEntity;
+import org.apache.http.HttpResponse;
+import org.apache.http.NameValuePair;
+import org.apache.http.client.entity.UrlEncodedFormEntity;
+import org.apache.http.client.methods.CloseableHttpResponse;
+import org.apache.http.client.methods.HttpEntityEnclosingRequestBase;
+import org.apache.http.client.methods.HttpPost;
+import org.apache.http.client.methods.HttpUriRequest;
+import org.apache.http.client.utils.URIBuilder;
+import org.apache.http.impl.client.CloseableHttpClient;
+import org.apache.http.impl.client.HttpClientBuilder;
+import org.apache.http.impl.client.HttpClients;
+import org.apache.http.message.BasicNameValuePair;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * class handles the communication between the application and a Restful API based web server.
@@ -49,6 +53,34 @@ import java.util.stream.Collectors;
 public abstract class AbstractRestfulApiClient<T> {
 
   protected static Logger logger = LoggerFactory.getLogger(AbstractRestfulApiClient.class);
+
+  /**
+   * 使用 AtomicReference 来创建线程安全的 HttpClient 单例
+   */
+  private static final AtomicReference<CloseableHttpClient> HTTP_CLIENT = new AtomicReference<>();
+
+  private static final Props SERVER_PROPS = AbstractAzkabanServer.getAzkabanProperties();
+
+  private static final boolean HTTPCLIENT_SINGLETON_MODE_SWITCH;
+
+  static {
+    HTTPCLIENT_SINGLETON_MODE_SWITCH = SERVER_PROPS.getBoolean(
+        ConfigurationKeys.HTTP_CLIENT_SINGLETON_MODE_SWITCH, false);
+
+    if (HTTPCLIENT_SINGLETON_MODE_SWITCH) {
+      // 初始化单例 HttpClient
+      int httpClientMaxConnTotal = SERVER_PROPS.getInt(
+          ConfigurationKeys.HTTP_CLIENT_MAX_CONN_TOTAL,
+          100);
+      int httpClientMaxConnPerRoute = httpClientMaxConnTotal / 2;
+
+      HttpClientBuilder httpClientBuilder = HttpClientBuilder.create();
+      httpClientBuilder.setMaxConnTotal(httpClientMaxConnTotal);
+      httpClientBuilder.setMaxConnPerRoute(httpClientMaxConnPerRoute);
+
+      HTTP_CLIENT.set(httpClientBuilder.build());
+    }
+  }
 
   /**
    * helper function to build a valid URI.
@@ -131,8 +163,16 @@ public abstract class AbstractRestfulApiClient<T> {
    * function to dispatch the request and pass back the response.
    */
   protected T sendAndReturn(final HttpUriRequest request) throws IOException {
+    if (HTTPCLIENT_SINGLETON_MODE_SWITCH) {
+      // 优化为单例模式
+      CloseableHttpClient client = HTTP_CLIENT.get();
+      try (CloseableHttpResponse response = client.execute(request)) {
+        return this.parseResponse(response);
+      }
+    } else {
     try (CloseableHttpClient client = HttpClients.createDefault()) {
       return this.parseResponse(client.execute(request));
+      }
     }
   }
 }

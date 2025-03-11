@@ -7,8 +7,8 @@ import azkaban.executor.ExecutableFlow;
 import azkaban.flow.Flow;
 import azkaban.utils.Props;
 import org.apache.commons.collections.CollectionUtils;
-import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.slf4j.Logger;
 
 import javax.inject.Inject;
 import javax.inject.Singleton;

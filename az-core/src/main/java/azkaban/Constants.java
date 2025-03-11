@@ -36,11 +36,19 @@ import java.time.Duration;
  */
 public class Constants {
 
+  public static final String UPLOAD_CHANNEL_TYPE= "zip";
+  public static final String CLOSE_USER_END_WITH = "_s";
+  public static final String WTSS_PUBLIC_KEY = "wtss.public.key";
+
+  public static final String JOB_NUM_MAX = "job.num.max";
+
+  public static final String JOB_FILENAME_CHECK = "job.filename.check";
+
   public static final Object HISTORY_RERUN_LOCK = new Object();
   public static final String USER_DEFINED_PARAM = "userDefined";
   public static final String FLOW_PAUSED_MAX_TIME_MS = "flow.paused.max.time.ms";
 
-  public static final long DEFAULT_FLOW_PAUSED_MAX_TIME = 1 * 60 * 60 * 1000;
+  public static final long DEFAULT_FLOW_PAUSED_MAX_TIME = 1 * 60 * 60 * 1000L;
 
   public static final String FAILED_PAUSED_MAX_WAIT_MS = "failed.paused.max.wait.ms";
   public static final String FAILED_PAUSED_CHECK_TIME_MS = "failed.paused.check.time.ms";
@@ -101,6 +109,38 @@ public class Constants {
 
   // The flow exec id for a flow trigger instance unable to trigger a flow yet
   public static final int FAILED_EXEC_ID = -2;
+
+  public static final String HOLD_BATCH_RESUME_LOCK_KEY = "hold_batch_resume_lock_key-";
+
+  public static final String HOLD_BATCH_COMMON_LOCK_KEY = "hold_batch_common_lock_key";
+
+  public static final String SCHEDULES_BACKUP_FILE = "schedules_backup";
+
+  public static final String HOLD_BATCH_REJECT = "holdBatchReject";
+
+  public static final String APPLICATION_ZIP_MIME_TYPE = "application/zip";
+
+  public static final String PROJECT_DOWNLOAD_BUFFER_SIZE_IN_BYTES = "project.download.buffer.size";
+
+  public static final String EXECUTE_FLOW_TRIGGER_ID = "execute_flow_trigger_id";
+
+  public static final String SCHEDULE_MISSED_TIME = "scheduleMissedTime";
+
+  public final static String DB_NAME = "dbName";
+  public final static String TABLE_NAME = "tableName";
+  public final static String PARTITION_NAME = "partitionName";
+  public final static String APPLICATION_ID = "applicationId";
+  public final static String CLUSTER_NAME = "dops.datachecker.jdo.option.cluster.name";
+
+  /**
+   * 100000为所有一级部分的父id，用于区分部门是否是一级部门
+   */
+  public static final int WEBANK_DEPARTMENT_ID_NO = 100000;
+
+  /**
+   * 用于手动划分租户的部门一定要带上该分隔符用于区分一级部门
+   */
+  public static final String WTSS_SPECIAL_DEPARTMENT_DELIMITER = "_";
 
   public static class ConfigurationKeys {
 
@@ -182,6 +222,9 @@ public class Constants {
     // Path name of execute-as-user executable
     public static final String AZKABAN_SERVER_NATIVE_LIB_FOLDER = "azkaban.native.lib";
 
+    // exec home
+    public static final String WTSS_EXEC_HOME = "wtss.home";
+
     // Name of *nix group associated with the process running Azkaban
     public static final String AZKABAN_SERVER_GROUP_NAME = "azkaban.group.name";
 
@@ -254,6 +297,10 @@ public class Constants {
         "azkaban.executorselector.comparator.";
     public static final String QUEUEPROCESSING_ENABLED = "azkaban.queueprocessing.enabled";
 
+    public static final String QUEUEPROCESSING_ASYNC_ENABLED = "azkaban.queueprocessing.async.enabled";
+
+    public static final String QUEUEPROCESSING_ASYNC_POOL_SIZE = "azkaban.queueprocessing.async.pool.size";
+
     public static final String SESSION_TIME_TO_LIVE = "session.time.to.live";
 
     // allowed max size of shared project dir in MB
@@ -264,6 +311,126 @@ public class Constants {
 
     // number of rows to be displayed on the executions page.
     public static final String DISPLAY_EXECUTION_PAGE_SIZE = "azkaban.display.execution_page_size";
+
+    public static final String WTSS_ENABLE_PROJECT_MANAGER_FLOW_CACHE = "wtss.project.manager.flow.cache.enabled";
+
+    public static final String SYSTEM_SCHEDULE_SWITCH_ACTIVE_KEY = "system.schedule.switch.active";
+
+    public static final String WTSS_QUERY_SERVER_ENABLE = "wtss.query.server.enabled";
+
+    public static final String EXECUTOR_REFRESH_WAIT_TIME = "wtss.executor.refresh.wait.time";
+    public static final String WTSS_OVERTIME_SCHEDULE_SCAN_INTERNAL = "wtss.overtime.schedule.scan.interval";
+    public static final String WTSS_QUERY_SERVER_WHITELIST_URL = "wtss.query.server.whitelist.url";
+
+    public static final String WTSS_QUERY_SERVER_BLACKLIST_URL = "wtss.query.server.blacklist.url";
+
+    public static final String WTSS_QUERY_SERVER_ENABLE_PROJECT_CACHE = "wtss.query.server.project.cache.enabled";
+
+
+    public static final String WTSS_QUERY_SCHEDULE_CACHE_ENABLE = "wtss.query.server.schedule.cache.enabled";
+
+    //单位分钟
+    public static final String WTSS_QUERY_SERVER_PROJECT_CACHE_REFRESH_PERIOD = "wtss.query.server.project.cache.refresh.period.minute";
+
+    public static final String WTSS_QUERY_SERVER_TRIGGER_CACHE_REFRESH_PERIOD = "wtss.query.server.trigger.cache.refresh.period.minute";
+
+    public static final String WTSS_QUERY_SERVER_SCHEDULE_CACHE_REFRESH_PERIOD = "wtss.query.server.schedule.cache.refresh.period.minute";
+
+    /**
+     * 工作流、任务日志是否上传到 HDFS，默认否，即存储在 DB 中
+     */
+    public static final String HDFS_LOG_SWITCH = "hdfs.log.switch";
+
+    /**
+     * 工作流、任务日志上传到 HDFS 路径
+     */
+    public static final String HDFS_LOG_PATH = "hdfs.log.path";
+
+    /**
+     * 工作流执行目录清理间隔 ms，默认 1 h
+     */
+    public static final String EXECUTION_DIR_CLEAN_INTERVAL_MS = "execution.dir.clean.interval.ms";
+
+    /**
+     * 工作流执行目录保留时间 ms，默认 1 day
+     */
+    public static final String EXECUTION_DIR_RETENTION_MS = "execution.dir.retention";
+
+
+    /**
+     * missed schedule 处理线程池大小
+     */
+    public static final String MISSED_SCHEDULE_HANDLE_THREAD_POOL_SIZE = "missed.schedule.task.threads";
+
+    public static final String MISSED_SCHEDULE_MANAGER_SWITCH = "missed.schedule.manager.switch";
+
+    public static final String ALERT_PLUGIN_PATH = "alerter.plugin.path";
+
+    public static final String EVENTCHECKER_BACKLOG_ALERT_TIME = "eventchecker.backlog.alert.time";
+
+    public static final String HTTP_CLIENT_SINGLETON_MODE_SWITCH = "httpclient.singleton.mode.switch";
+
+    public static final String HTTP_CLIENT_MAX_CONN_TOTAL = "httpclient.max.conn.total";
+
+    public static final String HTTP_CLIENT_MAX_CONN_PER_ROUTE = "httpclient.max.conn.per_route";
+
+
+    public static final String LINKIS_KN_URL = "wtss.linkis.kn.url";
+
+    public static final String WTSS_DEFAULT_DEPARTMENT_GROUP = "wtss.default.department.group";
+
+    public static final String WTSS_PREDICTION_TIMEOUT_ENABLED = "wtss.prediction.timeout.enabled";
+
+    public static final String WTSS_PREDICTION_TIMEOUT_INTERVAL = "wtss.prediction.timeout.interval";
+
+    public static final String WTSS_PREDICTION_TIMEOUT_BASE_TIME = "wtss.prediction.timeout.base.time";
+
+    public static final String WTSS_PREDICTION_TIMEOUT_THRESHOLD_RATIO = "wtss.prediction.timeout.threshold.ratio";
+
+    public static final String WTSS_PREDICTION_TIMEOUT_BUS_PATH_ALERT_LEVEL = "wtss.prediction.timeout.bus.path.alert.level";
+
+
+    /**
+     * 应用信息登记审批功能开关，默认关闭
+     */
+    public static final String APPLICATION_INFO_ITSM_APPROVAL_SWITCH = "application.info.itsm.approval.switch";
+
+    /**
+     * 禁止设置批量高峰期调度功能开关，默认关闭
+     */
+    public static final String BAN_BUSY_TIME_SCHEDULE_SWITCH = "ban.busy.time.schedule.switch";
+
+    /**
+     * Linkis token
+     */
+    public static final String WTSS_LINKIS_TOKEN = "wtss.linkis.token";
+
+    /**
+     * Linkis 服务 URL
+     */
+    public static final String LINKIS_SERVER_URL = "linkis.server.url";
+
+    /**
+     * DSS 项目交接接口 URI
+     */
+    public static final String DSS_TRANSFER_PROJECT_URI = "dss.transfer.project.uri";
+
+    /**
+     * 是否开启采用 appId + appSecret 的方式登录，默认 true
+     */
+    public static final String ENABLE_APPID_LOGIN = "wtss.enable.appId.login";
+
+    public static final String WTSS_SUBFLOW_JOB_CONSUMER_THREAD_SLEEP_TIME = "wtss.subflow.job_consumer_thread.sleep_time";
+
+    public static final String WTSS_JOB_LOG_DIAGNOSIS_SCRIPT_PATH = "wtss.job.log.diagnosis.script.path";
+
+    public static final String WTSS_JOB_LOG_AUTO_DIAGNOSIS_THREADS_SIZE = "wtss.job.log.auto.diagnosis.threads.size";
+
+    public static final String WTSS_JOB_LOG_AUTO_DIAGNOSIS_SWITCH = "wtss.job.log.auto.diagnosis.switch";
+
+    public static final String WTSS_JOB_LOG_AUTO_DIAGNOSIS_THREAD_INTERVAL = "wtss.job.log.auto.diagnosis.thread.interval";
+
+    public static final String WTSS_JOB_LOG_AUTO_DIAGNOSIS_TIME_INTERVAL = "wtss.job.log.auto.diagnosis.time.interval";
   }
 
   public static class FlowProperties {
@@ -314,6 +481,27 @@ public class Constants {
      * Format string for Log4j's EnhancedPatternLayout
      */
     public static final String JOB_LOG_LAYOUT = "azkaban.job.log.layout";
+
+    public static final String JOB_TYPE_LOAD_JOB_PATH_JAR = "jobtype.load.jobpath.jar";
+
+
+    /**
+     * 任务重要性：high,middle,low
+     */
+    public static final String JOB_IMPORTANCE_LEVEL_KEY = "wtss.job.importance.level";
+
+    /**
+     * 任务关键路径信息
+     */
+    public static final String JOB_BUS_PATH_KEY = "wtss.job.bus.path.id";
+
+    public static final String JOB_BUS_PATH_CODE_PREFIX = "azkaban.jobcode.prefix";
+
+
+    public static final String FLOW_ASYNC_KILL_ENABLE = "wtss.flow.async.kill.enable";
+
+
+
   }
 
   public static class JobCallbackProperties {
@@ -337,4 +525,23 @@ public class Constants {
     public static final String START_TIME = "startTime";
     public static final String TRIGGER_INSTANCE_ID = "triggerInstanceId";
   }
+
+  /**
+   * 项目负责人最大长度
+   */
+  public static final Integer PRINCIPAL_MAX_LENGTH = 64;
+
+  /**
+   * 【当日只告警一次】: dayOnce
+   * 【每30分钟告警】: thirtyMinuteOnce
+   *【每3个小时告警】：threeHourOnce
+   */
+  public static final String DAY_ONCE = "dayOnce";
+  public static final String THIRTY_MINUTE_ONCE = "thirtyMinuteOnce";
+  public static final String THREE_HOUR_ONCE = "threeHourOnce";
+
+  public static final Long DEFAULT_LAST_SEND_ALERT_TIME = 0L;
+
+
+
 }

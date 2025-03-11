@@ -1,8 +1,8 @@
 package azkaban.webapp.servlet;
 
 import azkaban.i18n.utils.LoadJsonUtils;
-import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.slf4j.Logger;
 
 import javax.servlet.*;
 import javax.servlet.http.HttpServletRequest;

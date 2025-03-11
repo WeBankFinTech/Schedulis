@@ -50,7 +50,7 @@ public abstract class AbstractMetric<T> implements IMetric<T>, Cloneable {
   /**
    * {@inheritDoc}
    *
-   * @see IMetric#getName()
+   * @see azkaban.metric.IMetric#getName()
    */
   @Override
   public String getName() {
@@ -60,7 +60,7 @@ public abstract class AbstractMetric<T> implements IMetric<T>, Cloneable {
   /**
    * {@inheritDoc}
    *
-   * @see IMetric#getValueType()
+   * @see azkaban.metric.IMetric#getValueType()
    */
   @Override
   public String getValueType() {
@@ -70,7 +70,7 @@ public abstract class AbstractMetric<T> implements IMetric<T>, Cloneable {
   /**
    * {@inheritDoc}
    *
-   * @see IMetric#updateMetricManager(MetricReportManager)
+   * @see azkaban.metric.IMetric#updateMetricManager(azkaban.metric.MetricReportManager)
    */
   @Override
   public void updateMetricManager(final MetricReportManager manager) {
@@ -80,7 +80,7 @@ public abstract class AbstractMetric<T> implements IMetric<T>, Cloneable {
   /**
    * {@inheritDoc}
    *
-   * @see IMetric#getSnapshot()
+   * @see azkaban.metric.IMetric#getSnapshot()
    */
   @Override
   public IMetric<T> getSnapshot() throws CloneNotSupportedException {
@@ -90,7 +90,7 @@ public abstract class AbstractMetric<T> implements IMetric<T>, Cloneable {
   /**
    * {@inheritDoc}
    *
-   * @see IMetric#getValue()
+   * @see azkaban.metric.IMetric#getValue()
    */
   @Override
   public T getValue() {
@@ -101,7 +101,7 @@ public abstract class AbstractMetric<T> implements IMetric<T>, Cloneable {
    * Method used to notify manager for a tracking event. Metric is free to call this method as per
    * implementation. Timer based or Azkaban events are the most common implementation {@inheritDoc}
    *
-   * @see IMetric#notifyManager()
+   * @see azkaban.metric.IMetric#notifyManager()
    */
   @Override
   public void notifyManager() {

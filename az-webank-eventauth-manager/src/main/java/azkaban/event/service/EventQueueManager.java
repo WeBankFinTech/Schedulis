@@ -25,14 +25,14 @@ public class EventQueueManager {
                 () -> eventQueueLoader.getEventTotal(search));
     }
 
-    public int getEventQueueTotal(String search, String... filterValue) {
+    public int getEventQueueTotal(String search, boolean authType, String... filterValue) {
         return exceptionHandler(0,
-                () -> eventQueueLoader.getEventTotal(search, filterValue));
+                () -> eventQueueLoader.getEventTotal(search, authType, filterValue));
     }
 
-    public int getEventQueueTotal4Page(String search, int index, int sum, String... filterValue) {
+    public int getEventQueueTotal4Page(String search, boolean authType, int index, int sum, String... filterValue) {
         return exceptionHandler(0,
-                () -> eventQueueLoader.getEventTotal4Page(search, index, sum, filterValue));
+                () -> eventQueueLoader.getEventTotal4Page(search, authType, index, sum, filterValue));
     }
 
     public List<EventQueue> findEventQueueList(String search, int pageNum, int pageSize) {
@@ -41,10 +41,10 @@ public class EventQueueManager {
                 () -> eventQueueLoader.findEventList(search, startIndex, pageSize));
     }
 
-    public List<EventQueue> findEventQueueList(String search, int pageNum, int pageSize, String... filterValue) {
+    public List<EventQueue> findEventQueueList(String search, int pageNum, int pageSize, boolean authType, String... filterValue) {
         int startIndex = (pageNum - 1) * pageSize;
         return exceptionHandler(new ArrayList<>(),
-                () -> eventQueueLoader.findEventList(search, startIndex, pageSize, filterValue));
+                () -> eventQueueLoader.findEventList(search, authType, startIndex, pageSize, filterValue));
     }
 
     private <T> T exceptionHandler(T defaultValue, CheckedSupplier<T, SQLException> supplier) {
@@ -59,4 +59,10 @@ public class EventQueueManager {
         return exceptionHandler(-1,
                 ()-> eventQueueLoader.queryMessageNum(filterValue));
     }
+    public List<EventQueue> queryMessage(String topic,String sender,String msgName,String msgBody,String isLike,Integer pageNo,Integer pageSize) {
+
+        return exceptionHandler(null,
+                ()-> eventQueueLoader.queryMessage(topic,sender,msgName,msgBody,isLike,pageNo,pageSize));
+    }
+
 }

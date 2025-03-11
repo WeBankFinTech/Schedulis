@@ -16,13 +16,13 @@
 
 package azkaban.jobtype.hiveutils.azkaban;
 
+import java.util.Properties;
+
 import azkaban.jobtype.hiveutils.HiveQueryExecutor;
 import azkaban.jobtype.hiveutils.HiveUtils;
 import azkaban.jobtype.hiveutils.azkaban.hive.actions.DropAllPartitionsAddLatest;
 import azkaban.jobtype.hiveutils.azkaban.hive.actions.ExecuteHiveQuery;
 import azkaban.jobtype.hiveutils.azkaban.hive.actions.UpdateTableLocationToLatest;
-
-import java.util.Properties;
 
 /**
  * Simple Java driver class to execute a Hive query provided via the Properties

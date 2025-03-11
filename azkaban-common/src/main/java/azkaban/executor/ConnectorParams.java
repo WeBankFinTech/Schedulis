@@ -25,15 +25,22 @@ public interface ConnectorParams {
   public static final String USER_PARAM = "user";
   public static final String TOKEN_PARAM = "token";
 
+
+  public static final String TOKEN_PARAM_NEW = "token_new";
+
+  public static final String TOKEN_PARAM_NEW_KEY = "wtss.new.secret";
+
   public static final String UPDATE_ACTION = "update";
   public static final String STATUS_ACTION = "status";
   public static final String EXECUTE_ACTION = "execute";
   public static final String CANCEL_ACTION = "cancel";
+  public static final String RESUME_BATCH_ACTION = "resumeBatch";
   public static final String SUPER_KILL_ACTION = "superKill";
   public static final String PAUSE_ACTION = "pause";
   public static final String FLOW_FAILED_ACTION = "flow_failed";
   public static final String RETRY_FAILED_JOBS_ACTION = "retry_failed_jobs";
   public static final String DISABLE_JOB_ACTION = "disable_job";
+  public static final String OPEN_JOB_ACTION = "open_job";
   public static final String SKIP_FAILED_JOBS_ACTION = "skip_failed_jobs";
   public static final String RESUME_ACTION = "resume";
   public static final String PING_ACTION = "ping";
@@ -42,6 +49,7 @@ public interface ConnectorParams {
   public static final String ATTACHMENTS_ACTION = "attachments";
   public static final String METADATA_ACTION = "metadata";
   public static final String RELOAD_JOBTYPE_PLUGINS_ACTION = "reloadJobTypePlugins";
+  public static final String RELOAD_EXEC_PROPS_ACTION = "reloadExecutorProperties";
   public static final String ACTIVATE = "activate";
   public static final String DEACTIVATE = "deactivate";
   public static final String GET_STATUS = "getStatus";
@@ -58,6 +66,8 @@ public interface ConnectorParams {
   public static final String MODIFY_ENABLE_JOBS = "enableJobs";
   public static final String MODIFY_PAUSE_JOBS = "pauseJobs";
   public static final String MODIFY_RESUME_JOBS = "resumeJobs";
+
+  String SET_JOB_FAILED = "setJobFailed";
   public static final String MODIFY_JOBS_LIST = "jobIds";
 
   public static final String START_PARAM = "start";

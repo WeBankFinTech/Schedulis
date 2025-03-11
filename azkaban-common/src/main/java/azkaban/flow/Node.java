@@ -19,6 +19,7 @@ package azkaban.flow;
 import azkaban.utils.Utils;
 import java.awt.geom.Point2D;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 public class Node {
@@ -39,6 +40,17 @@ public class Node {
 
   private ConditionOnJobStatus conditionOnJobStatus = ConditionOnJobStatus.ALL_SUCCESS;
 
+  private boolean isElasticNode = false;
+
+  private List<Integer> label;
+
+  private String comment;
+
+  /**
+   * 节点默认自动关闭
+   */
+  private boolean autoDisabled;
+
   public Node(final String id) {
     this.id = id;
   }
@@ -50,6 +62,38 @@ public class Node {
     this.id = clone.id;
     this.propsSource = clone.propsSource;
     this.jobSource = clone.jobSource;
+  }
+
+  public boolean isAutoDisabled() {
+    return autoDisabled;
+  }
+
+  public void setAutoDisabled(boolean autoDisabled) {
+    this.autoDisabled = autoDisabled;
+  }
+
+  public String getComment() {
+    return comment;
+  }
+
+  public void setComment(String comment) {
+    this.comment = comment;
+  }
+
+  public List<Integer> getLabel() {
+    return label;
+  }
+
+  public void setLabel(List<Integer> label) {
+    this.label = label;
+  }
+
+  public boolean isElasticNode() {
+    return isElasticNode;
+  }
+
+  public void setElasticNode(boolean elasticNode) {
+    isElasticNode = elasticNode;
   }
 
   public static Node fromObject(final Object obj) {
@@ -66,7 +110,13 @@ public class Node {
     final String condition = (String) mapObj.get("condition");
     final ConditionOnJobStatus conditionOnJobStatus = ConditionOnJobStatus
         .fromString((String) mapObj.get("conditionOnJobStatus"));
+    final List<Integer> label = (List<Integer>) mapObj.get("label");
+    final String comment = (String) mapObj.get("comment");
+    final boolean autoDisabled = (boolean) mapObj.getOrDefault("autoDisabled", false);
 
+    node.setAutoDisabled(autoDisabled);
+    node.setComment(comment);
+    node.setLabel(label);
     node.setJobSource(jobSource);
     node.setPropsSource(propSource);
     node.setType(jobType);
@@ -74,7 +124,7 @@ public class Node {
     node.setEmbeddedFlowId(embeddedFlowId);
     node.setCondition(condition);
     node.setConditionOnJobStatus(conditionOnJobStatus);
-
+    node.setElasticNode((boolean)mapObj.getOrDefault("isElasticNode", false));
     final Integer expectedRuntime = (Integer) mapObj.get("expectedRuntime");
     if (expectedRuntime != null) {
       node.setExpectedRuntimeSec(expectedRuntime);
@@ -198,7 +248,10 @@ public class Node {
     objMap.put("layout", layoutInfo);
     objMap.put("condition", this.condition);
     objMap.put("conditionOnJobStatus", this.conditionOnJobStatus);
-
+    objMap.put("isElasticNode", this.isElasticNode);
+    objMap.put("label", this.label);
+    objMap.put("comment", this.comment);
+    objMap.put("autoDisabled", this.autoDisabled);
     return objMap;
   }
 

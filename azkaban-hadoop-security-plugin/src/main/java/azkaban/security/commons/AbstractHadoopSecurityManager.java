@@ -17,13 +17,12 @@
 package azkaban.security.commons;
 
 import azkaban.utils.Props;
-import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.security.UserGroupInformation;
-import org.slf4j.Logger;
-
 import java.io.File;
 import java.io.IOException;
 import java.util.Properties;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.security.UserGroupInformation;
+import org.slf4j.Logger;
 
 public abstract class AbstractHadoopSecurityManager {
 

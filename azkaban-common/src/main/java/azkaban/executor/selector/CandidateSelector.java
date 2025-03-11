@@ -16,12 +16,11 @@
 
 package azkaban.executor.selector;
 
-import org.slf4j.LoggerFactory;
-import org.slf4j.Logger;
-
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Implementation of the CandidateSelector.
@@ -31,10 +30,10 @@ import java.util.Collections;
  */
 public class CandidateSelector<K extends Comparable<K>, V> implements Selector<K, V> {
 
-  private static final Logger logger = LoggerFactory.getLogger(CandidateComparator.class);
+  private static final Logger logger = LoggerFactory.getLogger(AbstractCandidateComparator.class);
 
-  private final CandidateFilter<K, V> filter;
-  private final CandidateComparator<K> comparator;
+  private final AbstractCandidateFilter<K, V> filter;
+  private final AbstractCandidateComparator<K> comparator;
 
   /**
    * constructor of the class.
@@ -43,8 +42,8 @@ public class CandidateSelector<K extends Comparable<K>, V> implements Selector<K
    * @param comparator CandidateComparator object to be used to find the best suit candidate from
    * the filtered list.
    */
-  public CandidateSelector(final CandidateFilter<K, V> filter,
-      final CandidateComparator<K> comparator) {
+  public CandidateSelector(final AbstractCandidateFilter<K, V> filter,
+      final AbstractCandidateComparator<K> comparator) {
     this.filter = filter;
     this.comparator = comparator;
   }
@@ -54,7 +53,7 @@ public class CandidateSelector<K extends Comparable<K>, V> implements Selector<K
 
     // shortcut if the candidateList is empty.
     if (null == candidateList || candidateList.size() == 0) {
-      logger.error("failed to getNext candidate as the passed candidateList is null or empty.");
+      logger.warn("failed to getNext candidate as the passed candidateList is null or empty.");
       return null;
     }
 
@@ -77,7 +76,7 @@ public class CandidateSelector<K extends Comparable<K>, V> implements Selector<K
 
     logger.debug(String.format("candidate count after filtering: %s", filteredList.size()));
     if (filteredList.size() == 0) {
-      logger.debug("failed to select candidate as the filtered candidate list is empty.");
+      logger.warn("failed to select candidate as the filtered candidate list is empty.");
       return null;
     }
 

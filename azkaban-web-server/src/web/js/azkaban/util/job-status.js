@@ -17,7 +17,7 @@
 var statusList = ["FAILED", "FAILED_FINISHING", "SUCCEEDED", "RUNNING",
   "WAITING", "KILLED", "DISABLED", "READY", "CANCELLED", "UNKNOWN", "PAUSED",
   "SKIPPED", "QUEUED", "FAILED_SUCCEEDED", "FAILED_WAITING", "FAILED_SKIPPED",
-  "FAILED_RETRYING", "RETRIED_SUCCEEDED"];
+  "FAILED_RETRYING", "RETRIED_SUCCEEDED", "SYSTEM_PAUSED", "FAILED_SKIPPED_DISABLED"];
 var statusStringMap = {
   "QUEUED": "Queued",
   "SKIPPED": "Skipped",
@@ -38,5 +38,8 @@ var statusStringMap = {
   "FAILED_WAITING": "Failed waiting",
   "FAILED_SKIPPED": "Failed skipped",
   "FAILED_RETRYING": "Failed retrying",
-  "RETRIED_SUCCEEDED": "Retried succeeded"
+  "RETRIED_SUCCEEDED": "Retried succeeded",
+  "SYSTEM_PAUSED": "System paused",
+  "FAILED_SKIPPED_DISABLED": "Failed skipped disabled",
+  "PRE_FAILED": "Pre failed",
 };

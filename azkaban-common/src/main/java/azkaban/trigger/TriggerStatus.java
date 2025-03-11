@@ -16,8 +16,12 @@
 
 package azkaban.trigger;
 
+/**
+ * @author WTSS
+ */
+
 public enum TriggerStatus {
-  READY(10), PAUSED(20), EXPIRED(30);
+  READY(10), PAUSED(20), EXPIRED(30), INVALID(40);
 
   private final int numVal;
 

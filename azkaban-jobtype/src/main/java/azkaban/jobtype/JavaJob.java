@@ -16,16 +16,21 @@
 
 package azkaban.jobtype;
 
+import java.io.File;
+
+import azkaban.utils.RSAUtils;
+import com.mysql.jdbc.Driver;
+import java.util.List;
+import java.util.StringTokenizer;
+
+
+import com.alibaba.druid.pool.DruidDataSource;
+import org.slf4j.Logger;
+
 import azkaban.flow.CommonJobProperties;
 import azkaban.jobExecutor.JavaProcessJob;
 import azkaban.security.commons.SecurityUtils;
 import azkaban.utils.Props;
-import bsp.encrypt.EncryptUtil;
-import org.slf4j.Logger;
-
-import java.io.File;
-import java.util.List;
-import java.util.StringTokenizer;
 
 public class JavaJob extends JavaProcessJob {
 
@@ -80,7 +85,7 @@ public class JavaJob extends JavaProcessJob {
     classPath.add(getSourcePathFromClass(Props.class));
     if (jobProps.get("type").equalsIgnoreCase("rmbsender")) {
       classPath.add(getSourcePathFromClass(SecurityUtils.class));
-      classPath.add(getSourcePathFromClass(EncryptUtil.class));
+      classPath.add(getSourcePathFromClass(RSAUtils.class));
     }
 
     classPath.add(HadoopConfigurationInjector.getPath(getJobProps(),

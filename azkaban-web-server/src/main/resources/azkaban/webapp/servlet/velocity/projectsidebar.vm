@@ -29,8 +29,37 @@
   <hr>
   <p><strong>$createTime</strong> $utils.formatDate($project.createTimestamp)</p>
   <p><strong>$lastModifyTime</strong> $utils.formatDate($project.lastModifiedTimestamp)</p>
-  <p><strong>$proCreator</strong> $project.createUser</p>
-
+  <p><strong>$fromType</strong> $project.fromType</p>
+  <p><strong>$proCreator</strong> <span id="project-create-user">$project.createUser</span></p>
+  <div id="project-create-user-form" class="editable-form">
+    <div class="input-group">
+      <input type="text" required maxlength="200" class="form-control input-sm" id="project-create-user-edit"
+             placeholder="enter a new project create user">
+      <span class="input-group-btn">
+                  <button class="btn btn-primary btn-sm" type="button" id="project-create-user-btn">$save</button>
+                </span>
+    </div>
+  </div>
+  <p><strong>$proPrincipal</strong> <span id="project-principal" style="display: inline-block; min-width: 80px; height: 16px; word-break: break-all;">$project.principal</span></p>
+  <div id="project-principal-form" class="editable-form">
+    <div class="input-group">
+      <input type="text" required maxlength="200" class="form-control input-sm" id="project-principal-edit"
+             placeholder="enter a new project principal">
+      <span class="input-group-btn">
+                  <button class="btn btn-primary btn-sm" type="button" id="project-principal-btn">$save</button>
+                </span>
+    </div>
+  </div>
+  <p><strong>$proJobLimit</strong> <span id="project-job-limit">$project.jobExecuteLimit</span></p>
+  <div id="project-job-limit-form" class="editable-form">
+    <div class="input-group">
+      <input type="text" required maxlength="10" class="form-control input-sm" id="project-job-limit-edit"
+             placeholder="enter job execute limit count">
+      <span class="input-group-btn">
+        <button class="btn btn-primary btn-sm" type="button" id="project-job-limit-btn">$save</button>
+      </span>
+    </div>
+  </div>
   <hr>
 
   <p><strong>$programManager</strong> $admins</p>

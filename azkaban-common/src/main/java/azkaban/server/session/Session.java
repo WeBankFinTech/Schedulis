@@ -18,6 +18,7 @@ package azkaban.server.session;
 import azkaban.user.User;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.UUID;
 
 /**
  * Container for the session, mapping session id to user in map
@@ -36,6 +37,7 @@ public class Session {
     this.user = user;
     this.sessionId = sessionId;
     this.ip = ip;
+    this.setSessionData("csrfToken", UUID.randomUUID().toString());
   }
 
   /**

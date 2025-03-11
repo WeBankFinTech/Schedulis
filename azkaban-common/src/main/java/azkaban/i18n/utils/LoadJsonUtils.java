@@ -1,8 +1,8 @@
 package azkaban.i18n.utils;
 
 import azkaban.utils.GsonUtils;
-import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.slf4j.Logger;
 
 import java.io.BufferedReader;
 import java.io.IOException;

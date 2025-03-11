@@ -27,6 +27,7 @@ import java.io.OutputStream;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
+import java.nio.file.Files;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.*;
@@ -34,19 +35,9 @@ import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
 import java.util.zip.ZipOutputStream;
 import org.apache.commons.io.IOUtils;
+import org.joda.time.*;
 import org.slf4j.LoggerFactory;
 import org.slf4j.Logger;
-import org.joda.time.DateTime;
-import org.joda.time.DateTimeZone;
-import org.joda.time.Days;
-import org.joda.time.DurationFieldType;
-import org.joda.time.Hours;
-import org.joda.time.Minutes;
-import org.joda.time.Months;
-import org.joda.time.ReadablePeriod;
-import org.joda.time.Seconds;
-import org.joda.time.Weeks;
-import org.joda.time.Years;
 import org.quartz.CronExpression;
 import org.quartz.TriggerUtils;
 import org.quartz.impl.triggers.CronTriggerImpl;
@@ -134,9 +125,9 @@ public class Utils {
   }
 
   public static File createTempDir(final File parent) {
-    final File temp = new File(parent, Integer.toString(Math.abs(new Random().nextInt()) % 100000000));
-    boolean delete = temp.delete();
-    boolean mkdir = temp.mkdir();
+    final File temp = new File(parent, Integer.toString(Math.abs(new Random().nextInt(Integer.MAX_VALUE)) % 100000000));
+    temp.delete();
+    temp.mkdir();
     temp.deleteOnExit();
     return temp;
   }
@@ -147,12 +138,13 @@ public class Utils {
     try {
       zipFile("", input, zOut);
     } finally {
-      zOut.close();
+      IOUtils.closeQuietly(zOut);
+      IOUtils.closeQuietly(out);
     }
   }
 
   public static void zipFolderContent(final File folder, final File output)
-      throws IOException {
+          throws IOException {
     final FileOutputStream out = new FileOutputStream(output);
     final ZipOutputStream zOut = new ZipOutputStream(out);
     try {
@@ -163,28 +155,29 @@ public class Utils {
         }
       }
     } finally {
-      zOut.close();
+      IOUtils.closeQuietly(zOut);
+      IOUtils.closeQuietly(out);
     }
   }
 
   private static void zipFile(final String path, final File input, final ZipOutputStream zOut)
-      throws IOException {
+          throws IOException {
     if (input.isDirectory()) {
       final File[] files = input.listFiles();
       if (files != null) {
         for (final File f : files) {
           final String childPath =
-              path + input.getName() + (f.isDirectory() ? "/" : "");
+                  path + input.getName() + (f.isDirectory() ? "/" : "");
           zipFile(childPath, f, zOut);
         }
       }
     } else {
       final String childPath =
-          path + (path.length() > 0 ? "/" : "") + input.getName();
+              path + (path.length() > 0 ? "/" : "") + input.getName();
       final ZipEntry entry = new ZipEntry(childPath);
       zOut.putNextEntry(entry);
       final InputStream fileInputStream =
-          new BufferedInputStream(new FileInputStream(input));
+              new BufferedInputStream(new FileInputStream(input));
       try {
         IOUtils.copy(fileInputStream, zOut);
       } finally {
@@ -200,42 +193,40 @@ public class Utils {
       final File newFile = new File(dest, entry.getName());
       if (!newFile.getCanonicalPath().startsWith(dest.getCanonicalPath())) {
         throw new IOException(
-            "Extracting zip entry would have resulted in a file outside the specified destination"
-                + " directory.");
+                "Extracting zip entry would have resulted in a file outside the specified destination"
+                        + " directory.");
       }
 
       if (entry.isDirectory()) {
         newFile.mkdirs();
       } else {
         newFile.getParentFile().mkdirs();
-        final InputStream src = source.getInputStream(entry);
-        try {
+
+        try (final InputStream src = source.getInputStream(entry)) {
           final OutputStream output =
-              new BufferedOutputStream(new FileOutputStream(newFile));
+                  new BufferedOutputStream(new FileOutputStream(newFile));
           try {
             IOUtils.copy(src, output);
           } finally {
-            output.close();
+            IOUtils.closeQuietly(output);
           }
-        } finally {
-          src.close();
         }
       }
     }
   }
 
   public static String flattenToString(final Collection<?> collection,
-      final String delimiter) {
-    final StringBuffer buffer = new StringBuffer();
+                                       final String delimiter) {
+    final StringBuilder builder = new StringBuilder();
     for (final Object obj : collection) {
-      buffer.append(obj.toString());
-      buffer.append(delimiter);
+      builder.append(obj.toString());
+      builder.append(delimiter);
     }
 
-    if (buffer.length() > 0) {
-      buffer.setLength(buffer.length() - 1);
+    if (builder.length() > 0) {
+      builder.setLength(builder.length() - 1);
     }
-    return buffer.toString();
+    return builder.toString();
   }
 
   public static Double convertToDouble(final Object obj) {
@@ -302,7 +293,7 @@ public class Utils {
    * @return The constructed object
    */
   public static Object callConstructor(final Class<?> c, final Class<?>[] argTypes,
-      final Object[] args) {
+                                       final Object[] args) {
     try {
       final Constructor<?> cons = c.getConstructor(argTypes);
       return cons.newInstance(args);
@@ -352,9 +343,9 @@ public class Utils {
   }
 
   public static Object invokeStaticMethod(final ClassLoader loader, final String className,
-      final String methodName, final Object... args) throws ClassNotFoundException,
-      SecurityException, NoSuchMethodException, IllegalArgumentException,
-      IllegalAccessException, InvocationTargetException {
+                                          final String methodName, final Object... args) throws ClassNotFoundException,
+          SecurityException, NoSuchMethodException, IllegalArgumentException,
+          IllegalAccessException, InvocationTargetException {
     final Class<?> clazz = loader.loadClass(className);
 
     final Class<?>[] argTypes = new Class[args.length];
@@ -368,7 +359,7 @@ public class Utils {
   }
 
   public static void copyStream(final InputStream input, final OutputStream output)
-      throws IOException {
+          throws IOException {
     final byte[] buffer = new byte[1024];
     int bytesRead;
     while ((bytesRead = input.read(buffer)) != -1) {
@@ -379,12 +370,12 @@ public class Utils {
   public static ReadablePeriod parsePeriodString(final String periodStr) {
     final ReadablePeriod period;
     final char periodUnit = periodStr.charAt(periodStr.length() - 1);
-    if (periodStr.equals("null") || periodUnit == 'n') {
+    if ("null".equals(periodStr) || periodUnit == 'n') {
       return null;
     }
 
     final int periodInt =
-        Integer.parseInt(periodStr.substring(0, periodStr.length() - 1));
+            Integer.parseInt(periodStr.substring(0, periodStr.length() - 1));
     switch (periodUnit) {
       case 'y':
         period = Years.years(periodInt);
@@ -409,7 +400,7 @@ public class Utils {
         break;
       default:
         throw new IllegalArgumentException("Invalid schedule period unit '"
-            + periodUnit);
+                + periodUnit);
     }
 
     return period;
@@ -459,8 +450,8 @@ public class Utils {
 
     final long size;
     if (strMemSize.endsWith("g") || strMemSize.endsWith("G")
-        || strMemSize.endsWith("m") || strMemSize.endsWith("M")
-        || strMemSize.endsWith("k") || strMemSize.endsWith("K")) {
+            || strMemSize.endsWith("m") || strMemSize.endsWith("M")
+            || strMemSize.endsWith("k") || strMemSize.endsWith("K")) {
       final String strSize = strMemSize.substring(0, strMemSize.length() - 1);
       size = Long.parseLong(strSize);
     } else {
@@ -491,15 +482,14 @@ public class Utils {
    * future.
    */
   public static CronExpression parseCronExpression(final String cronExpression,
-      final DateTimeZone timezone) {
+                                                   final DateTimeZone timezone) {
     if (cronExpression != null) {
       try {
         final CronExpression ce = new CronExpression(cronExpression);
         ce.setTimeZone(TimeZone.getTimeZone(timezone.getID()));
         return ce;
       } catch (final ParseException pe) {
-        logger.error("this cron expression {" + cronExpression + "} can not be parsed. "
-            + "Please Check Quartz Cron Syntax.");
+        logger.error("this cron expression [{}] can not be parsed. Please Check Quartz Cron Syntax.", cronExpression);
       }
       return null;
     } else {
@@ -511,7 +501,7 @@ public class Utils {
    * @return if the cronExpression is valid or not.
    */
   public static boolean isCronExpressionValid(final String cronExpression,
-      final DateTimeZone timezone) {
+                                              final DateTimeZone timezone) {
     if (!CronExpression.isValidExpression(cronExpression)) {
       return false;
     }
@@ -533,7 +523,7 @@ public class Utils {
     try {
       cronTriggerImpl.setCronExpression(cron);
     } catch (ParseException pe){
-      logger.error("parsing cron expression falied: {}", pe);
+      logger.error("parsing cron expression falied:", pe);
       return timeList;
     }
     List<Date> dates = TriggerUtils.computeFireTimesBetween(cronTriggerImpl, null, startDate, endDate);
@@ -541,8 +531,30 @@ public class Utils {
     for(int i = 0; i < dates.size(); i++){
       timeList.add(dateFormat.format(dates.get(i)));
     }
-    logger.debug("time: " + timeList);
+    logger.debug("time: {}" , timeList);
     return timeList;
+  }
+
+  public static boolean checkScheduleInterval(String cron, int topN, int interval) {
+    CronTriggerImpl cronTriggerImpl = new CronTriggerImpl();
+    try {
+      cronTriggerImpl.setCronExpression(cron);
+    } catch (ParseException pe){
+      logger.error("parsing cron expression falied.", pe);
+      return true;
+    }
+    List<Date> dateList = TriggerUtils.computeFireTimes(cronTriggerImpl, null, topN);
+    if(dateList.size() <= 1) {
+      return false;
+    }
+    long intervalTime = interval * 60 * 1000L;
+    for(int i = 0; i < dateList.size() - 1; i++){
+      if((dateList.get(i + 1).getTime() - dateList.get(i).getTime()) <= intervalTime){
+        logger.error("There are scheduling tasks with intervals of less than {} minutes.", interval);
+        return true;
+      }
+    }
+    return false;
   }
 
   /**

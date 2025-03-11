@@ -75,16 +75,7 @@ public class MD5Utils {
 
   }
 
-  public static void main(String[] args) {
-    String userId = "wtss_superadmin";
-    String inputPwd = "***REMOVED***";
-    String md5Pwd = md5(md5(inputPwd) + userId);
-    System.out.println("加密后的密码: " + md5Pwd);
 
-    boolean pwdAuth = authenticatePassword(inputPwd, userId, md5Pwd);
-
-    System.out.println(pwdAuth);
-  }
 
 
 }

@@ -435,6 +435,9 @@ public class JdbcFlowTriggerInstanceLoaderImpl implements FlowTriggerInstanceLoa
     return triggerInstance;
   }
 
+  /**
+   * the method of sorting
+   */
   private enum SORT_MODE {
     SORT_ON_START_TIME_DESC,
     SORT_ON_START_TIME_ASC

@@ -18,18 +18,18 @@
 
 <div class="container-full container-fill" id="graphView" style="margin-top: 20px">
   <div class="graph-sidebar-open" id="open-joblist-btn">
-    <span class="glyphicon glyphicon-th-list" title="Open Job List Panel"></span>
+    <span class="glyphicon glyphicon-th-list" title="${expandJobListPannel}"></span>
   </div>
   <div class="graph-sidebar-open switching-flow-btn" id="switching-flow-btn" >
-    <span class="glyphicon glyphicon-retweet" title="Flow Switching"></span>
+    <span class="glyphicon glyphicon-retweet" title="${collapseExpandNodeName}"></span>
   </div>
   <div class="graph-sidebar-float">
     <div class="panel panel-default" id="joblist-panel">
       <div class="panel-heading">
-        <div class="graph-sidebar-close" id="close-btn" title="Close Panel"><span
+        <div class="graph-sidebar-close" id="close-btn" title="${closePannel}"><span
             class="glyphicon glyphicon-remove"></span></div>
         <div class="graph-sidebar-search">
-          <input id="filter" type="text" placeholder=$jobFilter class="form-control input-sm">
+          <input id="filter" type="text" placeholder="${taskFilter}" class="form-control input-sm">
         </div>
       </div>
       <div id="joblist" class="graph-sidebar-list"></div>

@@ -27,15 +27,15 @@
       var successMessage = null;
       var langType = "${currentlangType}";
     </script>
-    <script type="text/javascript" src="/js/azkaban/i18n-config.js?version=1.43.0"></script>
-    <script type="text/javascript" src="/js/azkaban/util/common.js?version=1.43.0"></script>
-    <script type="text/javascript" src="/js/azkaban/util/ajax.js?version=1.43.0"></script>
-    <script type="text/javascript" src="/js/jquery/jquery.tablesorter.js?version=1.43.0"></script>
-    <script type="text/javascript" src="/js/azkaban/util/utils.js?version=1.43.0"></script>
-    <script type="text/javascript" src="/js/azkaban/util/job-status.js?version=1.43.0"></script>
-    <script type="text/javascript" src="/js/raphael.min.js?version=1.43.0"></script>
-    <script type="text/javascript" src="/js/morris.min.js?version=1.43.0"></script>
-    <link href="/homepage/css/home-page.css?version=1.43.0" rel="stylesheet">
+    <script type="text/javascript" src="/js/azkaban/i18n-config.js?version=1.49.0"></script>
+    <script type="text/javascript" src="/js/azkaban/util/common.js?version=1.49.0"></script>
+    <script type="text/javascript" src="/js/azkaban/util/ajax.js?version=1.49.0"></script>
+    <script type="text/javascript" src="/js/jquery/jquery.tablesorter.js?version=1.49.0"></script>
+    <script type="text/javascript" src="/js/azkaban/util/utils.js?version=1.49.0"></script>
+    <script type="text/javascript" src="/js/azkaban/util/job-status.js?version=1.49.0"></script>
+    <script type="text/javascript" src="/js/raphael.min.js?version=1.49.0"></script>
+    <script type="text/javascript" src="/js/morris.min.js?version=1.49.0"></script>
+    <link href="/homepage/css/home-page.css?version=1.49.0" rel="stylesheet">
 
   </head>
   <body>
@@ -122,7 +122,7 @@
       </div><!-- /row -->
 
   </div><!-- /container-full -->
-  <script type="text/javascript" src="/js/echarts/echarts.min.js?version=1.43.0"></script>
-<script type="text/javascript" src="/homepage/js/home-page.js?version=1.43.0"></script>
+  <script type="text/javascript" src="/js/echarts/echarts.min.js?version=1.49.0"></script>
+<script type="text/javascript" src="/homepage/js/home-page.js?version=1.49.0"></script>
   </body>
 </html>

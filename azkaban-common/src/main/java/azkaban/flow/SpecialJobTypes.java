@@ -23,4 +23,5 @@ public class SpecialJobTypes {
 
   public static final String EMBEDDED_FLOW_TYPE = "flow";
   public static final String FLOW_NAME = "flow.name";
+  public static final String ELASTIC_FLOW_TYPE = "elasticflow";
 }

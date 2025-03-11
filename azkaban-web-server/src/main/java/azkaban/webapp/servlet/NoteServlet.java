@@ -16,6 +16,7 @@
  */
 package azkaban.webapp.servlet;
 
+import azkaban.i18n.utils.LoadJsonUtils;
 import azkaban.server.HttpRequestUtils;
 import azkaban.server.session.Session;
 import azkaban.user.Permission.Type;
@@ -23,7 +24,7 @@ import azkaban.user.User;
 import azkaban.webapp.AzkabanWebServer;
 import org.slf4j.LoggerFactory;
 import org.slf4j.Logger;
-import com.webank.wedatasphere.schedulis.common.i18nutils.LoadJsonUtils;
+
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
@@ -32,7 +33,7 @@ import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
-public class NoteServlet extends LoginAbstractAzkabanServlet {
+public class NoteServlet extends AbstractLoginAzkabanServlet {
 
   private static final long serialVersionUID = 1L;
   private static final Logger logger = LoggerFactory.getLogger(NoteServlet.class);
@@ -97,9 +98,9 @@ public class NoteServlet extends LoginAbstractAzkabanServlet {
     final HashMap<String, Object> ret = new HashMap<>();
     final String ajaxName = getParam(req, "ajax");
     try {
-      if (ajaxName.equals("addNote")) {
+      if ("addNote".equals(ajaxName)) {
         ajaxAddNotes(req, ret);
-      } else if (ajaxName.equals("removeNote")) {
+      } else if ("removeNote".equals(ajaxName)) {
         ajaxRemoveNotes(ret);
       } else {
         ret.put("error", "Can not find the ajax operation");

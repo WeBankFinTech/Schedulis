@@ -21,7 +21,7 @@
     <div class="row">
       <div class="wb-header-title" title="${jobid}">
         <h1 style="overflow: hidden;text-overflow: ellipsis;">
-          <a href="${context}/executor?execid=${execid}&job=${jobid}">$job
+          <a href="javascript:void(0);" onclick="checkHrefUrlXss('/executor?execid=${execid}&job=${jobid}')">$job
             <small>$jobid</small>
           </a>
         </h1>
@@ -30,14 +30,14 @@
         <div class="pull-right header-form">
           #if ($jobLinkUrl)
             #if ($jobType == "spark")
-              <a href="$jobLinkUrl" target="_blank" class="btn btn-primary btn-sm"
+              <a href="javascript:void(0);" onclick="checkHrefUrlXss('$jobLinkUrl')" target="_blank" class="btn btn-primary btn-sm"
                  id="jobLinkUrl">Spark Job Log</a>
             #else
-              <a href="$jobLinkUrl" target="_blank" class="btn btn-primary btn-sm"
+              <a href="javascript:void(0);" onclick="checkHrefUrlXss('$jobLinkUrl')" target="_blank" class="btn btn-primary btn-sm"
                  id="jobLinkUrl">Hadoop Job Log</a>
             #end
           #end
-          <a href="${context}/manager?project=${projectName}&flow=${parentflowid}&job=$jobname"
+          <a href="javascript:void(0);" onclick="checkHrefUrlXss('/manager?project=${projectName}&flow=${parentflowid}&job=$newJobName')"
              class="btn btn-info btn-sm">$jobParam</a>
         </div>
       </div>
@@ -47,12 +47,12 @@
 <div class="page-breadcrumb">
   <div class="container-full" style="word-break:break-all;">
     <ol class="breadcrumb">
-      <li><a href="${context}/manager?project=${projectName}"><strong>$program</strong> $projectName
+      <li><a href="javascript:void(0);" onclick="checkHrefUrlXss('/manager?project=${projectName}')"><strong>$program</strong> $projectName
       </a></li>
       <li><a
-          href="${context}/manager?project=${projectName}&flow=${flowid}"><strong>$flow</strong> $flowid
+          href="javascript:void(0);" onclick="checkHrefUrlXss('/manager?project=${projectName}&flow=${flowid}')"><strong>$flow</strong> $flowid
       </a></li>
-      <li><a href="${context}/executor?execid=${execid}#jobslist"><strong>$execId</strong> $execid
+      <li><a href="javascript:void(0);" onclick="checkHrefUrlXss('/executor?execid=${execid}#jobslist')"><strong>$execId</strong> $execid
       </a></li>
       <li class="active"><strong>$job</strong> $jobid</li>
     </ol>
@@ -68,12 +68,13 @@
   <ul class="nav nav-tabs nav-sm" id="headertabs">
     #if ($current_page == "executing")
       <li class="active" id="jobLogViewLink"><a href="#logs">$jobLog</a></li>
+      <li id="diagnosticLogViewLink"><a href="#diagnosticLogs">$diagnosticLog</a></li>
     #else
-      <li id="jobLogViewLink"><a href="${context}/executor?execid=${execid}&job=${jobid}#logs">$jobLog</a></li>
+      <li id="jobLogViewLink"><a href="javascript:void(0);" onclick="checkHrefUrlXss('/executor?execid=${execid}&job=${jobid}#logs')">$jobLog</a></li>
     #end
     #foreach ($jobViewerPlugin in $jobViewerPlugins)
       <li#if($current_page == $jobViewerPlugin.pluginName) class="active"#end><a
-          href="$!context/${jobViewerPlugin.pluginPath}?execid=${execid}&jobid=${jobid}">$jobViewerPlugin.pluginName</a>
+          href="javascript:void(0);" onclick="checkHrefUrlXss('$!context/${jobViewerPlugin.pluginPath}?execid=${execid}&jobid=${jobid}')">$jobViewerPlugin.pluginName</a>
       </li>
     #end
   </ul>

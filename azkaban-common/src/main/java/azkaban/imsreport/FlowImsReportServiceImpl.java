@@ -1,21 +1,24 @@
 package azkaban.imsreport;
 
 import azkaban.Constants;
-import azkaban.executor.*;
+import azkaban.executor.DmsBusPath;
+import azkaban.executor.ExecutableFlow;
+import azkaban.executor.ExecutableFlowBase;
+import azkaban.executor.ExecutableNode;
+import azkaban.executor.Status;
 import azkaban.flow.FlowExecuteType;
 import azkaban.project.entity.FlowBusiness;
 import azkaban.utils.HttpUtils;
 import azkaban.utils.Props;
+import java.util.Date;
 import org.apache.commons.collections.CollectionUtils;
 import org.slf4j.Logger;
-
-import java.util.Date;
 
 public class FlowImsReportServiceImpl extends ImsReportService {
 
   public FlowImsReportServiceImpl(Props flowProps, Props pluginProps, Props serverProps,
-      Logger logger, ExecutableNode node,
-      FlowBusiness flowBusiness) {
+                                  Logger logger, ExecutableNode node,
+                                  FlowBusiness flowBusiness) {
     super(flowProps, pluginProps, serverProps, logger, flowBusiness);
     this.flow = (ExecutableFlowBase) node;
   }
@@ -54,7 +57,7 @@ public class FlowImsReportServiceImpl extends ImsReportService {
   void setExecuteType() {
     String executeType = "";
     if (flow.getFlowType() == FlowExecuteType.TIMED_SCHEDULING.getNumVal()
-        || flow.getFlowType() == FlowExecuteType.EVENT_SCHEDULE.getNumVal()) {
+            || flow.getFlowType() == FlowExecuteType.EVENT_SCHEDULE.getNumVal()) {
       executeType = "调度执行";
     } else {
       executeType = flow.getExecutionOptions().getExecuteType();
@@ -65,14 +68,14 @@ public class FlowImsReportServiceImpl extends ImsReportService {
   @Override
   boolean checkJobCode() {
     imsReport.setJobCode(DmsBusPath
-        .createJobCode(serverProps.get(Constants.JobProperties.JOB_BUS_PATH_CODE_PREFIX), flow.getProjectName(),
-            flow.getFlowId()));
+            .createJobCode(serverProps.get(Constants.JobProperties.JOB_BUS_PATH_CODE_PREFIX), flow.getProjectName(),
+                    flow.getFlowId()));
     if (flow instanceof ExecutableFlow) {
       imsReport.setDmsPath(CollectionUtils.isNotEmpty(((ExecutableFlow) flow).getJobCodeList()));
     } else {
       if (CollectionUtils.isEmpty(HttpUtils
-          .getBusPathFromDBOrDms(serverProps, imsReport.getJobCode(), 1, flow.getExecutionId(),
-              null, logger))) {
+              .getBusPathFromDBOrDms(serverProps, imsReport.getJobCode(), 1, flow.getExecutionId(),
+                      null, logger))) {
         return false;
       } else {
         imsReport.setDmsPath(true);

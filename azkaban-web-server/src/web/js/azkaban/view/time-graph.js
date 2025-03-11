@@ -71,6 +71,8 @@ azkaban.TimeGraphView = Backbone.View.extend({
     if (data.length == 0) {
       $(this.graphContainer).hide();
       return;
+    } else {
+        $(this.graphContainer).show();
     }
 
     var graphDiv = document.createElement('div');
@@ -119,6 +121,10 @@ azkaban.TimeGraphView = Backbone.View.extend({
       }
     };
 
+    var xLabelFormatCallback = function (x) {
+      return dateFormat("mm-dd/HH:MM",new Date(x));
+    };
+
     var yLabelFormatCallback = function (y) {
       var seconds = y / 1000.0;
       return seconds.toString() + " s";
@@ -145,6 +151,7 @@ azkaban.TimeGraphView = Backbone.View.extend({
       // ykeys: ['duration', 'moyenne'],
       // labels: ['Duration', 'Moyenne'],
       lineColors: lineColorsCallback,
+      xLabelFormat: xLabelFormatCallback,
       yLabelFormat: yLabelFormatCallback,
       hideHover:'auto',
       hoverCallback: hoverCallback,

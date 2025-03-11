@@ -16,9 +16,9 @@
 
 package azkaban.execapp;
 
-import java.io.File;
-
 import static com.google.common.base.Preconditions.checkArgument;
+
+import java.io.File;
 
 
 public class ProjectVersion implements Comparable<ProjectVersion> {

@@ -1,14 +1,16 @@
 package azkaban.distributelock;
 
-import azkaban.db.DatabaseOperator;
 import org.apache.commons.dbutils.ResultSetHandler;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
-import javax.inject.Inject;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.UUID;
+
+import javax.inject.Inject;
+
+import azkaban.db.DatabaseOperator;
+import org.slf4j.LoggerFactory;
+import org.slf4j.Logger;
 
 /**
  * @author georgeqiao

@@ -2,12 +2,11 @@ package azkaban.distributelock;
 
 import azkaban.db.DatabaseOperator;
 import azkaban.utils.HttpUtils;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
+import java.util.Objects;
 import javax.inject.Inject;
 import javax.inject.Singleton;
-import java.util.Objects;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * @author georgeqiao

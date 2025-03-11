@@ -16,23 +16,26 @@
 
 package azkaban.trigger;
 
-import azkaban.utils.JSONUtils;
-import org.joda.time.DateTime;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import static java.util.Objects.requireNonNull;
 
+import azkaban.flow.NoSuchResourceException;
+import azkaban.scheduler.MissedScheduleManager;
+import azkaban.trigger.builtin.ExecuteFlowAction;
+import azkaban.utils.JSONUtils;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-
-import static java.util.Objects.requireNonNull;
+import org.joda.time.DateTime;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 
 public class Trigger {
 
   private static final Logger logger = LoggerFactory.getLogger(Trigger.class);
   private static ActionTypeLoader actionTypeLoader;
+  private static MissedScheduleManager missedScheduleManager;
   private final long submitTime;
   private final String submitUser;
   private final String source;
@@ -47,18 +50,30 @@ public class Trigger {
   private Map<String, Object> context = new HashMap<>();
   private boolean resetOnTrigger = true;
   private boolean resetOnExpire = true;
+  private long lastModifyConfiguration;
+  /**
+   * 调度备注
+   */
+  private String comment;
+  /**
+   * 错过的调度是否需要自动执行
+   */
+  private boolean backExecuteOnceOnMiss = true;
 
   private long nextCheckTime = -1;
+
+  private boolean alertOnceOnMiss = true;
 
   private Trigger() throws TriggerManagerException {
     throw new TriggerManagerException("Triggers should always be specified");
   }
 
   private Trigger(final int triggerId, final long lastModifyTime, final long submitTime,
-      final String submitUser, final String source, final Condition triggerCondition,
-      final Condition expireCondition, final List<TriggerAction> actions,
-      final List<TriggerAction> expireActions, final Map<String, Object> info,
-      final Map<String, Object> context) {
+                  final String submitUser, final String source, final Condition triggerCondition,
+                  final Condition expireCondition, final List<TriggerAction> actions,
+                  final List<TriggerAction> expireActions, final Map<String, Object> info,
+                  final Map<String, Object> context, final String comment, boolean backExecuteOnceOnMiss,
+                  long lastModifyConfiguration, boolean alertOnceOnMiss) {
     requireNonNull(submitUser);
     requireNonNull(source);
     requireNonNull(triggerCondition);
@@ -77,6 +92,10 @@ public class Trigger {
     this.expireActions = expireActions;
     this.info = info;
     this.context = context;
+    this.comment = comment;
+    this.backExecuteOnceOnMiss = backExecuteOnceOnMiss;
+    this.lastModifyConfiguration = lastModifyConfiguration;
+    this.alertOnceOnMiss = alertOnceOnMiss;
   }
 
   public static ActionTypeLoader getActionTypeLoader() {
@@ -85,6 +104,38 @@ public class Trigger {
 
   public static synchronized void setActionTypeLoader(final ActionTypeLoader loader) {
     Trigger.actionTypeLoader = loader;
+  }
+
+  public static synchronized void setMissedScheduleManager(
+          final MissedScheduleManager missedScheduleManager) {
+    Trigger.missedScheduleManager = missedScheduleManager;
+  }
+
+  public void sendTaskToMissedScheduleManager() throws NoSuchResourceException {
+    if (this.triggerCondition.getMissedCheckTimes().isEmpty()) {
+      return;
+    }
+
+    for (final TriggerAction action : actions) {
+      if (action instanceof ExecuteFlowAction) {
+        // 过滤掉工作流失效以及调度失效的调度
+        Map<String, Object> otherOptionMap = ((ExecuteFlowAction) action).getOtherOption();
+        boolean isValidFlow = (Boolean) otherOptionMap.getOrDefault("validFlow", true);
+        boolean activeFlag = (Boolean) otherOptionMap.getOrDefault("activeFlag", false);
+        if (isValidFlow && activeFlag) {
+          // when successfully sending task to missedScheduleManager, clear the missed schedule times
+          if (missedScheduleManager.addMissedSchedule(this.triggerCondition.getMissedCheckTimes(),
+                  (ExecuteFlowAction) action, this.backExecuteOnceOnMiss, this.alertOnceOnMiss)) {
+            this.triggerCondition.getMissedCheckTimes().clear();
+          } else {
+            logger.error("failed to add miss schedule task for trigger " + this);
+          }
+
+        } else {
+          logger.debug("skip invalid schedule/task {}", this);
+        }
+      }
+    }
   }
 
   public static Trigger fromJson(final Object obj) throws Exception {
@@ -97,6 +148,7 @@ public class Trigger {
     Trigger trigger = null;
     try {
       logger.debug("Decoding for " + JSONUtils.toJSON(obj));
+      final int triggerId = Integer.valueOf((String) jsonObj.get("triggerId"));
       final Condition triggerCond = Condition.fromJson(jsonObj.get("triggerCondition"));
       final Condition expireCond = Condition.fromJson(jsonObj.get("expireCondition"));
       final List<TriggerAction> actions = new ArrayList<>();
@@ -104,38 +156,41 @@ public class Trigger {
       for (final Object actObj : actionsJson) {
         final Map<String, Object> oneActionJson = (HashMap<String, Object>) actObj;
         final String type = (String) oneActionJson.get("type");
+        Object actionObj = oneActionJson.get("actionJson");
+        /*if (actionObj instanceof Map) {
+          ((Map) actionObj).put(Constants.EXECUTE_FLOW_TRIGGER_ID, triggerId);
+        }*/
         final TriggerAction act =
-            actionTypeLoader.createActionFromJson(type,
-                oneActionJson.get("actionJson"));
+                actionTypeLoader.createActionFromJson(type, actionObj);
         actions.add(act);
       }
       final List<TriggerAction> expireActions = new ArrayList<>();
       final List<Object> expireActionsJson =
-          (List<Object>) jsonObj.get("expireActions");
+              (List<Object>) jsonObj.get("expireActions");
       for (final Object expireActObj : expireActionsJson) {
         final Map<String, Object> oneExpireActionJson =
-            (HashMap<String, Object>) expireActObj;
+                (HashMap<String, Object>) expireActObj;
         final String type = (String) oneExpireActionJson.get("type");
         final TriggerAction expireAct =
-            actionTypeLoader.createActionFromJson(type,
-                oneExpireActionJson.get("actionJson"));
+                actionTypeLoader.createActionFromJson(type,
+                        oneExpireActionJson.get("actionJson"));
         expireActions.add(expireAct);
       }
       final boolean resetOnTrigger =
-          Boolean.valueOf((String) jsonObj.get("resetOnTrigger"));
+              Boolean.valueOf((String) jsonObj.get("resetOnTrigger"));
       final boolean resetOnExpire =
-          Boolean.valueOf((String) jsonObj.get("resetOnExpire"));
+              Boolean.valueOf((String) jsonObj.get("resetOnExpire"));
       final String submitUser = (String) jsonObj.get("submitUser");
       final String source = (String) jsonObj.get("source");
       final long submitTime = Long.valueOf((String) jsonObj.get("submitTime"));
       final long lastModifyTime =
-          Long.valueOf((String) jsonObj.get("lastModifyTime"));
-      final int triggerId = Integer.valueOf((String) jsonObj.get("triggerId"));
+              Long.valueOf((String) jsonObj.get("lastModifyTime"));
+
       final TriggerStatus status =
-          TriggerStatus.valueOf((String) jsonObj.get("status"));
+              TriggerStatus.valueOf((String) jsonObj.get("status"));
       final Map<String, Object> info = (Map<String, Object>) jsonObj.get("info");
       Map<String, Object> context =
-          (Map<String, Object>) jsonObj.get("context");
+              (Map<String, Object>) jsonObj.get("context");
       if (context == null) {
         context = new HashMap<>();
       }
@@ -151,25 +206,31 @@ public class Trigger {
       for (final TriggerAction action : expireActions) {
         action.setContext(context);
       }
+      String comment = (String) jsonObj.get("comment");
 
-      trigger = new TriggerBuilder(submitUser,
-          source,
-          triggerCond,
-          expireCond,
-          actions)
-          .setId(triggerId)
-          .setLastModifyTime(lastModifyTime)
-          .setSubmitTime(submitTime)
-          .setExpireActions(expireActions)
-          .setInfo(info)
-          .setContext(context)
-          .build();
+      boolean backExecuteOnceOnMiss = (boolean) jsonObj.getOrDefault("backExecuteOnceOnMiss", true);
+      long lastModifyConfiguration = (long) jsonObj.getOrDefault("lastModifyConfiguration", lastModifyTime);
+      boolean alertOnceOnMiss = (boolean) jsonObj.getOrDefault("alertOnceOnMiss", true);
+
+      trigger = new Trigger.TriggerBuilder(submitUser,
+              source,
+              triggerCond,
+              expireCond,
+              actions,
+              comment, backExecuteOnceOnMiss, alertOnceOnMiss)
+              .setId(triggerId)
+              .setLastModifyTime(lastModifyTime)
+              .setSubmitTime(submitTime)
+              .setExpireActions(expireActions)
+              .setInfo(info)
+              .setContext(context)
+              .setLastModifyConfiguration(lastModifyConfiguration)
+              .build();
 
       trigger.setResetOnExpire(resetOnExpire);
       trigger.setResetOnTrigger(resetOnTrigger);
       trigger.setStatus(status);
     } catch (final Exception e) {
-      e.printStackTrace();
       logger.error("Failed to decode the trigger.", e);
       throw new Exception("Failed to decode the trigger.", e);
     }
@@ -179,7 +240,7 @@ public class Trigger {
 
   public void updateNextCheckTime() {
     this.nextCheckTime = Math.min(this.triggerCondition.getNextCheckTime(),
-        this.expireCondition.getNextCheckTime());
+            this.expireCondition.getNextCheckTime());
   }
 
   public long getNextCheckTime() {
@@ -286,6 +347,22 @@ public class Trigger {
     return this.expireCondition.isMet();
   }
 
+  public String getComment() {
+    return comment;
+  }
+
+  public void setComment(String comment) {
+    this.comment = comment;
+  }
+
+  public boolean isBackExecuteOnceOnMiss() {
+    return backExecuteOnceOnMiss;
+  }
+
+  public void setBackExecuteOnceOnMiss(boolean backExecuteOnceOnMiss) {
+    this.backExecuteOnceOnMiss = backExecuteOnceOnMiss;
+  }
+
   public void resetTriggerConditions() {
     this.triggerCondition.resetCheckers();
     updateNextCheckTime();
@@ -298,6 +375,14 @@ public class Trigger {
 
   public List<TriggerAction> getTriggerActions() {
     return this.actions;
+  }
+
+  public boolean isAlertOnceOnMiss() {
+    return alertOnceOnMiss;
+  }
+
+  public void setAlertOnceOnMiss(boolean alertOnceOnMiss) {
+    this.alertOnceOnMiss = alertOnceOnMiss;
   }
 
   public Map<String, Object> toJson() {
@@ -331,6 +416,10 @@ public class Trigger {
     jsonObj.put("status", this.status.toString());
     jsonObj.put("info", this.info);
     jsonObj.put("context", this.context);
+    jsonObj.put("comment", this.comment);
+    jsonObj.put("backExecuteOnceOnMiss", this.backExecuteOnceOnMiss);
+    jsonObj.put("lastModifyConfiguration", this.lastModifyConfiguration);
+    jsonObj.put("alertOnceOnMiss", this.alertOnceOnMiss);
     return jsonObj;
   }
 
@@ -344,9 +433,11 @@ public class Trigger {
       actionsString.append(", ");
       actionsString.append(act.getDescription());
     }
-    return "Trigger from " + getSource() + " with trigger condition of "
-        + this.triggerCondition.getExpression() + " and expire condition of "
-        + this.expireCondition.getExpression() + actionsString;
+    return "Trigger from " + getSource() + " with trigger condition's nextCheckTime of "
+            + new DateTime(this.triggerCondition.getNextCheckTime()).toDateTimeISO()
+            + " and expire condition's nextCheckTime of "
+            + new DateTime(this.expireCondition.getNextCheckTime()).toDateTimeISO()
+            + actionsString;
   }
 
   public void stopCheckers() {
@@ -356,6 +447,14 @@ public class Trigger {
     for (final ConditionChecker checker : this.expireCondition.getCheckers().values()) {
       checker.stopChecker();
     }
+  }
+
+  public long getLastModifyConfiguration() {
+    return lastModifyConfiguration;
+  }
+
+  public void setLastModifyConfiguration(long lastModifyConfiguration) {
+    this.lastModifyConfiguration = lastModifyConfiguration;
   }
 
   @Override
@@ -375,15 +474,21 @@ public class Trigger {
     private long lastModifyTime;
     private long submitTime;
     private List<TriggerAction> expireActions = new ArrayList<>();
+    private String comment;
+    private boolean backExecuteOnceOnMissed;
+    private long lastModifyConfiguration;
+
+    private boolean alertOnceOnMiss;
 
     private Map<String, Object> info = new HashMap<>();
     private Map<String, Object> context = new HashMap<>();
 
     public TriggerBuilder(final String submitUser,
-        final String source,
-        final Condition triggerCondition,
-        final Condition expireCondition,
-        final List<TriggerAction> actions) {
+                          final String source,
+                          final Condition triggerCondition,
+                          final Condition expireCondition,
+                          final List<TriggerAction> actions,
+                          final String comment, boolean backExecuteOnceOnMissed, boolean alertOnceOnMiss) {
       this.submitUser = submitUser;
       this.source = source;
       this.triggerCondition = triggerCondition;
@@ -392,6 +497,9 @@ public class Trigger {
       final long now = DateTime.now().getMillis();
       this.submitTime = now;
       this.lastModifyTime = now;
+      this.comment = comment;
+      this.backExecuteOnceOnMissed = backExecuteOnceOnMissed;
+      this.alertOnceOnMiss = alertOnceOnMiss;
     }
 
     public TriggerBuilder setId(final int id) {
@@ -424,18 +532,29 @@ public class Trigger {
       return this;
     }
 
+    public long getLastModifyConfiguration() {
+      return lastModifyConfiguration;
+    }
+
+    public TriggerBuilder setLastModifyConfiguration(long lastModifyConfiguration) {
+      this.lastModifyConfiguration = lastModifyConfiguration;
+      return this;
+    }
+
     public Trigger build() {
       return new Trigger(this.triggerId,
-          this.lastModifyTime,
-          this.submitTime,
-          this.submitUser,
-          this.source,
-          this.triggerCondition,
-          this.expireCondition,
-          this.actions,
-          this.expireActions,
-          this.info,
-          this.context);
+              this.lastModifyTime,
+              this.submitTime,
+              this.submitUser,
+              this.source,
+              this.triggerCondition,
+              this.expireCondition,
+              this.actions,
+              this.expireActions,
+              this.info,
+              this.context,
+              this.comment, this.backExecuteOnceOnMissed, lastModifyConfiguration,
+              this.alertOnceOnMiss);
     }
   }
 

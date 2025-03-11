@@ -53,7 +53,6 @@ azkaban.DBUploadPanel = Backbone.View.extend({
       console.log("Looks valid, uploading.");
       var uploadForm = document.getElementById("upload-form");
       var formData = new FormData(uploadForm);
-      var contextUrl = contextURL;
 
       var xhr = new XMLHttpRequest();
       xhr.onreadystatechange = function () {
@@ -63,8 +62,9 @@ azkaban.DBUploadPanel = Backbone.View.extend({
             alert(data.error);
           }
           else {
-            $("#installed").html("Uploaded <span class=bold>" + data.jarname
-                + "</span>");
+            var jarName = filterXSS("Uploaded <span class=bold>" + data.jarname
+              + "</span>", { 'whiteList': { 'span': ['class'] } })
+            $("#installed").html(jarName);
           }
         }
       }
@@ -100,10 +100,8 @@ azkaban.DBConnectionPanel = Backbone.View.extend({
     var database = $("#database").val();
     var username = $("#username").val();
     var password = $("#password").val();
-
-    var contextUrl = contextURL;
     $.post(
-        contextUrl,
+      '',
         {
           ajax: "saveDbConnection",
           host: host,

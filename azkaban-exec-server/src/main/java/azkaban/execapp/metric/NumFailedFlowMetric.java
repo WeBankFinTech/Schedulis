@@ -22,13 +22,13 @@ import azkaban.execapp.FlowRunner;
 import azkaban.executor.Status;
 import azkaban.metric.MetricException;
 import azkaban.metric.MetricReportManager;
-import azkaban.metric.TimeBasedReportingMetric;
+import azkaban.metric.AbstractTimeBasedReportingMetric;
 import azkaban.spi.EventType;
 
 /**
  * Metric to keep track of number of failed flows in between the tracking events
  */
-public class NumFailedFlowMetric extends TimeBasedReportingMetric<Integer> implements
+public class NumFailedFlowMetric extends AbstractTimeBasedReportingMetric<Integer> implements
     EventListener {
 
   public static final String NUM_FAILED_FLOW_METRIC_NAME = "NumFailedFlowMetric";
@@ -43,7 +43,7 @@ public class NumFailedFlowMetric extends TimeBasedReportingMetric<Integer> imple
   /**
    * Listen for events to maintain correct value of number of failed flows {@inheritDoc}
    *
-   * @see EventListener#handleEvent(Event)
+   * @see azkaban.event.EventListener#handleEvent(azkaban.event.Event)
    */
   @Override
   public synchronized void handleEvent(final Event event) {

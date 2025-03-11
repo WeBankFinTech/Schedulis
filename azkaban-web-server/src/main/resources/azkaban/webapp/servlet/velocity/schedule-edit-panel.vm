@@ -14,11 +14,11 @@
  * the License.
 *#
 
-<script type="text/javascript" src="${context}/js/azkaban/util/date.js?version=1.10.0"></script>
-<script type="text/javascript" src="${context}/js/azkaban/view/schedule-panel.js?version=1.10.0"></script>
-<script type="text/javascript" src="${context}/js/moment.min.js?version=1.10.0" ></script>
-<script type="text/javascript" src="${context}/js/later.min.js?version=1.10.0"></script>
-<script type="text/javascript" src="${context}/js/moment-timezone-with-data.min.js?version=1.10.0"></script>
+<script type="text/javascript" src="/js/azkaban/util/utils.js?version=1.49.0"></script>
+<script type="text/javascript" src="/js/azkaban/view/schedule-panel.js?version=1.49.0"></script>
+<script type="text/javascript" src="/js/moment-2.29.4.min.js?version=1.49.0" ></script>
+<script type="text/javascript" src="/js/later.min.js?version=1.49.0"></script>
+<script type="text/javascript" src="/js/moment-timezone-with-data.min.js?version=1.49.0"></script>
 <style type="text/css">
   .input-box { position: relative; }
   .input-box input { display: block; border: 1px solid #d7d6d6; background: #fff; padding: 10px 10px 10px 20px; width: 195px; }
@@ -87,7 +87,7 @@
                 </div>
               </div>
 
-              <div class="col-sm-5" style="background-color:#f5f5f5; border:1px solid #e3e3e3">
+              <div class="col-sm-6" style="background-color:#f5f5f5; border:1px solid #e3e3e3">
                 <h4 style="color:orange">$sepcialcharacter</h4>
                 <table class="table table-striped" data-row-style="rowColors" id="instructions">
                   <tbody>
@@ -106,6 +106,10 @@
                   <tr class="danger">
                     <th scope="row">/</th>
                     <td>$graduallyValue</td>
+                  </tr>
+                  <tr>
+                      <th scope="row" style="background: #d9edf7;">?</th>
+                      <td style="background-color: #d9edf7;">$regtip</td>
                   </tr>
                   </tbody>
                 </table>

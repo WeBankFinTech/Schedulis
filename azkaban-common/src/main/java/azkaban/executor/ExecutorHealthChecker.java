@@ -1,23 +1,24 @@
 /*
-* Copyright 2019 LinkedIn Corp.
-*
-* Licensed under the Apache License, Version 2.0 (the “License”); you may not
-* use this file except in compliance with the License. You may obtain a copy of
-* the License at
-*
-* http://www.apache.org/licenses/LICENSE-2.0
-*
-* Unless required by applicable law or agreed to in writing, software
-* distributed under the License is distributed on an “AS IS” BASIS, WITHOUT
-* WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
-* License for the specific language governing permissions and limitations under
-* the License.
-*/
+ * Copyright 2019 LinkedIn Corp.
+ *
+ * Licensed under the Apache License, Version 2.0 (the “License”); you may not
+ * use this file except in compliance with the License. You may obtain a copy of
+ * the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an “AS IS” BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations under
+ * the License.
+ */
 package azkaban.executor;
 
 import azkaban.Constants.ConfigurationKeys;
 import azkaban.utils.Pair;
 import azkaban.utils.Props;
+import com.google.common.annotations.VisibleForTesting;
 import org.slf4j.LoggerFactory;
 import org.slf4j.Logger;
 
@@ -58,12 +59,12 @@ public class ExecutorHealthChecker {
 
   @Inject
   public ExecutorHealthChecker(final Props azkProps, final ExecutorLoader executorLoader,
-      final ExecutorApiGateway apiGateway, final AlerterHolder alerterHolder) {
+                               final ExecutorApiGateway apiGateway, final AlerterHolder alerterHolder) {
     this.healthCheckIntervalMin = azkProps
-        .getLong(ConfigurationKeys.AZKABAN_EXECUTOR_HEALTHCHECK_INTERVAL_MIN,
-            DEFAULT_EXECUTOR_HEALTHCHECK_INTERVAL.toMinutes());
+            .getLong(ConfigurationKeys.AZKABAN_EXECUTOR_HEALTHCHECK_INTERVAL_MIN,
+                    DEFAULT_EXECUTOR_HEALTHCHECK_INTERVAL.toMinutes());
     this.executorMaxFailureCount = azkProps.getInt(ConfigurationKeys
-        .AZKABAN_EXECUTOR_MAX_FAILURE_COUNT, DEFAULT_EXECUTOR_MAX_FAILURE_COUNT);
+            .AZKABAN_EXECUTOR_MAX_FAILURE_COUNT, DEFAULT_EXECUTOR_MAX_FAILURE_COUNT);
     this.alertEmails = azkProps.getStringList(ConfigurationKeys.AZKABAN_ADMIN_ALERT_EMAIL);
     this.scheduler = Executors.newSingleThreadScheduledExecutor();
     this.executorLoader = executorLoader;
@@ -73,11 +74,13 @@ public class ExecutorHealthChecker {
 
   public void start() {
     logger.info("Starting executor health checker.");
-    this.scheduler.scheduleAtFixedRate(() -> checkExecutorHealth(), 0L, this.healthCheckIntervalMin,
-        TimeUnit.MINUTES);
+    this.scheduler.scheduleAtFixedRate(this::checkExecutorHealthQuietly, 0L,
+            this.healthCheckIntervalMin,
+            TimeUnit.MINUTES);
   }
 
   public void shutdown() {
+    logger.info("Shutting down executor health checker.");
     this.scheduler.shutdown();
     try {
       if (!this.scheduler.awaitTermination(60, TimeUnit.SECONDS)) {
@@ -90,21 +93,32 @@ public class ExecutorHealthChecker {
   }
 
   /**
+   * Wrapper for capturing and logging any exceptions thrown during healthcheck.
+   * {@code ScheduledExecutorService} stops the scheduled invocations of a given method in
+   * case it throws an exception.
+   * Any exceptions are not expected at this stage however in case any unchecked exceptions
+   * do occur, we still don't want subsequent healthchecks to stop.
+   */
+  public void checkExecutorHealthQuietly() {
+    try {
+      checkExecutorHealth();
+    } catch (final RuntimeException e) {
+      logger.warn("Unexepected error during executor health check. Cause", e);
+    }
+  }
+
+  /**
    * Checks executor health. Finalizes the flow if its executor is already removed from DB or
    * sends alert emails if the executor isn't alive any more.
    */
+  @VisibleForTesting
   public void checkExecutorHealth() {
     final Map<Optional<Executor>, List<ExecutableFlow>> exFlowMap = getFlowToExecutorMap();
-    for (final Entry<Optional<Executor>, List<ExecutableFlow>> entry : exFlowMap.entrySet()) {
+    for (final Map.Entry<Optional<Executor>, List<ExecutableFlow>> entry : exFlowMap.entrySet()) {
       final Optional<Executor> executorOption = entry.getKey();
       if (!executorOption.isPresent()) {
         final String finalizeReason = "Executor id of this execution doesn't exist.";
-        for (final ExecutableFlow flow : entry.getValue()) {
-          logger.warn(
-              String.format("Finalizing execution %s, %s", flow.getExecutionId(), finalizeReason));
-          ExecutionControllerUtils
-              .finalizeFlow(this.executorLoader, this.alerterHolder, flow, finalizeReason, null);
-        }
+        finalizeFlows(entry.getValue(), finalizeReason);
         continue;
       }
 
@@ -112,13 +126,13 @@ public class ExecutorHealthChecker {
       try {
         // Todo jamiesjc: add metrics to monitor the http call return time
         final Map<String, Object> results = this.apiGateway
-            .callWithExecutionId(executor.getHost(), executor.getPort(),
-                ConnectorParams.PING_ACTION, null, null);
+                .callWithExecutionId(executor.getHost(), executor.getPort(),
+                        ConnectorParams.PING_ACTION, null, null);
         if (results == null || results.containsKey(ConnectorParams.RESPONSE_ERROR) || !results
-            .containsKey(ConnectorParams.STATUS_PARAM) || !results.get(ConnectorParams.STATUS_PARAM)
-            .equals(ConnectorParams.RESPONSE_ALIVE)) {
+                .containsKey(ConnectorParams.STATUS_PARAM) || !results.get(ConnectorParams.STATUS_PARAM)
+                .equals(ConnectorParams.RESPONSE_ALIVE)) {
           throw new ExecutorManagerException("Status of executor " + executor.getId() + " is "
-              + "not alive.");
+                  + "not alive.");
         } else {
           // Executor is alive. Clear the failure count.
           if (this.executorFailureCount.containsKey(executor.getId())) {
@@ -132,6 +146,26 @@ public class ExecutorHealthChecker {
   }
 
   /**
+   * Finalize given flows with the provided reason.
+   *
+   * @param flows
+   * @param finalizeReason
+   */
+  @VisibleForTesting
+  void finalizeFlows(List<ExecutableFlow> flows, String finalizeReason) {
+    for (ExecutableFlow flow: flows) {
+      logger.warn(
+              String.format("Finalizing execution %s, %s", flow.getExecutionId(), finalizeReason));
+      try {
+        ExecutionControllerUtils
+                .finalizeFlow(this.executorLoader, this.alerterHolder, flow, finalizeReason, null);
+      } catch (RuntimeException e) {
+        logger.warn("Unchecked exception while finalizing execution: {}. ", flow.getExecutionId(), e);
+      }
+    }
+  }
+
+  /**
    * Groups Executable flow by Executors to reduce number of REST calls.
    *
    * @return executor to list of flows map
@@ -140,7 +174,7 @@ public class ExecutorHealthChecker {
     final HashMap<Optional<Executor>, List<ExecutableFlow>> exFlowMap = new HashMap<>();
     try {
       for (final Pair<ExecutionReference, ExecutableFlow> runningFlow : this
-          .executorLoader.fetchActiveFlows().values()) {
+              .executorLoader.fetchActiveFlows().values()) {
         final Optional<Executor> executor = runningFlow.getFirst().getExecutor();
         List<ExecutableFlow> flows = exFlowMap.get(executor);
         if (flows == null) {
@@ -150,7 +184,7 @@ public class ExecutorHealthChecker {
         flows.add(runningFlow.getSecond());
       }
     } catch (final ExecutorManagerException e) {
-      logger.error("Failed to get flow to executor map");
+      logger.error("Failed to get flow to executor map", e);
     }
     return exFlowMap;
   }
@@ -164,18 +198,21 @@ public class ExecutorHealthChecker {
    * @param e Exception thrown when the executor is not alive
    */
   private void handleExecutorNotAliveCase(
-      final Entry<Optional<Executor>, List<ExecutableFlow>> entry, final Executor executor,
-      final ExecutorManagerException e) {
+          final Entry<Optional<Executor>, List<ExecutableFlow>> entry, final Executor executor,
+          final ExecutorManagerException e) {
     logger.error("Failed to get update from executor " + executor.getId(), e);
     this.executorFailureCount.put(executor.getId(), this.executorFailureCount.getOrDefault
-        (executor.getId(), 0) + 1);
+            (executor.getId(), 0) + 1);
     if (this.executorFailureCount.get(executor.getId()) % this.executorMaxFailureCount == 0
-        && !this.alertEmails.isEmpty()) {
+            && !this.alertEmails.isEmpty()) {
       entry.getValue().stream().forEach(flow -> flow
-          .getExecutionOptions().setFailureEmails(this.alertEmails));
+              .getExecutionOptions().setFailureEmails(this.alertEmails));
       logger.info(String.format("Executor failure count is %d. Sending alert emails to %s.",
-          this.executorFailureCount.get(executor.getId()), this.alertEmails));
-//      this.alerterHolder.get("email").alertOnFailedUpdate(executor, entry.getValue(), e);
+              this.executorFailureCount.get(executor.getId()), this.alertEmails));
+      String finalizeReason =
+              String.format("Executor was unreachable, executor-id: %s, executor-host: %s, "
+                      + "executor-port: %d", executor.getId(), executor.getHost(), executor.getPort());
+      finalizeFlows(entry.getValue(), finalizeReason);
     }
   }
 }

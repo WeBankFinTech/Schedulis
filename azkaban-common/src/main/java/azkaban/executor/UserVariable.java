@@ -1,5 +1,8 @@
 package azkaban.executor;
 
+import azkaban.system.entity.WtssUser;
+import azkaban.user.User;
+
 import java.util.ArrayList;
 import java.util.List;
 

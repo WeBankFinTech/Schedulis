@@ -16,10 +16,13 @@
 
 package azkaban.executor;
 
+import azkaban.Constants.ConfigurationKeys;
 import azkaban.alert.Alerter;
+import azkaban.db.DatabaseOperator;
+import azkaban.distributelock.DBTableDistributeLock;
 import azkaban.metrics.CommonMetrics;
 import azkaban.utils.Pair;
-import com.webank.wedatasphere.schedulis.common.executor.ExecutionCycle;
+import azkaban.utils.Props;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -27,10 +30,9 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Optional;
 import javax.inject.Inject;
-
-import org.slf4j.LoggerFactory;
-import org.slf4j.Logger;
 import org.joda.time.DateTime;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Updates running executions.
@@ -51,13 +53,15 @@ public class RunningExecutionsUpdater {
   private final RunningExecutions runningExecutions;
   private final ExecutionFinalizer executionFinalizer;
   private final ExecutorLoader executorLoader;
-
+  private DatabaseOperator dbOperator;
+  private final Props azkProps;
 
   @Inject
   public RunningExecutionsUpdater(final ExecutorManagerUpdaterStage updaterStage,
-      final AlerterHolder alerterHolder, final CommonMetrics commonMetrics,
-      final ExecutorApiGateway apiGateway, final RunningExecutions runningExecutions,
-      final ExecutionFinalizer executionFinalizer, final ExecutorLoader executorLoader) {
+                                  final AlerterHolder alerterHolder, final CommonMetrics commonMetrics,
+                                  final ExecutorApiGateway apiGateway, final RunningExecutions runningExecutions,
+                                  final ExecutionFinalizer executionFinalizer, final ExecutorLoader executorLoader,
+                                  final DatabaseOperator dbOperator, final Props azkProps) {
     this.updaterStage = updaterStage;
     this.alerterHolder = alerterHolder;
     this.commonMetrics = commonMetrics;
@@ -65,6 +69,8 @@ public class RunningExecutionsUpdater {
     this.runningExecutions = runningExecutions;
     this.executionFinalizer = executionFinalizer;
     this.executorLoader = executorLoader;
+    this.dbOperator = dbOperator;
+    this.azkProps = azkProps;
   }
 
   /**
@@ -75,16 +81,16 @@ public class RunningExecutionsUpdater {
     this.updaterStage.set("Starting update all flows.");
     final Map<Optional<Executor>, List<ExecutableFlow>> exFlowMap = getFlowToExecutorMap();
     final ArrayList<ExecutableFlow> finalizeFlows =
-        new ArrayList<>();
+            new ArrayList<>();
 
-    for (final Entry<Optional<Executor>, List<ExecutableFlow>> entry : exFlowMap
-        .entrySet()) {
+    for (final Map.Entry<Optional<Executor>, List<ExecutableFlow>> entry : exFlowMap
+            .entrySet()) {
 
       final Optional<Executor> executorOption = entry.getKey();
       if (!executorOption.isPresent()) {
         for (final ExecutableFlow flow : entry.getValue()) {
           logger.warn("Finalizing execution " + flow.getExecutionId()
-              + ". Executor id of this execution doesn't exist");
+                  + ". Executor id of this execution doesn't exist");
           finalizeFlows.add(flow);
         }
         continue;
@@ -92,7 +98,7 @@ public class RunningExecutionsUpdater {
       final Executor executor = executorOption.get();
 
       this.updaterStage.set("Starting update flows on " + executor.getHost() + ":"
-          + executor.getPort());
+              + executor.getPort());
 
       Map<String, Object> results = null;
       try {
@@ -103,11 +109,8 @@ public class RunningExecutionsUpdater {
 
       if (results != null) {
         final List<Map<String, Object>> executionUpdates =
-            (List<Map<String, Object>>) results
-                .get(ConnectorParams.RESPONSE_UPDATED_FLOWS);
-        logger.info("==============================");
-        logger.info("executionUpdates 列表:{}", executionUpdates);
-        logger.info("==============================");
+                (List<Map<String, Object>>) results
+                        .get(ConnectorParams.RESPONSE_UPDATED_FLOWS);
         for (final Map<String, Object> updateMap : executionUpdates) {
           try {
             final ExecutableFlow flow = updateExecution(updateMap);
@@ -132,42 +135,64 @@ public class RunningExecutionsUpdater {
 
     this.updaterStage.set("Finalizing " + finalizeFlows.size() + " error flows.");
     for (final ExecutableFlow flow : finalizeFlows) {
-      this.executionFinalizer
-          .finalizeFlow(flow, "Not running on the assigned executor (any more)", null);
+      if (this.azkProps.getBoolean(ConfigurationKeys.WEBSERVER_HA_MODEL, false)) {
+        DBTableDistributeLock dd = new DBTableDistributeLock(dbOperator);
+        String lockKey = "flow-finish-" + flow.getExecutionId();
+        boolean lockFlag = dd.lock(lockKey, 5000, 10000);
+        if (lockFlag) {
+          try {
+            this.executionFinalizer
+                    .finalizeFlow(flow, "Not running on the assigned executor (any more)", null);
+          } finally {
+            try {
+              dd.unlock(lockKey);
+              logger.debug("unlock successfully");
+            } catch (RuntimeException e) {
+              logger.info("unlock failed ", e);
+            }
+          }
+        } else {
+          logger.info(
+                  "flow finish step is running in another webserver , lock_resource is {} " , lockKey);
+        }
+      } else {
+        this.executionFinalizer
+                .finalizeFlow(flow, "Not running on the assigned executor (any more)", null);
+      }
     }
 
     this.updaterStage.set("Updated all active flows. Waiting for next round.");
   }
 
   private void handleException(final Entry<Optional<Executor>, List<ExecutableFlow>> entry,
-      final Executor executor, final ExecutorManagerException e,
-      final ArrayList<ExecutableFlow> finalizeFlows) {
+                               final Executor executor, final ExecutorManagerException e,
+                               final ArrayList<ExecutableFlow> finalizeFlows) {
     logger.error("Failed to get update from executor " + executor.getHost(), e);
     boolean sendUnresponsiveEmail = false;
     final boolean executorRemoved = isExecutorRemoved(executor.getId());
     for (final ExecutableFlow flow : entry.getValue()) {
       final Pair<ExecutionReference, ExecutableFlow> pair =
-          this.runningExecutions.get().get(flow.getExecutionId());
+              this.runningExecutions.get().get(flow.getExecutionId());
 
       this.updaterStage
-          .set("Failed to get update for flow " + pair.getSecond().getExecutionId());
+              .set("Failed to get update for flow " + pair.getSecond().getExecutionId());
 
       if (executorRemoved) {
         logger.warn("Finalizing execution " + flow.getExecutionId()
-            + ". Executor is removed");
+                + ". Executor is removed");
         finalizeFlows.add(flow);
-        // FIXME executor is removed, stop the cycle flow and alert.
+        // FIXME executor is removed, stop the cycle flow and alert
         finalizeCycleFlow(flow);
       } else {
         final ExecutionReference ref = pair.getFirst();
         ref.setNextCheckTime(DateTime.now().getMillis() + this.errorThreshold);
         ref.setNumErrors(ref.getNumErrors() + 1);
         if (ref.getNumErrors() == this.numErrorsBeforeUnresponsiveEmail
-            || ref.getNumErrors() % this.numErrorsBetweenUnresponsiveEmail == 0) {
+                || ref.getNumErrors() % this.numErrorsBetweenUnresponsiveEmail == 0) {
           // if any of the executions has failed many enough updates, alert
           // and stop the cycle flow, alert
           sendUnresponsiveEmail = true;
-		      // FIXME executor is removed, stop the cycle flow and alert.
+          // FIXME executor is removed, stop the cycle flow and alert
           finalizeCycleFlow(flow);
         }
       }
@@ -193,10 +218,10 @@ public class RunningExecutionsUpdater {
   /* Group Executable flow by Executors to reduce number of REST calls */
   private Map<Optional<Executor>, List<ExecutableFlow>> getFlowToExecutorMap() {
     final HashMap<Optional<Executor>, List<ExecutableFlow>> exFlowMap =
-        new HashMap<>();
+            new HashMap<>();
 
     for (final Pair<ExecutionReference, ExecutableFlow> runningFlow : this.runningExecutions.get()
-        .values()) {
+            .values()) {
       final ExecutionReference ref = runningFlow.getFirst();
       final ExecutableFlow flow = runningFlow.getSecond();
       final Optional<Executor> executor = ref.getExecutor();
@@ -220,26 +245,26 @@ public class RunningExecutionsUpdater {
   }
 
   private ExecutableFlow updateExecution(final Map<String, Object> updateData)
-      throws ExecutorManagerException {
+          throws ExecutorManagerException {
 
     final Integer execId =
-        (Integer) updateData.get(ConnectorParams.UPDATE_MAP_EXEC_ID);
+            (Integer) updateData.get(ConnectorParams.UPDATE_MAP_EXEC_ID);
     if (execId == null) {
       throw new ExecutorManagerException(
-          "Response is malformed. Need exec id to update.");
+              "Response is malformed. Need exec id to update.");
     }
 
     final Pair<ExecutionReference, ExecutableFlow> refPair =
-        this.runningExecutions.get().get(execId);
+            this.runningExecutions.get().get(execId);
     if (refPair == null) {
       // this shouldn't ever happen on real azkaban runtime.
       // but this can easily happen in unit tests if there's some inconsistent mocking.
       throw new ExecutorManagerException(
-          "No execution found in the map with the execution id any more. Removing " + execId);
+              "No execution found in the map with the execution id any more. Removing " + execId);
     }
 
     final ExecutionReference ref = refPair.getFirst();
-    final ExecutableFlow flow = refPair.getSecond();
+    ExecutableFlow flow = refPair.getSecond();
     if (updateData.containsKey("error")) {
       // The flow should be finished here.
       throw new ExecutorManagerException((String) updateData.get("error"), flow);
@@ -249,12 +274,14 @@ public class RunningExecutionsUpdater {
     ref.setNextCheckTime(0);
     ref.setNumErrors(0);
     final Status oldStatus = flow.getStatus();
-    flow.applyUpdateObject(updateData);
+    try {
+      flow.applyUpdateObject(updateData);
+    } catch (Exception e){
+      logger.warn("update flow status failed.", e);
+      flow = this.executorLoader.fetchExecutableFlow(execId);
+      this.runningExecutions.get().put(execId, new Pair<>(ref, flow));
+    }
     final Status newStatus = flow.getStatus();
-
-    logger.info("==============================");
-    logger.info("oldStatus={}, newStatus={}", oldStatus, newStatus);
-    logger.info("==============================");
 
     if (oldStatus != newStatus && newStatus == Status.FAILED) {
       this.commonMetrics.markFlowFail();

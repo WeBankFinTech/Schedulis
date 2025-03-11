@@ -11,7 +11,7 @@ import org.apache.commons.lang.RandomStringUtils;
 import org.junit.Assert;
 import org.junit.Test;
 
-import com.webank.wedatasphere.schedulis.jobtype.javautils.FileUtils;
+import azkaban.jobtype.javautils.FileUtils;
 
 import com.google.common.io.Files;
 

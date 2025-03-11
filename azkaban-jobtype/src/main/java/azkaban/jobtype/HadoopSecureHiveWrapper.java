@@ -85,7 +85,7 @@ public class HadoopSecureHiveWrapper {
     populateHiveConf(hiveConf, args);
 
     if (System.getenv(HADOOP_TOKEN_FILE_LOCATION) != null) {
-      System.out.println("Setting hadoop tokens ... ");
+     logger.info("Setting hadoop tokens ... ");
       hiveConf.set(MAPREDUCE_JOB_CREDENTIALS_BINARY,
           System.getenv(HADOOP_TOKEN_FILE_LOCATION));
       System.setProperty(MAPREDUCE_JOB_CREDENTIALS_BINARY,

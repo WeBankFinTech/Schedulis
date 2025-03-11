@@ -35,7 +35,7 @@ public class PropsUtils {
 
   private static final Logger logger = LoggerFactory.getLogger(PropsUtils.class);
   private static final Pattern VARIABLE_REPLACEMENT_PATTERN = Pattern
-      .compile("\\$\\{([a-zA-Z_.0-9]+)\\}");
+          .compile("\\$\\{([a-zA-Z_.0-9]+)\\}");
 
   /**
    * Load job schedules from the given directories
@@ -112,7 +112,7 @@ public class PropsUtils {
    * @param suffixes The suffixes of files to load
    */
   public static void loadPropsBySuffix(final File jobPath, final Props props,
-      final String... suffixes) {
+                                       final String... suffixes) {
     try {
       if (jobPath.isDirectory()) {
         final File[] files = jobPath.listFiles();
@@ -154,13 +154,13 @@ public class PropsUtils {
     for (final String key : props.getKeySet()) {
       String value = props.get(key);
       if (value == null) {
-        logger.warn("Null value in props for key '" + key + "'. Replacing with empty string.");
+        logger.warn("Null value in props for key '{}'. Replacing with empty string.", key);
         value = "";
       }
 
       visitedVariables.add(key);
       final String replacedValue =
-          resolveVariableReplacement(value, props, visitedVariables);
+              resolveVariableReplacement(value, props, visitedVariables);
       visitedVariables.clear();
 
       resolvedProps.put(key, replacedValue);
@@ -176,23 +176,23 @@ public class PropsUtils {
   }
 
   private static String resolveVariableReplacement(final String value, final Props props,
-      final LinkedHashSet<String> visitedVariables) {
-    final StringBuffer buffer = new StringBuffer();
+                                                   final LinkedHashSet<String> visitedVariables) {
+    final StringBuilder builder = new StringBuilder();
     int startIndex = 0;
 
     final Matcher matcher = VARIABLE_REPLACEMENT_PATTERN.matcher(value);
     while (matcher.find(startIndex)) {
       if (startIndex < matcher.start()) {
         // Copy everything up front to the buffer
-        buffer.append(value.substring(startIndex, matcher.start()));
+        builder.append(value.substring(startIndex, matcher.start()));
       }
 
       final String subVariable = matcher.group(1);
       // Detected a cycle
       if (visitedVariables.contains(subVariable)) {
         throw new IllegalArgumentException(String.format(
-            "Circular variable substitution found: [%s] -> [%s]",
-            StringUtils.join(visitedVariables, "->"), subVariable));
+                "Circular variable substitution found: [%s] -> [%s]",
+                StringUtils.join(visitedVariables, "->"), subVariable));
       } else {
         // Add substitute variable and recurse.
         final String replacement = props.get(subVariable);
@@ -200,12 +200,12 @@ public class PropsUtils {
 
         if (replacement == null) {
           throw new UndefinedPropertyException(String.format(
-              "Could not find variable substitution for variable(s) [%s]",
-              StringUtils.join(visitedVariables, "->")));
+                  "Could not find variable substitution for variable(s) [%s]",
+                  StringUtils.join(visitedVariables, "->")));
         }
 
-        buffer.append(resolveVariableReplacement(replacement, props,
-            visitedVariables));
+        builder.append(resolveVariableReplacement(replacement, props,
+                visitedVariables));
         visitedVariables.remove(subVariable);
       }
 
@@ -213,10 +213,10 @@ public class PropsUtils {
     }
 
     if (startIndex < value.length()) {
-      buffer.append(value.substring(startIndex));
+      builder.append(value.substring(startIndex));
     }
 
-    return buffer.toString();
+    return builder.toString();
   }
 
   private static String resolveVariableExpression(final String value) {
@@ -229,7 +229,7 @@ public class PropsUtils {
    * expressions
    */
   private static String resolveVariableExpression(final String value, final int last,
-      final JexlEngine jexl) {
+                                                  final JexlEngine jexl) {
     final int lastIndex = value.lastIndexOf("$(", last);
     if (lastIndex == -1) {
       return value;
@@ -252,7 +252,7 @@ public class PropsUtils {
 
     if (nextClosed == value.length()) {
       throw new IllegalArgumentException("Expression " + value
-          + " not well formed.");
+              + " not well formed.");
     }
 
     final String innerExpression = value.substring(lastIndex + 2, nextClosed);
@@ -262,7 +262,7 @@ public class PropsUtils {
       result = e.evaluate(new MapContext());
     } catch (final JexlException e) {
       throw new IllegalArgumentException("Expression " + value
-          + " not well formed. " + e.getMessage(), e);
+              + " not well formed. " + e.getMessage(), e);
     }
 
     if (result == null) {
@@ -271,8 +271,8 @@ public class PropsUtils {
     }
 
     final String newValue =
-        value.substring(0, lastIndex) + result.toString()
-            + value.substring(nextClosed + 1);
+            value.substring(0, lastIndex) + result.toString()
+                    + value.substring(nextClosed + 1);
     return resolveVariableExpression(newValue, lastIndex, jexl);
   }
 
@@ -306,7 +306,7 @@ public class PropsUtils {
 
     final String source = (String) propsMap.get("source");
     final Map<String, String> propsParams =
-        (Map<String, String>) propsMap.get("props");
+            (Map<String, String>) propsMap.get("props");
 
     final Map<String, Object> parent = (Map<String, Object>) propsMap.get("parent");
     final Props parentProps = fromHierarchicalMap(parent);
@@ -329,18 +329,18 @@ public class PropsUtils {
   }
 
   public static Map<String, Object> toHierarchicalMapByLoop(Props props) {
-    Stack<Props> stack = new Stack<>();
+    Deque<Props> deque = new LinkedList<>();
     Map<String, Object> propsMap = new HashMap<>();
-    stack.push(props);
+    deque.push(props);
     LinkedList<Map<String, Object>> list = new LinkedList<>();
-    while (!stack.isEmpty()){
-      props = stack.pop();
+    while (!deque.isEmpty()){
+      props = deque.pop();
       Map<String, Object> tmpMap = new HashMap<>();
       tmpMap.put("source", props.getSource());
       tmpMap.put("props", toStringMap(props, true));
       list.push(tmpMap);
       if(props.getParent() != null){
-        stack.push(props.getParent());
+        deque.push(props.getParent());
       }
     }
     while (!list.isEmpty()){
@@ -374,7 +374,7 @@ public class PropsUtils {
     }
 
     final MapDifference<String, String> md =
-        Maps.difference(toStringMap(oldProps, false), toStringMap(newProps, false));
+            Maps.difference(toStringMap(oldProps, false), toStringMap(newProps, false));
 
     final Map<String, String> newlyCreatedProperty = md.entriesOnlyOnRight();
     if (newlyCreatedProperty != null && newlyCreatedProperty.size() > 0) {

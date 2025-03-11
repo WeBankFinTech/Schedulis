@@ -18,23 +18,23 @@ package azkaban.user;
 
 import azkaban.user.User.UserPermissions;
 import azkaban.utils.Props;
-import java.io.File;
-import java.io.IOException;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Set;
-import javax.xml.parsers.DocumentBuilder;
-import javax.xml.parsers.DocumentBuilderFactory;
-import javax.xml.parsers.ParserConfigurationException;
-
-import com.webank.wedatasphere.schedulis.common.utils.XmlResolveUtils;
-import org.slf4j.LoggerFactory;
+import azkaban.utils.XmlResolveUtils;
 import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.w3c.dom.Document;
 import org.w3c.dom.NamedNodeMap;
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 import org.xml.sax.SAXException;
+
+import javax.xml.parsers.DocumentBuilder;
+import javax.xml.parsers.DocumentBuilderFactory;
+import javax.xml.parsers.ParserConfigurationException;
+import java.io.File;
+import java.io.IOException;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Set;
 
 /**
  * Xml implementation of the UserManager. Looks for the property user.manager.xml.file in the
@@ -353,5 +353,16 @@ public class XmlUserManager implements UserManager {
     } else {
       return false;
     }
+  }
+
+  @Override
+  public User validateNonRealNameUser(String username, String password, String normalUserName, String normalPassword, UserType type) throws UserManagerException {
+    return null;
+  }
+
+  @Override
+  public void validDepartmentOpsUser(String username, String normalUserName)
+      throws UserManagerException {
+
   }
 }

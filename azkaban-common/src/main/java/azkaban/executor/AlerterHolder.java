@@ -17,17 +17,15 @@
 
 package azkaban.executor;
 
+import azkaban.Constants;
 import azkaban.alert.Alerter;
+import azkaban.exceptional.user.dao.ExceptionalUserLoader;
 import azkaban.utils.Emailer;
 import azkaban.utils.FileIOUtils;
 import azkaban.utils.Props;
 import azkaban.utils.PropsUtils;
-import org.slf4j.LoggerFactory;
-import org.slf4j.Logger;
-
-import javax.inject.Inject;
-import javax.inject.Singleton;
 import java.io.File;
+import java.io.IOException;
 import java.lang.reflect.Constructor;
 import java.net.MalformedURLException;
 import java.net.URL;
@@ -38,6 +36,10 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import javax.inject.Inject;
+import javax.inject.Singleton;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 
 
@@ -48,8 +50,11 @@ public class AlerterHolder {
   private Map<String, Alerter> alerters;
   private final ConcurrentHashMap<Integer, Boolean> flowAlerterFlag = new ConcurrentHashMap<>();
 
+  private ExceptionalUserLoader exceptionalUserLoader;
+
   @Inject
-  public AlerterHolder(final Props props, final Emailer mailAlerter) {
+  public AlerterHolder(final Props props, final Emailer mailAlerter, ExceptionalUserLoader exceptionalUserLoader) {
+    this.exceptionalUserLoader = exceptionalUserLoader;
     try {
       this.alerters = loadAlerters(props, mailAlerter);
     } catch (final Exception ex) {
@@ -61,7 +66,12 @@ public class AlerterHolder {
   private Map<String, Alerter> loadAlerters(final Props props, final Emailer mailAlerter) {
     final Map<String, Alerter> allAlerters = new HashMap<>();
     allAlerters.put("default", mailAlerter);
-    final String pluginDir = props.getString("alerter.plugin.dir", "plugins/alerter");
+    // load built-in alerters
+    //Alter by johnnwang
+    //final WeBankAlerter weBankAlerter = new WeBankAlerter(props);
+    //allAlerters.put("email", weBankAlerter);
+    // load all plugin alerters
+    final String pluginDir = props.getString(Constants.ConfigurationKeys.ALERT_PLUGIN_PATH, "/appcom/Install/AzkabanInstall/wtss-exec/plugins/alerter");
     allAlerters.putAll(loadPluginAlerters(pluginDir));
     return allAlerters;
   }
@@ -167,7 +177,7 @@ public class AlerterHolder {
 
       Constructor<?> constructor = null;
       try {
-        constructor = alerterClass.getConstructor(Props.class);
+        constructor = alerterClass.getConstructor(Props.class, ExceptionalUserLoader.class);
       } catch (final NoSuchMethodException e) {
         logger.error("Constructor not found in " + pluginClass);
         continue;
@@ -175,7 +185,7 @@ public class AlerterHolder {
 
       Object obj = null;
       try {
-        obj = constructor.newInstance(pluginProps);
+        obj = constructor.newInstance(pluginProps, this.exceptionalUserLoader);
       } catch (final Exception e) {
         logger.error("", e);
       }

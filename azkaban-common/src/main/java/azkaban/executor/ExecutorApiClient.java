@@ -16,7 +16,7 @@
 
 package azkaban.executor;
 
-import azkaban.utils.RestfulApiClient;
+import azkaban.utils.AbstractRestfulApiClient;
 import java.io.IOException;
 import javax.inject.Singleton;
 import org.apache.http.HttpResponse;
@@ -29,7 +29,7 @@ import org.apache.http.util.EntityUtils;
  * application.
  */
 @Singleton
-public class ExecutorApiClient extends RestfulApiClient<String> {
+public class ExecutorApiClient extends AbstractRestfulApiClient<String> {
 
   /**
    * Implementing the parseResponse function to return de-serialized Json object.

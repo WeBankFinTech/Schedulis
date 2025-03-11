@@ -28,7 +28,7 @@ import java.util.Comparator;
  */
 public final class FactorComparator<T> {
 
-  private static final Logger logger = LoggerFactory.getLogger(CandidateComparator.class);
+  private static final Logger logger = LoggerFactory.getLogger(AbstractCandidateComparator.class);
 
   private final String factorName;
   private final Comparator<T> comparator;

@@ -71,8 +71,14 @@ public class ProjectLogEvent {
     SLA(8),
     PROXY_USER(9),
     PURGE(10),
-    PROPERTY_OVERRIDE(11);
+    PROPERTY_OVERRIDE(11),
+    CREATE_USER(12),
+    RESTORE_PROJECT(13),
+    IMS_PROPERTIES(14),
+    JOB_EXECUTE_LIMIT(15),
+    PRINCIPAL(16),
 
+    DELETE_CYCLE_FLOW(17);
     private final int numVal;
 
     EventType(final int numVal) {
@@ -103,6 +109,18 @@ public class ProjectLogEvent {
           return PURGE;
         case 11:
           return PROPERTY_OVERRIDE;
+        case 12:
+          return CREATE_USER;
+        case 13:
+          return RESTORE_PROJECT;
+        case 14:
+          return IMS_PROPERTIES;
+        case 15:
+          return JOB_EXECUTE_LIMIT;
+        case 16:
+          return PRINCIPAL;
+        case 17:
+          return DELETE_CYCLE_FLOW;
         case 128:
           return ERROR;
         default:

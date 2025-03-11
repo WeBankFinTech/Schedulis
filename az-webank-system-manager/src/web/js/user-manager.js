@@ -1,20 +1,28 @@
+/**
+ * Created by zhu on 7/5/18.
+ */
+
 
 //处理方法 组装表格和翻页处理
 var systemUserView;
 azkaban.SystemUserView = Backbone.View.extend({
   events: {
     "click #pageSelection li": "handleChangePageSelection",
+    "change #pageSelection .pageSizeSelect": "handlePageSizeSelection",
+    "click #pageSelection .pageNumJump": "handlePageNumJump",
     "click .btn-info": "handleUpdateSystemUserBtn",
   },
 
-  initialize: function(settings) {
+  initialize: function (settings) {
     this.model.bind('change:view', this.handleChangeView, this);
     this.model.bind('render', this.render, this);
-    this.model.set({page: 1, pageSize: 20});
+    this.model.set({ page: 1, pageSize: 20 });
     this.model.bind('change:page', this.handlePageChange, this);
+    this.model.set('elDomId','pageSelection');
+    this.createResize();
   },
 
-  render: function(evt) {
+  render: function (evt) {
     console.log("render");
     // Render page selections
     var tbody = $("#userTableBody");
@@ -22,9 +30,9 @@ azkaban.SystemUserView = Backbone.View.extend({
 
     var users = this.model.get("systemUserPageList");
     var modifyI18n = this.model.get("modify");
-    if(!users || users.length == 0){
+    if (!users || users.length == 0) {
       $("#pageSelection").hide()
-    }else{
+    } else {
       $("#pageSelection").show()
     }
 
@@ -35,7 +43,7 @@ azkaban.SystemUserView = Backbone.View.extend({
       //组装数字行
       var tdNum = document.createElement("td");
       $(tdNum).text(i + 1);
-      $(tdNum).attr("class","tb-name");
+      $(tdNum).attr("class", "tb-name");
       row.appendChild(tdNum);
 
       //组装用户ID行
@@ -46,19 +54,19 @@ azkaban.SystemUserView = Backbone.View.extend({
       //组装用户全名行
       var tdFullName = document.createElement("td");
       $(tdFullName).text(users[i].fullName);
-      $(tdFullName).attr("style","word-break:break-all;");
+      $(tdFullName).attr("style", "word-break:break-all;");
       row.appendChild(tdFullName);
 
       //组装用户部门行
       var tdDep = document.createElement("td");
       $(tdDep).text(users[i].departmentName);
-      $(tdDep).attr("style","word-break:break-all;");
+      $(tdDep).attr("style", "word-break:break-all;");
       row.appendChild(tdDep);
 
       //组装代理用户行
       var tdProxyUser = document.createElement("td");
       $(tdProxyUser).text(users[i].proxyUsers);
-      $(tdProxyUser).attr("style","word-break:break-all;width:250px");
+      $(tdProxyUser).attr("style", "word-break:break-all;width:250px");
       row.appendChild(tdProxyUser);
 
       //组装用户角色行
@@ -69,11 +77,12 @@ azkaban.SystemUserView = Backbone.View.extend({
       //组装用户行
       var tdPermission = document.createElement("td");
       $(tdPermission).text(users[i].permission);
-      $(tdPermission).attr("style","word-break:break-all;width:350px");
+      $(tdPermission).attr("style", "word-break:break-all;width:350px");
       row.appendChild(tdPermission);
 
       //组装用户邮箱行
       var tdEmail = document.createElement("td");
+      $(tdEmail).attr("style", "word-break:break-all;max-width:350px");
       $(tdEmail).text(users[i].email);
       row.appendChild(tdEmail);
 
@@ -82,7 +91,7 @@ azkaban.SystemUserView = Backbone.View.extend({
       var updateBtn = document.createElement("button");
       $(updateBtn).attr("id", users[i].userId + "updateBtn");
       $(updateBtn).attr("name", users[i].userId);
-      $(updateBtn).attr("class","btn btn-sm btn-info");
+      $(updateBtn).attr("class", "btn btn-sm btn-info");
       $(updateBtn).text(modifyI18n);
       tdAction.appendChild(updateBtn);
       row.appendChild(tdAction);
@@ -93,119 +102,15 @@ azkaban.SystemUserView = Backbone.View.extend({
     this.renderPagination(evt);
   },
 
-  renderPagination: function(evt) {
-    var total = this.model.get("total");
-    total = total? total : 1;
-    var pageSize = this.model.get("pageSize");
-    var numPages = Math.ceil(total / pageSize);
+  ...commonPaginationFun(),
 
-    this.model.set({"numPages": numPages});
-    var page = this.model.get("page");
-
-    //Start it off
-    $("#pageSelection .active").removeClass("active");
-
-    // Disable if less than 5
-    console.log("Num pages " + numPages)
-    var i = 1;
-    for (; i <= numPages && i <= 5; ++i) {
-      $("#page" + i).removeClass("disabled");
-    }
-    for (; i <= 5; ++i) {
-      $("#page" + i).addClass("disabled");
-    }
-
-    // Disable prev/next if necessary.
-    if (page > 1) {
-      var prevNum = parseInt(page) - parseInt(1);
-      $("#previous").removeClass("disabled");
-      $("#previous")[0].page = prevNum;
-      $("#previous a").attr("href", "#system-user#page" + prevNum);
-    }
-    else {
-      $("#previous").addClass("disabled");
-    }
-
-    if (page < numPages) {
-      var nextNum = parseInt(page) + parseInt(1);
-      $("#next")[0].page = nextNum;
-      $("#next").removeClass("disabled");
-      $("#next a").attr("href", "#system-user#page" + nextNum);
-    }
-    else {
-      var nextNum = parseInt(page) + parseInt(1);
-      $("#next").addClass("disabled");
-    }
-
-    // Selection is always in middle unless at barrier.
-    var startPage = 0;
-    var selectionPosition = 0;
-    if (page < 3) {
-      selectionPosition = page;
-      startPage = 1;
-    }
-    else if (page == numPages && page != 3 && page != 4) {
-      selectionPosition = 5;
-      startPage = numPages - 4;
-    }
-    else if (page == numPages - 1 && page != 3) {
-      selectionPosition = 4;
-      startPage = numPages - 4;
-    }
-    else if (page == 4) {
-      selectionPosition = 4;
-      startPage = page - 3;
-    }
-    else if (page == 3) {
-      selectionPosition = 3;
-      startPage = page - 2;
-    }
-    else {
-      selectionPosition = 3;
-      startPage = page - 2;
-    }
-
-    $("#page"+selectionPosition).addClass("active");
-    $("#page"+selectionPosition)[0].page = page;
-    var selecta = $("#page" + selectionPosition + " a");
-    selecta.text(page);
-    selecta.attr("href", "#system-user#page" + page);
-
-    for (var j = 0; j < 5; ++j) {
-      var realPage = startPage + j;
-      var elementId = "#page" + (j+1);
-
-      $(elementId)[0].page = realPage;
-      var a = $(elementId + " a");
-      a.text(realPage);
-      a.attr("href", "#system-user#page" + realPage);
-    }
-  },
-
-  handleChangePageSelection: function(evt) {
-    if ($(evt.currentTarget).hasClass("disabled")) {
-      return;
-    }
-    var page = evt.currentTarget.page;
-    this.model.set({"page": page});
-  },
-
-  handleChangeView: function(evt) {
-    // if (this.init) {
-    //   return;
-    // }
-    console.log("init");
-    this.handlePageChange(evt);
-    this.init = true;
-  },
-
-  handlePageChange: function(evt) {
+  handlePageChange: function (evt) {
     var start = this.model.get("page") - 1;
     var pageSize = this.model.get("pageSize");
-    var requestURL = contextURL + "/system";
+    var requestURL = "/system";
     var searchterm = this.model.get("searchterm");
-    if(!searchterm){
-      searchterm="";
+    if (!searchterm) {
+      searchterm = "";
     }
 
     var model = this.model;
@@ -215,7 +120,7 @@ azkaban.SystemUserView = Backbone.View.extend({
       "pageSize": pageSize,
       "searchterm": searchterm,
     };
-    var successHandler = function(data) {
+    var successHandler = function (data) {
       model.set({
         "systemUserPageList": data.systemUserPageList,
         "modify": data.modify,
@@ -226,11 +131,11 @@ azkaban.SystemUserView = Backbone.View.extend({
     $.get(requestURL, requestData, successHandler, "json");
   },
 
-  handleUpdateSystemUserBtn: function(evt) {
+  handleUpdateSystemUserBtn: function (evt) {
     console.log("click upload project");
 
     var userId = evt.currentTarget.name;
-    systemUserModel.set({"updateUserId": userId});
+    systemUserModel.set({ "updateUserId": userId });
     $('#update-system-user-panel').modal();
     updateSystemUserView.render();
     updateSystemUserView.loadWtssUserData();
@@ -250,9 +155,18 @@ azkaban.UserOptionsView = Backbone.View.extend({
 
   initialize: function (settings) {
   },
-
+  initCreateForm: function() {
+    $("#webank-user-select").empty();
+    $("#password").val("");
+    $("#user-role-select").val("0");
+    $("#user-category-select").val("0");
+    $("#proxy-user").val("");
+    $("#webank-department-select2").val("0");
+    $("#add-system-user-panel [name=email]").val("");
+  },
   handleAddSystemUser: function (evt) {
     console.log("click upload project");
+    this.initCreateForm();
     $('#add-system-user-panel').modal();
     addSystemUserView.render();
   },
@@ -265,7 +179,7 @@ azkaban.UserOptionsView = Backbone.View.extend({
 
   handleXmlUserBtn: function (evt) {
     console.log("click webank user sync");
-    var requestURL = contextURL + "/system";
+    var requestURL = "/system";
 
     var requestData = {
       "ajax": "syncXmlUsers",
@@ -275,15 +189,15 @@ azkaban.UserOptionsView = Backbone.View.extend({
         alert(data.error);
         return false;
       } else {
-        window.location.href = contextURL + "/system#system-user";
+        window.location.href = "/system#system-user";
       }
     };
     $.get(requestURL, requestData, successHandler, "json");
   },
 
   handleSearchUser: function () {
-    var searchterm = $('#serarch-user').val();
-    systemUserModel.set({"searchterm": searchterm});
+    var searchterm = filterXSS($('#serarch-user').val());
+    systemUserModel.set({ "searchterm": searchterm });
 
     //systemUserModel.trigger("change:page");
 
@@ -306,7 +220,6 @@ azkaban.AddSystemUserView = Backbone.View.extend({
     console.log("Hide modal error msg");
     $("#add-user-modal-error-msg").hide();
     this.loadWebankUserData();
-    this.loadWebankDepartmentData();
   },
 
   handleAddSystemUser: function (evt) {
@@ -317,23 +230,24 @@ azkaban.AddSystemUserView = Backbone.View.extend({
     var categoryUser = $("#user-category-select").val();
     var proxyUser = $("#proxy-user").val();
     var departmentId = $("#webank-department-select2").val();
-    var requestURL = contextURL + "/system";
+    var email = $("#add-system-user-panel [name=email]").val();
+    var requestURL = "/system";
 
-    if(null == userId){
+    if (null == userId) {
       alert(wtssI18n.system.userPro);
       return;
     }
 
-    if("0" == roleId){
+    if (!roleId || "0" == roleId) {
       alert(wtssI18n.system.rolePro);
       return;
     }
 
-    if("0" == departmentId){
+    if (!departmentId || "0" == departmentId) {
       alert(wtssI18n.system.departmentPro);
       return;
     }
-    if ("0" == categoryUser) {
+    if (!categoryUser ||"0" == categoryUser) {
       alert(wtssI18n.system.userCatePro);
       return;
     }
@@ -346,7 +260,8 @@ azkaban.AddSystemUserView = Backbone.View.extend({
       "roleId": roleId,
       "proxyUser": proxyUser,
       "departmentId": departmentId,
-      "categoryUser":categoryUser
+      "categoryUser": categoryUser,
+      "email": email
     };
     var successHandler = function (data) {
       if (data.error) {
@@ -354,7 +269,7 @@ azkaban.AddSystemUserView = Backbone.View.extend({
         $("#add-user-modal-error-msg").text(data.error.message);
         return false;
       } else {
-        window.location.href = contextURL + "/system";
+        window.location.href = "/system";
       }
       model.trigger("render");
     };
@@ -364,19 +279,19 @@ azkaban.AddSystemUserView = Backbone.View.extend({
   loadWebankUserData: function () {
 
     $("#webank-user-select").select2({
-      placeholder:wtssI18n.system.userPro,//默认文字提示
-      multiple : false,
+      placeholder: wtssI18n.system.userPro,//默认文字提示
+      multiple: false,
       width: 'resolve',
       //language: "zh-CN",
       tags: true,//允许手动添加
       //allowClear: true,//允许清空
       escapeMarkup: function (markup) { return markup; }, //自定义格式化防止XSS注入
       minimumInputLengt: 1,//最少输入多少字符后开始查询
-      formatResult: function formatRepo(repo){return repo.text;},//函数用来渲染结果
-      formatSelection: function formatRepoSelection(repo){return repo.text;},//函数用于呈现当前的选择
+      formatResult: function formatRepo (repo) { return repo.text; },//函数用来渲染结果
+      formatSelection: function formatRepoSelection (repo) { return repo.text; },//函数用于呈现当前的选择
       ajax: {
         type: 'GET',
-        url: contextURL + "/system",
+        url: "/system",
         dataType: 'json',
         delay: 250,
         data: function (params) {
@@ -397,7 +312,7 @@ azkaban.AddSystemUserView = Backbone.View.extend({
             }
           }
         },
-        cache:true
+        cache: true
       },
       language: 'zh-CN',
 
@@ -405,42 +320,7 @@ azkaban.AddSystemUserView = Backbone.View.extend({
     });
   },
 
-  loadWebankDepartmentData:function () {
-    var requestURL = contextURL + "/system";
-    var requestData = {
-      "ajax":"loadWebankDepartmentSelectData",
-    };
-    var successHandler = function(data) {
-      if (data.error) {
-        console.log(data.error);
-      }
-      else {
-        var depList = data.webankDepartmentList;
-        //每次新增option,需要清空select,避免造成重复数据
-        $("#webank-department-select2").find("option:selected").text("");
-        $("#webank-department-select2").empty();
-        for(var i=0; i<depList.length; i++){
-          var department = depList[i];
-          $('#webank-department-select2').append("<option value='" + department.dpId + "'>" + department.dpName + "</option>");
-        }
-      }
-    }
-
-    $.ajax({
-      url: requestURL,
-      type: "get",
-      async: false,
-      data: requestData,
-      dataType: "json",
-      error: function(data) {
-        console.log(data);
-      },
-      success: successHandler
-    });
-  },
-
   render: function () {
-    this.loadWebankDepartmentData();
     $("#add-user-modal-error-msg").hide();
   },
 });
@@ -455,24 +335,26 @@ azkaban.UpdateSystemUserView = Backbone.View.extend({
   initialize: function (settings) {
     console.log("Hide modal error msg");
     $("#update-user-modal-error-msg").hide();
-    this.loadWebankDepartmentData();
+    this.loadWebankDepartmentData(this.renderDepartmentOption);
   },
 
   handleUpdateSystemUser: function (evt) {
     console.log("Update System User button.");
     var userId = $("#wtss-user-id").val();
     var password = $("#update-password").val();
+    var categoryUser = $("#wtss-user-category").attr('userType');
     var roleId = $("#update-user-role-select").val();
     var proxyUser = $("#update-proxy-user").val();
     var departmentId = $("#update-wtss-department-select").val();
-    var requestURL = contextURL + "/system";
+    var email = $("#update-system-user-panel [name=email]").val();
+    var requestURL = "/system";
 
-    if("0" == roleId){
+    if (!roleId || "0" == roleId) {
       alert(wtssI18n.system.rolePro);
       return;
     }
 
-    if("0" == departmentId){
+    if (!departmentId || "0" == departmentId) {
       alert(wtssI18n.system.departmentPro);
       return;
     }
@@ -481,18 +363,20 @@ azkaban.UpdateSystemUserView = Backbone.View.extend({
     var requestData = {
       "ajax": "updateSystemUser",
       "userId": userId,
+      "categoryUser": categoryUser,
       "password": password,
       "roleId": roleId,
       "proxyUser": proxyUser,
       "departmentId": departmentId,
+      "email": email
     };
     var successHandler = function (data) {
       if (data.error) {
         $("#update-user-modal-error-msg").show();
-        $("#update-user-modal-error-msg").text(data.error.message);
+        $("#update-user-modal-error-msg").text(data.error);
         return false;
       } else {
-        window.location.href = contextURL + "/system";
+        window.location.href = "/system";
       }
       model.trigger("render");
     };
@@ -500,32 +384,34 @@ azkaban.UpdateSystemUserView = Backbone.View.extend({
   },
 
   handleDeleteSystemUser: function (evt) {
-    console.log("Delete System User button.");
-    var userId = $("#wtss-user-id").val();
-    var requestURL = contextURL + "/system";
+    deleteDialogView.show(wtssI18n.deletePro.deleteUser, wtssI18n.deletePro.whetherDeleteUser, wtssI18n.common.cancel, wtssI18n.common.delete, '', function() {
+        console.log("Delete System User button.");
+        var userId = $("#wtss-user-id").val();
+        var requestURL = "/system";
 
-    var model = this.model;
-    var requestData = {
-      "ajax": "deleteSystemUser",
-      "userId": userId,
-    };
-    var successHandler = function (data) {
-      if (data.error) {
-        $("#update-user-modal-error-msg").show();
-        $("#update-user-modal-error-msg").text(data.error.message);
-        return false;
-      } else {
-        window.location.href = contextURL + "/system";
-      }
-      model.trigger("render");
-    };
-    $.get(requestURL, requestData, successHandler, "json");
+        var model = this.model;
+        var requestData = {
+        "ajax": "deleteSystemUser",
+        "userId": userId,
+        };
+        var successHandler = function (data) {
+        if (data.error) {
+            $("#update-user-modal-error-msg").show();
+            $("#update-user-modal-error-msg").text(data.error.message);
+            return false;
+        } else {
+            window.location.href = "/system";
+        }
+        model.trigger("render");
+        };
+        $.get(requestURL, requestData, successHandler, "json");
+    });
   },
 
   loadWtssUserData: function () {
 
     var userId = this.model.get("updateUserId");
-    var requestURL = contextURL + "/system";
+    var requestURL = "/system";
 
     var requestData = {
       "ajax": "getSystemUserById",
@@ -568,52 +454,37 @@ azkaban.UpdateSystemUserView = Backbone.View.extend({
             }
           }
         }
+        const departPathMap = addSystemUserView.model.get("departPathMap");
+        if (!departPathMap[data.systemUser.departmentId]) {
+            messageBox.show(`${data.systemUser.departmentName}不存在，请重新选择用户部门`,"warning");
+            data.systemUser.departmentId = "";
+        }
 
         $("#wtss-user-id").val(data.systemUser.userId);
         $("#wtss-full-name").val(data.systemUser.fullName);
-        $("#wtss-user-category").val(showUserCategory);
+        $("#wtss-user-category").val(showUserCategory).attr('userType', data.systemUser.userType);
         $("#update-password").val(data.systemUser.password);
         $("#update-user-role-select").val(data.systemUser.roleId);
         $("#update-proxy-user").val(data.systemUser.proxyUsers);
         $("#update-wtss-department-select").val(data.systemUser.departmentId);
+        $("#update-system-user-panel [name=email]").val(data.systemUser.email);
       }
     };
     $.get(requestURL, requestData, successHandler, "json");
 
   },
-
-  loadWebankDepartmentData:function () {
-    var requestURL = contextURL + "/system";
-    var requestData = {
-      "ajax":"loadWebankDepartmentSelectData",
-    };
-    var successHandler = function(data) {
-      if (data.error) {
-        console.log(data.error.message);
-      }
-      else {
-        var depList = data.webankDepartmentList;
-        $("#update-wtss-department-select").find("option:selected").text("");
-        $("#update-wtss-department-select").empty();
-        for(var i=0; i<depList.length; i++){
-          var department = depList[i];
-          $('#update-wtss-department-select').append("<option value='" + department.dpId + "'>" + department.dpName + "</option>");
-        }
-      }
+  renderDepartmentOption: function (){
+    var subsystemMap = addSystemUserView.model.get("departPathMap");
+    var optionHtml = ""
+    for (var key in subsystemMap) {
+        optionHtml += "<option value='" + key + "'>" + subsystemMap[key] + "</option>"
     }
-
-    $.ajax({
-      url: requestURL,
-      type: "get",
-      async: false,
-      data: requestData,
-      dataType: "json",
-      error: function(data) {
-        console.log(data);
-      },
-      success: successHandler
-    });
+    optionHtml = filterXSS(optionHtml, { 'whiteList': { 'option': ['value'] } })
+    $('#webank-department-select2').empty().append(optionHtml);
+    $('#update-wtss-department-select').empty().append(optionHtml);
+    $('#dep-for-select-add-maintainer').empty().append(optionHtml);
   },
+  loadWebankDepartmentData: loadDepartmentData,
 
   render: function () {
     $("#update-user-modal-error-msg").hide();
@@ -636,31 +507,31 @@ azkaban.WebankUserSyncView = Backbone.View.extend({
     //console.log("click webank user sync");
     //$('#webank-user-sync-panel').modal();
 
-    $('#webank-user-sync-progress').prop("class","flow-progress-bar main-progress RUNNING");
+    $('#webank-user-sync-progress').prop("class", "flow-progress-bar main-progress RUNNING");
 
     var requestData = {
       "ajax": "syncWebankUsers",
     };
-    var successHandler = function(data) {
-      if(data.error){
+    var successHandler = function (data) {
+      if (data.error) {
         $("#webank-user-sync-error-msg").show();
         $("#webank-user-sync-error-msg").text(data.error);
-        $('#webank-user-sync-progress').prop("class","flow-progress-bar main-progress FAILED");
+        $('#webank-user-sync-progress').prop("class", "flow-progress-bar main-progress FAILED");
       } else {
         $("#webank-user-sync-success-msg").show();
         $("#webank-user-sync-success-msg").text(data.message);
-        $('#webank-user-sync-progress').prop("class","flow-progress-bar main-progress SUCCEEDED");
+        $('#webank-user-sync-progress').prop("class", "flow-progress-bar main-progress SUCCEEDED");
       }
 
     };
-    $.get(contextURL, requestData, successHandler, "json");
+    $.get('', requestData, successHandler, "json");
 
   },
 
   render: function () {
     $("#webank-user-sync-error-msg").hide();
     $("#webank-user-sync-success-msg").hide();
-    $('#webank-user-sync-progress').prop("class","");
+    $('#webank-user-sync-progress').prop("class", "");
   },
 
 });

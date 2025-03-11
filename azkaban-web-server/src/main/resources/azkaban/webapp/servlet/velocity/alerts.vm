@@ -27,7 +27,7 @@
   $warn_message
 </div>
 #elseif ($success_message != "null")
-<div class="alert alert-success" style="word-break:break-all;">
+<div class="alert alert-success alert-success-prompt" style="word-break:break-all;">
   <button type="button" class="close" data-dismiss="alert" aria-hidden="true">&times;</button>
   $success_message
 </div>

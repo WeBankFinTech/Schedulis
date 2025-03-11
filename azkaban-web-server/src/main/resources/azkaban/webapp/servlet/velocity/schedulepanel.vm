@@ -14,12 +14,12 @@
  * the License.
 *#
 
-<script type="text/javascript" src="${context}/js/azkaban/util/date.js?version=1.10.0"></script>
+<script type="text/javascript" src="/js/azkaban/util/utils.js?version=1.49.0"></script>
 <script type="text/javascript"
-        src="${context}/js/azkaban/view/schedule-panel.js?version=1.10.0"></script>
-<script type="text/javascript" src="${context}/js/moment.min.js?version=1.10.0"></script>
-<script type="text/javascript" src="${context}/js/later.min.js?version=1.10.0"></script>
-<script type="text/javascript" src="${context}/js/moment-timezone-with-data.min.js?version=1.10.0"></script>
+        src="/js/azkaban/view/schedule-panel.js?version=1.49.0"></script>
+<script type="text/javascript" src="/js/moment-2.29.4.min.js?version=1.49.0"></script>
+<script type="text/javascript" src="/js/later.min.js?version=1.49.0"></script>
+<script type="text/javascript" src="/js/moment-timezone-with-data.min.js?version=1.49.0"></script>
 <style type="text/css">
   .input-box {
     position: relative;
@@ -55,7 +55,7 @@
             <div class="col-sm-12" style="height:55px;">
               <h4 style="color:Coral; font-style:italic;">$refTimeZone <b id="timeZoneID"></b>.</h4>
               <!--
-              <h6 style="color:#0080ff;">警告:如果它被安排在运行时的一个小时内运行，那么它将被跳过。当PST切换到PDT时，没有2-3 AM。</h6>
+              <h6 style="color:#0080ff;">$warning</h6>
               -->
             </div>
             <!--
@@ -118,6 +118,10 @@
                   <tr class="danger">
                     <th scope="row">/</th>
                     <td>$graduallyValue</td>
+                  </tr>
+                  <tr>
+                    <th scope="row" style="background: #d9edf7;">?</th>
+                    <td style="background-color: #d9edf7;">$regtip</td>
                   </tr>
                   </tbody>
                 </table>

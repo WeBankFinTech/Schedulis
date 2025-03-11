@@ -1,6 +1,7 @@
 package com.webank.wedatashpere.schedulis.jobhook;
 
 import azkaban.Constants;
+import azkaban.executor.ExecutableFlowBase;
 import azkaban.executor.ExecutableNode;
 import azkaban.executor.ExecutorLoader;
 import azkaban.hookExecutor.ExecuteWithJobHook;
@@ -9,10 +10,15 @@ import azkaban.hookExecutor.HookContext.HookType;
 import azkaban.jobhook.JobHook;
 import azkaban.utils.Props;
 import azkaban.utils.QualitisUtil;
-import org.slf4j.Logger;
-
 import java.util.Map;
-import java.util.concurrent.*;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
+import org.jetbrains.annotations.NotNull;
+import org.slf4j.Logger;
 
 public class DataQualityInspectionHook implements ExecuteWithJobHook {
 
@@ -35,15 +41,11 @@ public class DataQualityInspectionHook implements ExecuteWithJobHook {
     @Override
     public void run() throws Exception {
         logger.info("DataQualityInspectionHook start execute , hook type {}", hooktype);
-        //todo 补充和 qualitis 的交互场景
         boolean hookSwitch = serverProps.getBooleanDefaultFalse("job.hook.switch", false);
         String jobCodePrefix = serverProps.getString(Constants.JobProperties.JOB_BUS_PATH_CODE_PREFIX);
         QualitisUtil qualitisUtil = new QualitisUtil(this.pluginJobProps);
-        String flowId = this.node.getExecutableFlow().getId();
-        String projectName = this.node.getExecutableFlow().getProjectName();
-        String jobCode =
-            jobCodePrefix + "/" + projectName.toLowerCase() + "/" + flowId.toLowerCase() + "/"
-                + this.node.getId().toLowerCase();
+        String jobCode = createJobCode(jobCodePrefix);
+
         logger.info("jobCode: " + jobCode);
 
         JobHook jobHook = this.executorLoader.getJobHook(jobCode);
@@ -58,7 +60,7 @@ public class DataQualityInspectionHook implements ExecuteWithJobHook {
         if (hookSwitch && HookType.PRE_EXEC_SYS_HOOK.equals(this.hooktype) && jobHook != null) {
             // 前置 hook
             Map<Long, String> prefixRules = jobHook.getPrefixRules();
-            logger.info("prefix Qualitis hook , roleGroupInfoArr info :{}" , prefixRules.toString());
+            logger.info("prefix Qualitis hook , ruleGroupInfoArr info :{}" , prefixRules.toString());
             if (!prefixRules.isEmpty()) {
                 for (Long prefixRuleId : prefixRules.keySet()) {
                     String roleGroupInfo = prefixRules.get(prefixRuleId);
@@ -74,7 +76,7 @@ public class DataQualityInspectionHook implements ExecuteWithJobHook {
                             Callable<String> call = () -> {
                                 String applicationId = qualitisUtil.submitTask(prefixRuleId,
                                     createUser,
-                                    executionUser);
+                                    executionUser, node.getRunDate());
                                 logger.info("Application Id: " + applicationId);
                                 return applicationId;
                             };
@@ -97,7 +99,7 @@ public class DataQualityInspectionHook implements ExecuteWithJobHook {
                             try {
                                 applicationIdInCall = qualitisUtil.submitTask(prefixRuleId,
                                     createUser,
-                                    executionUser);
+                                    executionUser, node.getRunDate());
                                 logger.info("Application Id: " + applicationIdInCall);
                             } catch (Throwable e) {
                                 throw new QualitisTaskException(
@@ -185,7 +187,7 @@ public class DataQualityInspectionHook implements ExecuteWithJobHook {
             && jobHook != null) {
             // 后置 hook
             Map<Long, String> suffixRules = jobHook.getSuffixRules();
-            logger.info("suffix Qualitis hook , roleGroupInfoArr info :{}" , suffixRules.toString());
+            logger.info("suffix Qualitis hook ,  ruleGroupInfoArr info :{}" , suffixRules.toString());
             if (!suffixRules.isEmpty()) {
                 for (Long suffixRuleId : suffixRules.keySet()) {
                     String roleGroupInfo = suffixRules.get(suffixRuleId);
@@ -200,7 +202,7 @@ public class DataQualityInspectionHook implements ExecuteWithJobHook {
                             Callable<String> call = () -> {
                                 String applicationId = qualitisUtil.submitTask(suffixRuleId,
                                     createUser,
-                                    executionUser);
+                                    executionUser, node.getRunDate());
                                 logger.info("Application Id: " + applicationId);
                                 return applicationId;
                             };
@@ -223,7 +225,7 @@ public class DataQualityInspectionHook implements ExecuteWithJobHook {
                             try {
                                 applicationIdInCall = qualitisUtil.submitTask(suffixRuleId,
                                     createUser,
-                                    executionUser);
+                                    executionUser, node.getRunDate());
                                 logger.info("Application Id: " + applicationIdInCall);
                             } catch (Throwable e) {
                                 throw new QualitisTaskException(
@@ -311,5 +313,26 @@ public class DataQualityInspectionHook implements ExecuteWithJobHook {
         }
 
         logger.info("DataQualityInspectionHook end execute , hook type {}" , hooktype);
+    }
+
+    @NotNull
+    private String createJobCode(String jobCodePrefix) {
+        String flowId = this.node.getExecutableFlow().getId();
+        String projectName = this.node.getExecutableFlow().getProjectName();
+        // 获取任务节点直接父级工作流名
+        ExecutableFlowBase parentFlow = this.node.getParentFlow();
+        String jobCode = "";
+        if (parentFlow == null) {
+            // 最外层工作流上的节点
+            jobCode =
+                jobCodePrefix + "/" + projectName.toLowerCase() + "/" + flowId.toLowerCase() + "/"
+                    + this.node.getId().toLowerCase();
+        } else {
+            // 子工作流内的节点使用直接父级工作流名（末端节点名）
+            jobCode =
+                jobCodePrefix + "/" + projectName.toLowerCase() + "/" + parentFlow.getFlowId()
+                    .toLowerCase() + "/" + this.node.getId().toLowerCase();
+        }
+        return jobCode;
     }
 }

@@ -16,20 +16,40 @@
 
 package azkaban.execapp;
 
+import static azkaban.Constants.ConfigurationKeys;
+import static azkaban.Constants.DEFAULT_EXECUTOR_PORT_FILE;
+import static azkaban.ServiceProvider.SERVICE_PROVIDER;
+import static azkaban.execapp.ExecJettyServerModule.EXEC_JETTY_SERVER;
+import static azkaban.execapp.ExecJettyServerModule.EXEC_ROOT_CONTEXT;
+import static com.google.common.base.Preconditions.checkState;
+import static java.util.Objects.requireNonNull;
+
+import azkaban.AzkabanCommonModule;
+import azkaban.Constants;
+import azkaban.execapp.event.JobCallbackManager;
+import azkaban.execapp.jmx.JmxFlowRunnerManager;
+import azkaban.execapp.jmx.JmxJobMBeanManager;
+import azkaban.execapp.metric.NumFailedFlowMetric;
+import azkaban.execapp.metric.NumFailedJobMetric;
+import azkaban.execapp.metric.NumQueuedFlowMetric;
+import azkaban.execapp.metric.NumRunningFlowMetric;
+import azkaban.execapp.metric.NumRunningJobMetric;
+import azkaban.executor.Executor;
+import azkaban.executor.ExecutorLoader;
+import azkaban.executor.ExecutorManagerException;
+import azkaban.executor.Hosts;
+import azkaban.jmx.JmxJettyServer;
+import azkaban.metric.IMetricEmitter;
+import azkaban.metric.MetricException;
+import azkaban.metric.MetricReportManager;
+import azkaban.metric.inmemoryemitter.InMemoryMetricEmitter;
+import azkaban.metrics.MetricsManager;
+import azkaban.server.AbstractAzkabanServer;
+import azkaban.utils.FileIOUtils;
+import azkaban.utils.Props;
+import azkaban.utils.Utils;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
-
-import org.apache.commons.lang.StringUtils;
-import org.eclipse.jetty.server.Connector;
-import org.eclipse.jetty.server.Server;
-import org.eclipse.jetty.server.ServerConnector;
-import org.eclipse.jetty.server.handler.IPAccessHandler;
-import org.eclipse.jetty.servlet.FilterHolder;
-import org.eclipse.jetty.servlet.ServletContextHandler;
-import org.joda.time.DateTimeZone;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
@@ -37,6 +57,7 @@ import java.io.InputStreamReader;
 import java.lang.management.ManagementFactory;
 import java.lang.reflect.Constructor;
 import java.net.InetAddress;
+import java.net.UnknownHostException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Paths;
 import java.security.Permission;
@@ -56,38 +77,17 @@ import javax.management.MBeanServer;
 import javax.management.ObjectName;
 import javax.servlet.DispatcherType;
 
-import azkaban.AzkabanCommonModule;
-import azkaban.Constants;
-import azkaban.execapp.event.JobCallbackManager;
-import azkaban.execapp.jmx.JmxFlowRunnerManager;
-import azkaban.execapp.jmx.JmxJobMBeanManager;
-import azkaban.execapp.metric.NumFailedFlowMetric;
-import azkaban.execapp.metric.NumFailedJobMetric;
-import azkaban.execapp.metric.NumQueuedFlowMetric;
-import azkaban.execapp.metric.NumRunningFlowMetric;
-import azkaban.execapp.metric.NumRunningJobMetric;
-import azkaban.executor.Executor;
-import azkaban.executor.ExecutorLoader;
-import azkaban.executor.ExecutorManagerException;
-import azkaban.jmx.JmxJettyServer;
-import azkaban.metric.IMetricEmitter;
-import azkaban.metric.MetricException;
-import azkaban.metric.MetricReportManager;
-import azkaban.metric.inmemoryemitter.InMemoryMetricEmitter;
-import azkaban.metrics.MetricsManager;
-import azkaban.server.AzkabanServer;
-import azkaban.utils.FileIOUtils;
-import azkaban.utils.Props;
-import azkaban.utils.StdOutErrRedirect;
-import azkaban.utils.Utils;
-
-import static azkaban.Constants.ConfigurationKeys;
-import static azkaban.Constants.DEFAULT_EXECUTOR_PORT_FILE;
-import static azkaban.ServiceProvider.SERVICE_PROVIDER;
-import static azkaban.execapp.ExecJettyServerModule.EXEC_JETTY_SERVER;
-import static azkaban.execapp.ExecJettyServerModule.EXEC_ROOT_CONTEXT;
-import static com.google.common.base.Preconditions.checkState;
-import static java.util.Objects.requireNonNull;
+import org.apache.commons.collections.CollectionUtils;
+import org.apache.commons.lang.StringUtils;
+import org.eclipse.jetty.server.Connector;
+import org.eclipse.jetty.server.Server;
+import org.eclipse.jetty.server.ServerConnector;
+import org.eclipse.jetty.server.handler.IPAccessHandler;
+import org.eclipse.jetty.servlet.FilterHolder;
+import org.eclipse.jetty.servlet.ServletContextHandler;
+import org.joda.time.DateTimeZone;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 //import org.mortbay.jetty.Connector;
 //import org.mortbay.jetty.Server;
@@ -97,17 +97,21 @@ import static java.util.Objects.requireNonNull;
 public class AzkabanExecutorServer {
 
   public static final String JOBTYPE_PLUGIN_DIR = "azkaban.jobtype.plugin.dir";
+  public static final String JOBHOOK_PLUGIN_DIR = "azkaban.jobhook.plugin.dir";
   public static final String METRIC_INTERVAL = "executor.metric.milisecinterval.";
   private static final String CUSTOM_JMX_ATTRIBUTE_PROCESSOR_PROPERTY = "jmx.attribute.processor.class";
   private static final Logger logger = LoggerFactory.getLogger(AzkabanExecutorServer.class);
   private static final String DEFAULT_TIMEZONE_ID = "default.timezone.id";
   private static final String EXECUTOR_SERVER_ID = "executor.server.id";
+  private static final String DEFAULT_USER = "superadmin";
 
   private static AzkabanExecutorServer app;
 
   private final ExecMetrics execMetrics;
   private final ExecutorLoader executionLoader;
   private final FlowRunnerManager runnerManager;
+  private final LinkisJobUpdater linkisJobUpdater;
+  private final SystemInfoMonitor systemInfoMonitor;
   private final MetricsManager metricsManager;
   private final Props props;
   private final Server server;
@@ -122,12 +126,15 @@ public class AzkabanExecutorServer {
       final FlowRunnerManager runnerManager,
       final MetricsManager metricsManager,
       final ExecMetrics execMetrics,
+      final LinkisJobUpdater linkisJobUpdater,
+      final SystemInfoMonitor systemInfoMonitor,
       @Named(EXEC_JETTY_SERVER) final Server server,
       @Named(EXEC_ROOT_CONTEXT) final ServletContextHandler root) throws Exception {
     this.props = props;
     this.executionLoader = executionLoader;
     this.runnerManager = runnerManager;
-
+    this.linkisJobUpdater= linkisJobUpdater;
+    this.systemInfoMonitor= systemInfoMonitor;
     this.metricsManager = metricsManager;
     this.execMetrics = execMetrics;
     this.server = server;
@@ -145,8 +152,6 @@ public class AzkabanExecutorServer {
    * Azkaban using Jetty
    */
   public static void main(final String[] args) throws Exception {
-    // Redirect all std out and err messages into log4j
-    StdOutErrRedirect.redirectOutAndErrToLog();
 
     logger.info("Starting Jetty Azkaban Executor...");
 
@@ -160,7 +165,7 @@ public class AzkabanExecutorServer {
       System.setSecurityManager(new SecurityManager());
     }
 
-    final Props props = AzkabanServer.loadProps(args);
+    final Props props = AbstractAzkabanServer.loadProps(args);
 
     if (props == null) {
       logger.error("Azkaban Properties not loaded.");
@@ -176,6 +181,12 @@ public class AzkabanExecutorServer {
     SERVICE_PROVIDER.setInjector(injector);
 
     launch(injector.getInstance(AzkabanExecutorServer.class));
+
+    try{
+      Class.forName("org.apache.linkis.errorcode.client.handler.LinkisErrorCodeHandler");
+    }catch(ClassNotFoundException e){
+      logger.error("instantace LinkisErrorCodeHandler failed",e);
+    }
   }
 
   public static void launch(final AzkabanExecutorServer azkabanExecutorServer) throws Exception {
@@ -220,8 +231,8 @@ public class AzkabanExecutorServer {
             && new File("/usr/bin/head").exists()) {
           AzkabanExecutorServer.logger.info("logging top memory consumer");
 
-          final ProcessBuilder processBuilder =
-              new ProcessBuilder("/bin/bash", "-c",
+          final java.lang.ProcessBuilder processBuilder =
+              new java.lang.ProcessBuilder("/bin/bash", "-c",
                   "/bin/ps aux --sort -rss | /usr/bin/head");
           final Process p = processBuilder.start();
           p.waitFor();
@@ -281,7 +292,7 @@ public class AzkabanExecutorServer {
     try {
       this.server.start();
     } catch (final Exception e) {
-      logger.error("", e);
+      logger.error("Failed to start server", e);
       Utils.croak(e.getMessage(), 1);
     }
 
@@ -308,8 +319,20 @@ public class AzkabanExecutorServer {
       final int port = getPort();
       checkState(port != -1);
       final Executor executor = this.executionLoader.fetchExecutor(host, port);
-      // FIXME executorId changed from self-incrementing to configurable.
-      final int id = Integer.valueOf(this.props.get(EXECUTOR_SERVER_ID));
+//      // FIXME executorId changed from self-incrementing to configurable.
+//      final int id = Integer.valueOf(this.props.get(EXECUTOR_SERVER_ID));
+      // Modified by v_rantao in 20231220, getting executorid from db instead of getting from properties
+//      String hostname = "";
+//      try {
+//        hostname = InetAddress.getLocalHost().getHostName();
+//      } catch (UnknownHostException e) {
+//        throw new ExecutorManagerException("Cannot get Localhost", e);
+//      }
+//      logger.info("hostname:{}", hostname);
+//      Hosts hosts = this.executionLoader.getHostConfigByHostname(hostname);
+//      final int id = hosts.getExecutorid();
+      final int id = getExecutorId();
+      logger.info("get executorid from db result, executorid is {}", id);
       if (executor == null) {//向数据库插入executor节点数据
         //this.executionLoader.addExecutor(host, port);
         logger.info("This executor wasn't found in the DB. Adding self.");
@@ -322,6 +345,28 @@ public class AzkabanExecutorServer {
       logger.error("Error inserting executor entry into DB", e);
       throw e;
     }
+  }
+
+  private int getExecutorId() throws ExecutorManagerException{
+    final String hostname;
+      try {
+        hostname = InetAddress.getLocalHost().getHostName();
+      } catch (UnknownHostException e) {
+        throw new ExecutorManagerException("Cannot get Localhost", e);
+      }
+      logger.info("hostname:{}", hostname);
+      Hosts hosts = this.executionLoader.getHostConfigByHostname(hostname);
+      if (null != hosts) {
+        // 如果数据库中有，则取数据库中的executorid
+        return hosts.getExecutorid();
+      } else {
+        // 如果数据库中没有，则新建一个
+        Hosts newHosts = new Hosts();
+        newHosts.setHostname(hostname);
+        newHosts.setCreator(DEFAULT_USER);
+        newHosts.setCreatetime(System.currentTimeMillis());
+        return this.executionLoader.insertHostsConfig(newHosts);
+      }
   }
 
   private void dumpPortToFile() throws IOException {
@@ -508,7 +553,7 @@ public class AzkabanExecutorServer {
   public String getHost() {
     if (this.props.containsKey(ConfigurationKeys.AZKABAN_SERVER_HOST_NAME)) {
       final String hostName = this.props
-          .getString(ConfigurationKeys.AZKABAN_SERVER_HOST_NAME);
+          .getString(Constants.ConfigurationKeys.AZKABAN_SERVER_HOST_NAME);
       if (!StringUtils.isEmpty(hostName)) {
         return hostName;
       }
@@ -571,6 +616,8 @@ public class AzkabanExecutorServer {
    */
   private void shutdownInternal() {
     getFlowRunnerManager().shutdown();
+    getLinkisJobUpdater().shutDown();
+    getSystemInfoMonitor().shutDown();
     // Sleep for an hour to wait for web server updater thread
     // {@link azkaban.executor.RunningExecutionsUpdaterThread#updateExecutions} to finalize updating
     sleep(Duration.ofHours(1));
@@ -585,7 +632,13 @@ public class AzkabanExecutorServer {
     this.server.stop();
     this.server.destroy();
     getFlowRunnerManager().shutdownNow();
+    getLinkisJobUpdater().shutDown();
+    getSystemInfoMonitor().shutDown();
     close();
+  }
+
+  public LinkisJobUpdater getLinkisJobUpdater() {
+    return linkisJobUpdater;
   }
 
   public int getPort() {
@@ -602,8 +655,12 @@ public class AzkabanExecutorServer {
     }else {
       serverConnector = new ServerConnector(server);
     }
-
-    return serverConnector.getLocalPort();
+    int port = serverConnector.getLocalPort();
+    //serverConnector.close();
+    return port;
   }
 
+  public SystemInfoMonitor getSystemInfoMonitor() {
+    return systemInfoMonitor;
+  }
 }

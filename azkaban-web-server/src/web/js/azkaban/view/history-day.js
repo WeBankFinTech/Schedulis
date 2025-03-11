@@ -80,7 +80,7 @@ var showDialog = function (title, message) {
 }
 
 $(function () {
-  var requestURL = contextURL + "/history";
+  var requestURL = "/history";
 
   var start = new Date();
   start.setHours(0);

@@ -20,13 +20,13 @@ import azkaban.flowtrigger.CancellationCause;
 import azkaban.flowtrigger.DependencyInstance;
 import azkaban.flowtrigger.FlowTriggerService;
 import azkaban.flowtrigger.TriggerInstance;
+import azkaban.i18n.utils.LoadJsonUtils;
 import azkaban.project.Project;
 import azkaban.project.ProjectManager;
 import azkaban.server.session.Session;
 import azkaban.user.Permission.Type;
 import azkaban.webapp.AzkabanWebServer;
 import com.google.gson.GsonBuilder;
-import com.webank.wedatasphere.schedulis.common.i18nutils.LoadJsonUtils;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -43,7 +43,7 @@ import org.slf4j.Logger;
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
 
-public class FlowTriggerInstanceServlet extends LoginAbstractAzkabanServlet {
+public class FlowTriggerInstanceServlet extends AbstractLoginAzkabanServlet {
 
   private static final long serialVersionUID = 1L;
   private static final Logger logger = LoggerFactory.getLogger(FlowTriggerInstanceServlet.class);
@@ -60,7 +60,7 @@ public class FlowTriggerInstanceServlet extends LoginAbstractAzkabanServlet {
 
   @Override
   protected void handleGet(final HttpServletRequest req, final HttpServletResponse resp,
-      final Session session) throws ServletException, IOException {
+                           final Session session) throws ServletException, IOException {
     if (hasParam(req, "ajax")) {
       handleAJAXAction(req, resp, session);
     } else {
@@ -69,10 +69,10 @@ public class FlowTriggerInstanceServlet extends LoginAbstractAzkabanServlet {
   }
 
   private void handlePage(final HttpServletRequest req,
-      final HttpServletResponse resp, final Session session) {
+                          final HttpServletResponse resp, final Session session) {
     final Page page =
-        newPage(req, resp, session,
-            "azkaban/webapp/servlet/velocity/executingflowtriggerspage.vm");
+            newPage(req, resp, session,
+                    "azkaban/webapp/servlet/velocity/executingflowtriggerspage.vm");
 
     page.add("runningTriggers", this.triggerService.getRunningTriggers());
     page.add("recentTriggers", this.triggerService.getRecentlyFinished());
@@ -85,29 +85,29 @@ public class FlowTriggerInstanceServlet extends LoginAbstractAzkabanServlet {
   }
 
   private void handleAJAXAction(final HttpServletRequest req,
-      final HttpServletResponse resp, final Session session) throws ServletException,
-      IOException {
+                                final HttpServletResponse resp, final Session session) throws ServletException,
+          IOException {
     final HashMap<String, Object> ret = new HashMap<>();
     final String ajaxName = getParam(req, "ajax");
 
     //todo chengren311: add permission control
-    if (ajaxName.equals("fetchRunningTriggers")) {
+    if ("fetchRunningTriggers".equals(ajaxName)) {
       ajaxFetchRunningTriggerInstances(ret);
-    } else if (ajaxName.equals("killRunningTrigger")) {
+    } else if ("killRunningTrigger".equals(ajaxName)) {
       if (hasParam(req, "id")) {
         final String triggerInstanceId = getParam(req, "id");
         ajaxKillTriggerInstance(triggerInstanceId, session, ret);
       } else {
         ret.put("error", "please specify a valid running trigger instance id");
       }
-    } else if (ajaxName.equals("showTriggerProperties")) {
+    } else if ("showTriggerProperties".equals(ajaxName)) {
       if (hasParam(req, "id")) {
         final String triggerInstanceId = getParam(req, "id");
         loadTriggerProperties(triggerInstanceId, ret);
       } else {
         ret.put("error", "please specify a valid running trigger instance id");
       }
-    } else if (ajaxName.equals("fetchTriggerStatus")) {
+    } else if ("fetchTriggerStatus".equals(ajaxName)) {
       if (hasParam(req, "triggerinstid")) {
         final String triggerInstanceId = getParam(req, "triggerinstid");
         ajaxFetchTriggerInstanceByTriggerInstId(triggerInstanceId, session, ret);
@@ -117,7 +117,7 @@ public class FlowTriggerInstanceServlet extends LoginAbstractAzkabanServlet {
       } else {
         ret.put("error", "please specify a valid trigger instance id or flow execution id");
       }
-    } else if (ajaxName.equals("fetchTriggerInstances")) {
+    } else if ("fetchTriggerInstances".equals(ajaxName)) {
       if (hasParam(req, "project") && hasParam(req, "flow")) {
         final String projectName = getParam(req, "project");
         final String flowId = getParam(req, "flow");
@@ -140,17 +140,17 @@ public class FlowTriggerInstanceServlet extends LoginAbstractAzkabanServlet {
   }
 
   private void ajaxFetchTriggerInstances(
-      final int projectId,
-      final String flowId,
-      final HashMap<String, Object> ret,
-      final HttpServletRequest req)
-      throws ServletException {
+          final int projectId,
+          final String flowId,
+          final HashMap<String, Object> ret,
+          final HttpServletRequest req)
+          throws ServletException {
 
     final int from = Integer.valueOf(getParam(req, "start"));
     final int length = Integer.valueOf(getParam(req, "length"));
 
     final Collection<TriggerInstance> triggerInstances = this.triggerService
-        .getTriggerInstances(projectId, flowId, from, length);
+            .getTriggerInstances(projectId, flowId, from, length);
 
     ret.put("flow", flowId);
     ret.put("total", triggerInstances.size());
@@ -172,9 +172,9 @@ public class FlowTriggerInstanceServlet extends LoginAbstractAzkabanServlet {
   }
 
   private void loadTriggerProperties(final String triggerInstanceId,
-      final HashMap<String, Object> ret) {
+                                     final HashMap<String, Object> ret) {
     final TriggerInstance triggerInstance = this.triggerService
-        .findTriggerInstanceById(triggerInstanceId);
+            .findTriggerInstanceById(triggerInstanceId);
     if (triggerInstance != null) {
       ret.put("triggerProperties", triggerInstance.getFlowTrigger().toString());
     } else {
@@ -184,20 +184,20 @@ public class FlowTriggerInstanceServlet extends LoginAbstractAzkabanServlet {
 
 
   private void wrapTriggerInst(final TriggerInstance triggerInst,
-      final HashMap<String, Object> ret) {
+                               final HashMap<String, Object> ret) {
     final List<Map<String, Object>> dependencyOutput = new ArrayList<>();
     for (final DependencyInstance depInst : triggerInst.getDepInstances()) {
       final Map<String, Object> depMap = new HashMap<>();
       depMap.put("triggerInstanceId", depInst.getTriggerInstance().getId());
       depMap.put("dependencyName", depInst.getDepName());
       depMap.put("dependencyType", depInst.getTriggerInstance().getFlowTrigger()
-          .getDependencyByName(depInst.getDepName()).getType());
+              .getDependencyByName(depInst.getDepName()).getType());
       depMap.put("dependencyStartTime", depInst.getStartTime());
       depMap.put("dependencyEndTime", depInst.getEndTime());
       depMap.put("dependencyStatus", depInst.getStatus());
       depMap.put("dependencyCancelCause", depInst.getCancellationCause());
       depMap.put("dependencyConfig", depInst.getTriggerInstance().getFlowTrigger()
-          .getDependencyByName(depInst.getDepName()));
+              .getDependencyByName(depInst.getDepName()));
       dependencyOutput.add(depMap);
     }
     ret.put("items", dependencyOutput);
@@ -208,32 +208,32 @@ public class FlowTriggerInstanceServlet extends LoginAbstractAzkabanServlet {
     ret.put("triggerEndTime", triggerInst.getEndTime());
     ret.put("triggerStatus", triggerInst.getStatus());
     final String flowTriggerJson = new GsonBuilder().setPrettyPrinting().create()
-        .toJson(triggerInst.getFlowTrigger());
+            .toJson(triggerInst.getFlowTrigger());
     ret.put("triggerProps", flowTriggerJson);
   }
 
   private void ajaxFetchTriggerInstanceByExecId(final int execId, final Session session,
-      final HashMap<String, Object> ret) {
+                                                final HashMap<String, Object> ret) {
     final TriggerInstance triggerInst = this.triggerService
-        .findTriggerInstanceByExecId(execId);
+            .findTriggerInstanceByExecId(execId);
     if (triggerInst != null) {
       wrapTriggerInst(triggerInst, ret);
     }
   }
 
   private void ajaxFetchTriggerInstanceByTriggerInstId(final String triggerInstanceId,
-      final Session session, final HashMap<String, Object> ret) {
+                                                       final Session session, final HashMap<String, Object> ret) {
     final TriggerInstance triggerInst = this.triggerService
-        .findTriggerInstanceById(triggerInstanceId);
+            .findTriggerInstanceById(triggerInstanceId);
     if (triggerInst != null) {
       wrapTriggerInst(triggerInst, ret);
     }
   }
 
   private void ajaxKillTriggerInstance(final String triggerInstanceId, final Session session,
-      final HashMap<String, Object> ret) {
+                                       final HashMap<String, Object> ret) {
     final TriggerInstance triggerInst = this.triggerService
-        .findRunningTriggerInstById(triggerInstanceId);
+            .findRunningTriggerInstById(triggerInstanceId);
     if (triggerInst != null) {
       if (hasPermission(triggerInst.getProject(), session.getUser(), Type.EXECUTE)) {
         this.triggerService.cancelTriggerInstance(triggerInst, CancellationCause.MANUAL);
@@ -246,9 +246,9 @@ public class FlowTriggerInstanceServlet extends LoginAbstractAzkabanServlet {
   }
 
   private void ajaxFetchRunningTriggerInstances(final HashMap<String, Object> ret) throws
-      ServletException {
+          ServletException {
     final Collection<TriggerInstance> triggerInstanceList = this.triggerService
-        .getRunningTriggers();
+            .getRunningTriggers();
 
     final List<HashMap<String, Object>> output = new ArrayList<>();
     ret.put("items", output);
@@ -259,7 +259,7 @@ public class FlowTriggerInstanceServlet extends LoginAbstractAzkabanServlet {
   }
 
   private void writeTriggerInstancesData(final List<HashMap<String, Object>> output,
-      final TriggerInstance triggerInst) {
+                                         final TriggerInstance triggerInst) {
 
     final HashMap<String, Object> data = new HashMap<>();
     data.put("id", triggerInst.getId());
@@ -277,8 +277,8 @@ public class FlowTriggerInstanceServlet extends LoginAbstractAzkabanServlet {
       depMap.put("dependencyEndtime", depInst.getEndTime());
       depMap.put("dependencyStatus", depInst.getStatus());
       depMap.put("dependencyConfig", depInst.getTriggerInstance().getFlowTrigger()
-          .getDependencyByName
-              (depInst.getDepName()));
+              .getDependencyByName
+                      (depInst.getDepName()));
       dependencyOutput.add(depMap);
     }
     data.put("dependencies", dependencyOutput);
@@ -287,7 +287,7 @@ public class FlowTriggerInstanceServlet extends LoginAbstractAzkabanServlet {
 
   @Override
   protected void handlePost(final HttpServletRequest req, final HttpServletResponse resp,
-      final Session session) throws ServletException, IOException {
+                            final Session session) throws ServletException, IOException {
     if (hasParam(req, "ajax")) {
       handleAJAXAction(req, resp, session);
     }
@@ -299,7 +299,7 @@ public class FlowTriggerInstanceServlet extends LoginAbstractAzkabanServlet {
    * timezone.
    */
   private DateTimeZone parseTimeZone(final String cronTimezone) {
-    if (cronTimezone != null && cronTimezone.equals("UTC")) {
+    if (cronTimezone != null && "UTC".equals(cronTimezone)) {
       return DateTimeZone.UTC;
     }
 

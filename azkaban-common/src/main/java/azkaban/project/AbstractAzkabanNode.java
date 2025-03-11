@@ -17,11 +17,11 @@
 
 package azkaban.project;
 
+import static java.util.Objects.requireNonNull;
+
 import azkaban.utils.Props;
 
 import java.util.List;
-
-import static java.util.Objects.requireNonNull;
 
 /**
  * A unit of execution that could be either a job or a flow.

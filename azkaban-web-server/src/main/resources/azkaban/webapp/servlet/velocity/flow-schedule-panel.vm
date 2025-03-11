@@ -19,7 +19,12 @@
     <div class="modal-content">
       <div class="modal-header">
         <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
-        <h4 class="modal-title" id="schedule-flow-panel-title" style="word-break:break-all;"></h4>
+        <div style="dispaly: flex;">
+          <h4 class="modal-title" id="schedule-flow-panel-title" style="word-break:break-all;"></h4>
+          <button id="project-upload-sch-btn" class="btn btn-sm btn-primary">
+            <span class="glyphicon glyphicon-upload"></span> $uploadTimingSchedule
+          </button>
+        </div>
       </div><!-- /modal-header -->
       <div class="modal-body row">
         <div class="col-xs-4" id="schedule-graph-options-box">
@@ -57,10 +62,31 @@
         <div class="col-xs-8" id="schedule-graph-panel-box">
           <div id="schedule-graph-options-panel">
             <div class="graph-sidebar-open " >
-              <span class="glyphicon glyphicon-retweet switching-flow-btn margin-left-15" id="switching-schedule-flow-btn"  title="Flow Switching"></span>
-              <span class="glyphicon glyphicon-zoom-in margin-left-15" id="workflow-zoom-in" title="Zoom in"></span>
-              <span class="glyphicon glyphicon-zoom-out margin-left-15" id="workflow-zoom-out" style="display:none" title="Zoom out"></span>
+                <span class="glyphicon glyphicon-th-list" title="${expandJobListPannel}" id ="open-schedule-joblist-btn"></span>
+                <span class="glyphicon glyphicon-retweet margin-left-15" id="switching-schedule-flow-btn"  title="${collapseExpandNodeName}"></span>
+                <span class="glyphicon glyphicon-zoom-in margin-left-15" id="workflow-zoom-in" title="${zoomin}"></span>
+                <span class="glyphicon glyphicon-zoom-out margin-left-15" id="workflow-zoom-out" style="display:none" title="${zoomout}"></span>
             </div>
+            <!-- graph-sidebar-open -->
+            <div class="execute-graph-sidebar-float graph-sidebar-float">
+                <div class="panel panel-default" id="schedule-joblist-panel">
+                    <div class="panel-heading">
+                        <div class="graph-sidebar-close execute-close-btn" title="${closePannel}"><span
+                            class="glyphicon glyphicon-remove"></span></div>
+                        <div class="graph-sidebar-search">
+                            <input  type="text" placeholder="${taskFilter}" class="form-control input-sm executeFilter">
+                        </div>
+                    </div>
+                    <div class="graph-sidebar-list executeJoblist"></div>
+                    <div class="panel-footer">
+                        <button type="button" class="btn btn-sm btn-default executeResetPanZoomBtn">Reset Pan Zoom
+                        </button>
+                        <button type="button" class="btn btn-sm btn-default executeAutoPanZoomBtn" data-toggle="button">Auto Pan Zoom
+                        </button>
+                    </div>
+                </div><!-- /.panel -->
+            </div>
+            ## SVG graph panel.
           ## SVG graph panel.
 
             <div id="schedule-svg-div-custom" class="side-panel">
@@ -103,6 +129,7 @@
               </div>
               <label>$setFailedAlertFormat</label>
               <textarea class="form-control" rows="3" placeholder="$alertUserInputTips" id="schedule-failure-emails"></textarea>
+              <textarea class="form-control" rows="3" placeholder="$customAlertInputTips" id="schedule-custom-failure-alert"></textarea>
 
               <h4>$successAlertList</h4>
               <div class="checkbox">
@@ -124,6 +151,7 @@
               </div>
               <label>$setSuccAlertFormat</label>
               <textarea class="form-control" rows="3" placeholder="$alertUserInputTips" id="schedule-success-emails"></textarea>
+              <textarea class="form-control" rows="3" placeholder="$customAlertInputTips" id="schedule-custom-success-alert"></textarea>
             </div>
 
           ## Failure options panel.
@@ -144,6 +172,21 @@
                 <option value="cancelImmediately">$shutdownRunningJob</option>
                 <option value="failedPause">$suspendCurrentFlow</option>
               </select>
+              <hr>
+              <p>$rerunActionTips</p>
+              <div class="radio">
+                <label>
+                  <input type="radio" name="rerunActionSche" value="killServer">
+                  $killServerTips
+                </label>
+              </div>
+
+              <div class="radio">
+                <label>
+                  <input type="radio" name="rerunActionSche" value="rerun" checked="checked">
+                  $rerunTips
+                </label>
+              </div>
               <hr>
               <p>$retryFailed</p>
               <div id="job-schedule-failed-retry-view">
@@ -167,10 +210,12 @@
                 </table>
               </div>
               <p>$skipFailed</p>
+              <p class="help-block">$skipActionTips</p>
               <div id="schedule-job-skip-failed-view">
                 <table class="table table-striped" id="scheduleJobSkipFailedTable">
                   <thead>
                   <tr>
+                    <th>$skipActionHead</th>
                     <th>$jobName</th>
                   </tr>
                   </thead>
@@ -264,6 +309,14 @@
           ## Flow parameters panel
 
             <div id="schedule-flow-parameters-panel" class="side-panel">
+                <h4>$settingProjectCache<span style="color: #b94a48;">$settingProjectCacheTips</span>）</h4>
+                <div id="scheduleEnabledCacheProjectFiles" class="margin-tb10" >
+                    <label class="title">$isSettinProjectCache</label>
+                    <label class="radio-inline">
+                        <input type="radio" name="scheduleCacheProject" id="scheduleCacheProjectTrue" value="true">$selectYes</label>
+                    <label class="radio-inline">
+                        <input type="radio" name="scheduleCacheProject" id="scheduleCacheProjectFalse" value="false" checked="">$selectNo</label>
+                </div>
               <h4>$flowParamOverride</h4>
               <hr>
               <div id="schedule-editTable">
@@ -283,6 +336,25 @@
                   </tbody>
                 </table>
               </div>
+              <div style="background-color:#f5f5f5; border:1px solid #e3e3e3">
+                <h4 style="color:orange">$paraexplain</h4>
+                <table class="table table-striped table-condensed" data-row-style="rowColors">
+                    <tbody>
+                      <tr class="success">
+                        <th scope="row">wto</th>
+                        <td>$paramwto</td>
+                      </tr>
+                      <tr class="primary">
+                        <th scope="row">wtl</th>
+                        <td>$paramwtl</td>
+                      </tr>
+                      <tr class="warning">
+                        <th scope="row">wtu</th>
+                        <td>$paramwtu</td>
+                      </tr>
+                    </tbody>
+                </table>
+              </div>
             </div>
 
           ## Schedule panel
@@ -298,86 +370,306 @@
                       <h4 style="color:Coral; font-style:italic;">$refTimeZone<b id="scheduleTimeZoneID"></b>.</h4>
                     </div>
                     <div class="form-group">
-                      <div class="col-sm-6">
-                        <label class="col-sm-4 control-label" id="schedule-min_label">$minute</label>
-                        <div class="col-sm-8">
-                          <input type="text" id="schedule-minute_input" value="" class="form-control"
-                                 oninput="updateScheduleOutput()">
+                      <div class="col-sm-7">
+                        <div
+                          class="row"
+                          style="margin-top: 20px; display: flex; align-item: center;"
+                        >
+                          <label
+                            class="col-sm-4 control-label"
+                            id="schedule-min_label"
+                          >$minute</label>
+                          <div class="col-sm-8">
+                            <input
+                              type="text"
+                              id="schedule-minute_input"
+                              value=""
+                              class="form-control"
+                              oninput="updateScheduleOutput()"
+                            >
+                          </div>
                         </div>
-                        <br/> <br/> <br/>
-                        <label class="col-sm-4 control-label" id="schedule-hour_label">$hour</label>
-                        <div class="col-sm-8">
-                          <input type="text" id="schedule-hour_input" value="" class="form-control"
-                                 oninput="updateScheduleOutput()">
+                        <div
+                          class="row"
+                          style="margin-top: 20px; display: flex; align-item: center;"
+                        >
+                          <label
+                            class="col-sm-4 control-label"
+                            id="schedule-hour_label"
+                          >$hour</label>
+                          <div class="col-sm-8">
+                            <input
+                              type="text"
+                              id="schedule-hour_input"
+                              value=""
+                              class="form-control"
+                              oninput="updateScheduleOutput()"
+                            >
+                          </div>
                         </div>
-                        <br/> <br/> <br/>
-                        <label class="col-sm-4 control-label" id="schedule-dom_label" style="margin-top:-8px">$dayofmonth</label>
-                        <div class="col-sm-8">
-                          <input type="text" id="schedule-dom_input" value="" class="form-control"
-                                 oninput="updateScheduleOutput()">
+                        <div
+                          class="row"
+                          style="margin-top: 20px; display: flex; align-item: center;"
+                        >
+                          <label
+                            class="col-sm-4 control-label"
+                            id="schedule-dom_label"
+                            style="margin-top:-8px"
+                          >$dayofmonth</label>
+                          <div class="col-sm-8">
+                            <input
+                              type="text"
+                              id="schedule-dom_input"
+                              value=""
+                              class="form-control"
+                              oninput="updateScheduleOutput()"
+                            >
+                          </div>
                         </div>
-                        <br/> <br/> <br/>
-                        <label class="col-sm-4 control-label" id="schedule-mon_label">$month</label>
-                        <div class="col-sm-8">
-                          <input type="text" id="schedule-month_input" value="" class="form-control"
-                                 oninput="updateScheduleOutput()">
+                        <div
+                          class="row"
+                          style="margin-top: 20px; display: flex; align-item: center;"
+                        >
+                          <label
+                            class="col-sm-4 control-label"
+                            id="schedule-mon_label"
+                          >$month</label>
+                          <div class="col-sm-8">
+                            <input
+                              type="text"
+                              id="schedule-month_input"
+                              value=""
+                              class="form-control"
+                              oninput="updateScheduleOutput()"
+                            >
+                          </div>
                         </div>
-                        <br/> <br/> <br/>
-                        <label class="col-sm-4 control-label" id="schedule-dow_label" style="margin-top:-8px">$dayofweek</label>
-                        <div class="col-sm-8">
-                          <input type="text" id="schedule-dow_input" value="" class="form-control"
-                                 oninput="updateScheduleOutput()">
+                        <div
+                          class="row"
+                          style="margin-top: 20px; display: flex; align-item: center;"
+                        >
+                          <label
+                            class="col-sm-4 control-label"
+                            id="schedule-dow_label"
+                            style="margin-top:-8px"
+                          >$dayofweek</label>
+                          <div class="col-sm-8">
+                            <input
+                              type="text"
+                              id="schedule-dow_input"
+                              value=""
+                              class="form-control"
+                              oninput="updateScheduleOutput()"
+                            >
+                          </div>
                         </div>
-                        <br/> <br/> <br/>
-                        <label class="col-sm-4 control-label" id="schedule-year_label">$year</label>
-                        <div class="col-sm-8">
-                          <input type="text" id="schedule-year_input" value="" class="form-control"
-                                 oninput="updateScheduleOutput()">
+                        <div
+                          class="row"
+                          style="margin-top: 20px; display: flex; align-item: center;"
+                        >
+                          <label
+                            class="col-sm-4 control-label"
+                            id="schedule-year_label"
+                            style="margin-top:-8px"
+                          >$year</label>
+                          <div class="col-sm-8">
+                            <input
+                              type="text"
+                              id="schedule-year_input"
+                              value=""
+                              class="form-control"
+                              oninput="updateScheduleOutput()"
+                            >
+                          </div>
+                        </div>
+                        <div
+                          class="row"
+                          style="margin-top: 20px; display: flex; align-item: center;"
+                        >
+                          <label class="col-sm-4 control-label">$scheStartDate</label>
+                          <div class="col-sm-8">
+                            <input
+                              type="text"
+                              id="schedule-start-date-input"
+                              class="ui-datetime-container form-control"
+                              onblur="updateScheduleExpression('#schedule-start-date-input')"
+                            >
+                          </div>
+                        </div>
+                        <div
+                          class="row"
+                          style="margin-top: 20px; display: flex; align-item: center;"
+                        >
+                          <label class="col-sm-4 control-label">$scheEndDate</label>
+                          <div class="col-sm-8">
+                            <input
+                              type="text"
+                              id="schedule-end-date-input"
+                              class="ui-datetime-container form-control"
+                              onblur="updateScheduleExpression('#schedule-end-date-input')"
+                            >
+                          </div>
+                        </div>
+                        <div
+                          class="row"
+                          style="margin-top: 20px; display: flex; align-item: center;"
+                        >
+                          <label class="col-sm-4 control-label">
+                            $isCrossDay
+                            <span
+                              id="cross-dayp-alert"
+                              class="glyphicon glyphicon-question-sign"
+                            ></span>
+                          </label>
+                          <div class="col-sm-8">
+                            <select
+                              id="cross-day-select"
+                              class="form-control"
+                            >
+                              <option value="false">$selectNo</option>
+                              <option value="true">$selectYes</option>
+                            </select>
+                          </div>
+                        </div>
+                        <div
+                          class="row"
+                          style="margin-top: 20px; display: flex; align-item: center;"
+                        >
+                          <label
+                            class="col-sm-4 control-label"
+                            style="padding-top:0"
+                          >$crontabTemplate</label>
+                          <div class="col-sm-8">
+                            <select
+                              id="crontabTemplate"
+                              class="form-control"
+                            >
+                            </select>
+                          </div>
+                        </div>
+                        <div
+                          class="row"
+                          style="margin-top: 20px; display: flex; align-item: center;"
+                        >
+                          <label
+                            class="col-sm-4 control-label"
+                            style="padding-top:0"
+                          >$autopullup</label>
+                          <div
+                            class="col-sm-8"
+                            id="autoEnable"
+                            style="padding-top: 7px;"
+                          >
+                            <label class="radio-inline">
+                              <input
+                                type="radio"
+                                name="optionsRadiosinline"
+                                id="autoEnableTrue"
+                                value="true"
+                              > $selectYes
+                            </label>
+                            <label class="radio-inline">
+                              <input
+                                type="radio"
+                                name="optionsRadiosinline"
+                                id="autoEnableFalse"
+                                value="false"
+                              > $selectNo
+                            </label>
+                          </div>
+                        </div>
+                        <div
+                          class="row"
+                          style="margin-top: 20px; display: flex; align-item: center;"
+                        >
+                          <label
+                            class="col-sm-4 control-label"
+                            style="padding-top:0"
+                          >$needAlert</label>
+                          <div
+                            class="col-sm-8"
+                            id="autoEnableAlert"
+                            style="padding-top: 7px;"
+                          >
+                            <label class="radio-inline">
+                              <input
+                                type="radio"
+                                name="optionsRadiosinlineAlert"
+                                id="autoEnableTrueAlert"
+                                value="true"
+                              > $selectYes
+                            </label>
+                            <label class="radio-inline">
+                              <input
+                                type="radio"
+                                name="optionsRadiosinlineAlert"
+                                id="autoEnableFalseAlert"
+                                value="false"
+                              > $selectNo
+                            </label>
+                          </div>
                         </div>
                       </div>
 
-                      <div class="col-sm-5" style="background-color:#f5f5f5; border:1px solid #e3e3e3">
-                        <h4 style="color:orange">$sepcialcharacter</h4>
-                        <table class="table table-striped" data-row-style="rowColors" id="schedule-instructions">
-                          <tbody>
-                          <tr class="success">
-                            <th scope="row">*</th>
-                            <td>$anything</td>
-                          </tr>
-                          <tr class="primary">
-                            <th scope="row">,</th>
-                            <td>$commaSep</td>
-                          </tr>
-                          <tr class="warning">
-                            <th scope="row">-</th>
-                            <td>$valueRange</td>
-                          </tr>
-                          <tr class="danger">
-                            <th scope="row">/</th>
-                            <td>$graduallyValue</td>
-                          </tr>
-                          </tbody>
-                        </table>
-                        <p><u><span style="color:Indigo"><a
-                                href="http://www.quartz-scheduler.org/documentation/quartz-2.x/tutorials/crontrigger.html" target="_blank">$detailDocLink</a></span>.</u>
-                        </p>
+                      <div class="col-sm-4" >
+                        <div style="background-color:#f5f5f5; border:1px solid #e3e3e3">
+                                <h4 style="color:orange">$sepcialcharacter</h4>
+                                <table class="table table-striped" data-row-style="rowColors" id="schedule-instructions">
+                                <tbody>
+                                <tr class="success">
+                                    <th scope="row">*</th>
+                                    <td>$anything</td>
+                                </tr>
+                                <tr class="primary">
+                                    <th scope="row">,</th>
+                                    <td>$commaSep</td>
+                                </tr>
+                                <tr class="warning">
+                                    <th scope="row">-</th>
+                                    <td>$valueRange</td>
+                                </tr>
+                                <tr class="danger">
+                                    <th scope="row">/</th>
+                                    <td>$graduallyValue</td>
+                                </tr>
+                                <tr>
+                                    <th scope="row" style="background: #d9edf7;">?</th>
+                                    <td style="background-color: #d9edf7;">$regtip</td>
+                                </tr>
+                                </tbody>
+                                </table>
+                                <p><u><span style="color:Indigo"><a
+                                        href="http://www.quartz-scheduler.org/documentation/quartz-2.x/tutorials/crontrigger.html" target="_blank">$detailDocLink</a></span>.</u>
+                                </p>
+                            </div>
+                            <textarea id="scheduleComment" class="form-control" rows="3" placeholder="$enterremark" style="
+                                        margin-top: 15px;
+                                    "></textarea>
+                            <div class="form-group" style="margin-top: 15px;">
+                              <label for="itsm-number" class="col-sm-3 control-label">$itsmNo</label>
+                              <div class="col-sm-9">
+                                <input id="schedule-flow-check-itsm-number-input" type="text" class="form-control">
+                              </div>
+                            </div>
                       </div>
                     </div>
 
-                    <div class="col-sm-offset-1 col-sm-4">
+                    <div class="col-sm-offset-2 col-sm-4" style="padding-left: 32px;padding-right: 28px;">
                       <div class="input-box">
                         <input type="text" id="schedule-cron-output" value="" oninput="updateScheduleExpression()"
-                               class="form-control">
+                               class="form-control" style="width: 100%;">
                         <span class="unit">0</span>
                       </div>
                     </div>
                     <!-- 清空是清空所有定时设置选项 -->
-                    <button type="button" class="col-sm-offset-1 btn btn-warning" id="schedule-clearCron">$clear
+                    <button type="button" class=" btn btn-warning" id="schedule-clearCron">$clear
                     </button>
                     <!-- 就是之前的重置按钮,之前的重置,就是设置为每分钟执行一次-->
-                    <button type="button" class="margin-left-15 btn btn-warning" id="schedule-suggestCron">$ececute12
-                    </button>
+                    <!--  <button type="button" class="margin-left-15 btn btn-warning" id="schedule-suggestCron">$ececute12
+                    </button> -->
+
                     <div class="col-xs-12" style="height:20px;"></div>
+
 
                     <div class="col-sm-12" style="background-color:#f5f5f5; border:1px solid #e3e3e3">
                       <h4>
@@ -417,7 +709,6 @@
     </div><!-- /modal-content -->
   </div><!-- /modal-dialog -->
 </div><!-- /modal -->
-
 
 #*
 #if ($triggerPlugins.size() > 0)

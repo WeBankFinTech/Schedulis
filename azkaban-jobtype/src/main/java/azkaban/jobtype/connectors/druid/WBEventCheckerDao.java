@@ -1,10 +1,11 @@
 package azkaban.jobtype.connectors.druid;
 
+
+import java.util.Properties;
+
 import azkaban.eventcheck.DefaultEventcheckReceiver;
 import azkaban.eventcheck.EventCheckSender;
 import org.slf4j.Logger;
-
-import java.util.Properties;
 
 
 public class WBEventCheckerDao {

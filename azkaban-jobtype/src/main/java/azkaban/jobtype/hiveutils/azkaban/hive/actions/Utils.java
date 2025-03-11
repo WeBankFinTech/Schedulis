@@ -16,12 +16,13 @@
 
 package azkaban.jobtype.hiveutils.azkaban.hive.actions;
 
-import azkaban.jobtype.hiveutils.azkaban.HiveViaAzkabanException;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.slf4j.Logger;
+
+import azkaban.jobtype.hiveutils.azkaban.HiveViaAzkabanException;
 
 import java.io.IOException;
 import java.util.ArrayList;

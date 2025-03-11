@@ -16,22 +16,21 @@
 
 package azkaban.service.impl;
 
+import azkaban.Constants;
 import azkaban.dao.SystemUserLoader;
 import azkaban.dto.PrivilegeReportDto;
 import azkaban.entity.*;
 import azkaban.exception.SystemUserManagerException;
 import azkaban.exceptional.user.dao.ExceptionalUserLoader;
 import azkaban.exceptional.user.entity.ExceptionalUser;
-import azkaban.executor.DepartmentGroup;
-import azkaban.executor.Executor;
-import azkaban.executor.ExecutorManagerException;
-import azkaban.executor.JdbcExecutorLoader;
+import azkaban.executor.*;
 import azkaban.i18n.utils.LoadJsonUtils;
 import azkaban.project.ProjectLoader;
 import azkaban.storage.StorageManager;
 import azkaban.utils.MD5Utils;
 import azkaban.utils.Props;
 import azkaban.viewer.system.SystemServlet;
+import org.apache.commons.lang.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -55,10 +54,17 @@ public class SystemManager {
   private final SystemUserLoader systemUserLoader;
   private final JdbcExecutorLoader jdbcExecutorLoader;
   private final ExceptionalUserLoader exceptionalUserLoader;
+
+  private final ActiveExecutors activeExecutors;
   private final Props props;
 
   public static final Pattern PROXY_USER_PATTERN = Pattern.compile("^[A-Za-z0-9_,]+$");
   public static final Pattern USER_ID_PATTERN = Pattern.compile("^[0-9]+$");
+
+
+  public static final  String WTSS_PROXY_USER_SWITCH = "wtss.proxy.user.switch";
+
+  public static final  String WTSS_CLOSE_USER_ENDWITH = "wtss.close.user.endWith";
 
   @Inject
   public SystemManager(
@@ -66,6 +72,7 @@ public class SystemManager {
       final StorageManager storageManager,
       final SystemUserLoader systemUserLoader,
       final JdbcExecutorLoader jdbcExecutorLoader,
+      final ActiveExecutors activeExecutors,
       final Props props,
       final ExceptionalUserLoader exceptionalUserLoader) {
     this.exceptionalUserLoader = requireNonNull(exceptionalUserLoader);
@@ -73,8 +80,7 @@ public class SystemManager {
     this.props = requireNonNull(props);
     this.systemUserLoader = requireNonNull(systemUserLoader);
     this.jdbcExecutorLoader = jdbcExecutorLoader;
-
-
+    this.activeExecutors = activeExecutors;
   }
 
   public Props getProps() {
@@ -207,6 +213,14 @@ public class SystemManager {
     String encodePwd = MD5Utils.md5(MD5Utils.md5(password) + wtssUser.getUserId());
     wtssUser.setPassword(encodePwd);
 
+
+    boolean proxyUserSwitch =  props.getBoolean(WTSS_PROXY_USER_SWITCH, false);
+    String closeUserEndWith = props.getString(WTSS_CLOSE_USER_ENDWITH, Constants.CLOSE_USER_END_WITH);
+
+    if (proxyUserSwitch){
+      checkProxyUser(proxyUser, dataMap, wtssUser, closeUserEndWith);
+
+    }else {
     if (null != proxyUser && !"".equals(proxyUser)) {
 
       // 代理用户正则表达式增加下划线校验通过
@@ -218,6 +232,7 @@ public class SystemManager {
       wtssUser.setProxyUsers(wtssUser.getUsername());
     }
 
+    }
     wtssUser.setRoleId(roleId);
     wtssUser.setUserType(WtssUser.UserType.ACTIVE.getUserTypeNum());
     wtssUser.setCreateTime(System.currentTimeMillis());
@@ -237,6 +252,25 @@ public class SystemManager {
     wtssUser.setUserCategory(userCategory);
 
     return this.systemUserLoader.addWtssUser(wtssUser);
+  }
+
+  private static void checkProxyUser(String proxyUser, Map<String, String> dataMap, WtssUser wtssUser, String closeUserEndWith) throws SystemUserManagerException {
+
+    if (StringUtils.isNotEmpty(proxyUser)) {
+      // 代理用户正则表达式增加下划线校验通过
+      if (!PROXY_USER_PATTERN.matcher(proxyUser).matches()) {
+        throw new SystemUserManagerException(dataMap.get("errorFormatProxy"));
+      }
+      if(proxyUser.trim().equals(wtssUser.getUsername())){
+        throw new SystemUserManagerException(dataMap.get("errorProxyTips"));
+      }
+      if(!(wtssUser.getUsername()+ closeUserEndWith).equals(proxyUser)){
+        throw new SystemUserManagerException("代理用户只能是"+ wtssUser.getUsername()+ closeUserEndWith);
+      }
+      wtssUser.setProxyUsers(proxyUser);
+    } else {
+      wtssUser.setProxyUsers(wtssUser.getUsername()+ closeUserEndWith);
+    }
   }
 
   public int getWebankUserTotal() throws SystemUserManagerException {
@@ -333,6 +367,13 @@ public class SystemManager {
         wtssUser.setUserCategory(userCategory);
       }
       wtssUser.setEmail(email);
+      boolean proxyUserSwitch =  props.getBoolean(WTSS_PROXY_USER_SWITCH, false);
+      String closeUserEndWith = props.getString(WTSS_CLOSE_USER_ENDWITH, Constants.CLOSE_USER_END_WITH);
+
+      if (proxyUserSwitch){
+        checkProxyUser(proxyUser, dataMap, wtssUser, closeUserEndWith);
+
+      }
       return this.systemUserLoader.updateWtssUser(wtssUser);
     } else {
       throw new SystemUserManagerException("Unregistered User, Please register this user.");
@@ -466,7 +507,7 @@ public class SystemManager {
         wtssUser.setUsername(username);
         wtssUser.setFullName(username);
         wtssUser.setEmail("");
-        wtssUser.setPassword("***REMOVED***");
+        wtssUser.setPassword("");
       }
 
       if (null == existUser) {
@@ -692,6 +733,15 @@ public class SystemManager {
     return executors;
   }
 
+  public void updateExecutor(Executor executor) throws ExecutorManagerException {
+    Executor oldExecutor = jdbcExecutorLoader.fetchExecutor(executor.getId());
+    if (null != executor) {
+      oldExecutor.setActive(executor.isActive());
+      jdbcExecutorLoader.updateExecutor(executor);
+      this.activeExecutors.setupExecutors();
+    }
+  }
+
   /**
    * 根据部门编号查询wtssUser
    *
@@ -894,6 +944,10 @@ public class SystemManager {
     // 获取所有wtsspermissions
     List<WtssPermissions> wtssPermissionsList = this.systemUserLoader.getAllWtssPermissions();
     for (WtssUser wtssUser : wtssUserList) {
+      // 只上报个人用户
+      if (!"personal".equals(wtssUser.getUserCategory())) {
+        continue;
+      }
       PrivilegeReportDto privilegeReportDto = new PrivilegeReportDto();
       privilegeReportDto.setUserId(wtssUser.getUsername());
       int roleId = wtssUser.getRoleId();

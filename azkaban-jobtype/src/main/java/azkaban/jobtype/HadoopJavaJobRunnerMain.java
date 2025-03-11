@@ -16,17 +16,15 @@
 
 package azkaban.jobtype;
 
-import azkaban.jobExecutor.ProcessJob;
-import azkaban.security.commons.AbstractHadoopSecurityManager;
-import azkaban.utils.JSONUtils;
-import azkaban.utils.Props;
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.security.UserGroupInformation;
-import org.apache.hadoop.security.token.Token;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import static azkaban.security.commons.SecurityUtils.MAPREDUCE_JOB_CREDENTIALS_BINARY;
+import static org.apache.hadoop.security.UserGroupInformation.HADOOP_TOKEN_FILE_LOCATION;
 
-import java.io.*;
+import java.io.BufferedReader;
+import java.io.BufferedWriter;
+import java.io.FileReader;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.io.Writer;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
@@ -36,8 +34,16 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Properties;
 
-import static azkaban.security.commons.SecurityUtils.MAPREDUCE_JOB_CREDENTIALS_BINARY;
-import static org.apache.hadoop.security.UserGroupInformation.HADOOP_TOKEN_FILE_LOCATION;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.security.token.Token;
+
+import azkaban.jobExecutor.ProcessJob;
+import azkaban.security.commons.AbstractHadoopSecurityManager;
+import azkaban.utils.JSONUtils;
+import azkaban.utils.Props;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 
 public class HadoopJavaJobRunnerMain {

@@ -13,13 +13,12 @@ import java.sql.SQLException;
 import java.text.DateFormat;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
-import java.time.Instant;
-import java.time.LocalDateTime;
-import java.time.LocalTime;
-import java.time.ZoneId;
+import java.time.*;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 import java.util.*;
+
+import static azkaban.jobtype.util.EventChecker.MSG_RECEIVE_AFTER_DATE;
 
 /**
  * @author georgeqiao
@@ -65,6 +64,23 @@ public class DefaultEventcheckReceiver extends AbstractEventCheckReceiver{
         if (wait_for_time != null && props.containsKey(EventChecker.WAIT_FOR_TIME)) {
             waitForTime(log, waitTime);
         }
+
+        String receiveAfterDateStr = "";
+        LocalDate receiveAfterDate = null;
+        if (props.containsKey(MSG_RECEIVE_AFTER_DATE)) {
+            receiveAfterDateStr = props.getProperty(MSG_RECEIVE_AFTER_DATE);
+            if (StringUtils.isNotBlank(receiveAfterDateStr)) {
+                try {
+                    receiveAfterDate = LocalDate.parse(receiveAfterDateStr,
+                        DateTimeFormatter.ofPattern("yyyy-MM-dd"));
+                } catch (Exception e) {
+                    log.error("Failed to parse {}: {}", MSG_RECEIVE_AFTER_DATE, receiveAfterDateStr,
+                        e);
+                    throw new RuntimeException("Failed to parse " + MSG_RECEIVE_AFTER_DATE);
+                }
+            }
+        }
+
         log.info(
             "-------------------------------------- waiting time(unit：millisecond) : " + waitTime);
         log.info(
@@ -74,6 +90,9 @@ public class DefaultEventcheckReceiver extends AbstractEventCheckReceiver{
             "-------------------------------------- earliest finish time : " + earliestFinishTime);
         log.info("-------------------------------------- earliest finish time cross day : "
             + earliestFinishTimeCrossDay);
+        log.info(
+            "-------------------------------------- receive after date : " + receiveAfterDateStr);
+
         Long sleepTime = waitTime / queryFrequency;
         if (sleepTime < 60000L) {
             log.info(
@@ -105,19 +124,54 @@ public class DefaultEventcheckReceiver extends AbstractEventCheckReceiver{
                 return false;
             }
         }
+        String lastMsgId = getOffset(jobId, props, log);
         while ((currentTime - startTime) <= waitTime) {
             boolean flag = false;
             try {
                 //step1
                 //这里让线程随机休眠0到1秒，防止多个receiver在同一时刻重复更新event_status;
                 Thread.sleep(new Random().nextInt(1000));
-                String lastMsgId = getOffset(jobId, props, log);
+                if (StringUtils.isBlank(receiveAfterDateStr)) {
+                    lastMsgId = getOffset(jobId, props, log);
+                }
+                log.info("The last record id is {} ", lastMsgId);
                 String[] executeType = createExecuteType(jobId, props, log, lastMsgId);
                 if (executeType != null && executeType.length == 3) {
                     //step2
                     ConsumedMsgInfo consumedMsgInfo = getMsg(props, log,executeType);
                     if(consumedMsgInfo!=null) {
                         //step3
+                        // after date 日期限制
+                        if (StringUtils.isNotBlank(receiveAfterDateStr)) {
+                            String sendTimeStr = consumedMsgInfo.getSendTime();
+
+                            try {
+                                // 解析消息的发送时间字符串为 LocalDateTime
+                                LocalDateTime msgDateTime = LocalDateTime.parse(sendTimeStr,
+                                    DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
+
+                                // 提取日期部分
+                                LocalDate msgDate = msgDateTime.toLocalDate();
+
+                                // 比较消息日期是否大于等于配置的日期
+                                if (receiveAfterDate != null && msgDate.isBefore(
+                                    receiveAfterDate)) {
+                                    // 跳过不符合日期的消息，更新 offset 到下一个消息
+                                    ConsumedMsgInfo msgInfo = getMsg(props, log, executeType);
+                                    lastMsgId = msgInfo != null ? msgInfo.getMsgId() : "0";
+                                    log.info("Skipping message(msgId: {}) from date: {}",
+                                        consumedMsgInfo.getMsgId(), msgDate);
+                                    updateMsgOffset(jobId, props, log, msgInfo,
+                                        consumedMsgInfo.getMsgId(), true, receiveAfterDate,
+                                        msgDate);
+                                    continue;
+                                }
+                            } catch (Exception e) {
+                                log.error("Failed to parse message send time: " + sendTimeStr, e);
+                                throw new RuntimeException("Failed to parse message send time");
+                            }
+                        }
+
                         if (earliestFinishTime != null && props.containsKey(
                             EventChecker.EARLIEST_FINISH_TIME)) {
                             boolean isAfter = isTimeAfter(log, currentTime, targetDateTime);
@@ -128,11 +182,12 @@ public class DefaultEventcheckReceiver extends AbstractEventCheckReceiver{
                             } else {
                                 sendBacklogAlert(jobId, props, log, consumedMsgInfo);
                                 flag = updateMsgOffset(jobId, props, log, consumedMsgInfo,
-                                    lastMsgId);
+                                    lastMsgId, false, null, null);
                             }
                         } else {
                             sendBacklogAlert(jobId, props, log, consumedMsgInfo);
-                            flag = updateMsgOffset(jobId,props,log,consumedMsgInfo,lastMsgId);
+                            flag = updateMsgOffset(jobId, props, log, consumedMsgInfo, lastMsgId,
+                                false, null, null);
                         }
 
                     }else if (trigger_time != null && !"".equals(trigger_time.trim())){
@@ -181,6 +236,8 @@ public class DefaultEventcheckReceiver extends AbstractEventCheckReceiver{
     }
 
     private void sendBacklogAlert(int jobId, Properties props, Logger log, ConsumedMsgInfo consumedMsgInfo) {
+        log.info(
+            "-------------------------------------- send back alert start --------------------------------------");
         Map<String, String> consumeInfo = new HashMap<>();
         consumeInfo.put("topic", topic);
         consumeInfo.put("msg_id", consumedMsgInfo.getMsgId());
@@ -198,6 +255,8 @@ public class DefaultEventcheckReceiver extends AbstractEventCheckReceiver{
                 mailAlerter.alertOnSingnalBacklog(jobId, consumeInfo);
             }
         }
+        log.info(
+            "-------------------------------------- send back alert end --------------------------------------");
     }
 
     /**

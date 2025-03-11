@@ -31,6 +31,7 @@ import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
+import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.slf4j.LoggerFactory;
 import org.slf4j.Logger;
 
@@ -121,8 +122,8 @@ class ProjectCacheCleaner {
   @SuppressWarnings("FutureReturnValueIgnored")
   private void deleteFilesInParallel(final List<File> filesToDelete) {
     final int CLEANING_SERVICE_THREAD_NUM = 8;
-    final ExecutorService deletionService = Executors
-        .newFixedThreadPool(CLEANING_SERVICE_THREAD_NUM);
+    final ExecutorService deletionService = Executors.newFixedThreadPool(CLEANING_SERVICE_THREAD_NUM,
+            new ThreadFactoryBuilder().setNameFormat("azk-cleaner-pool-%d").build());
 
     for (final File toDelete : filesToDelete) {
       deletionService.submit(() -> FileIOUtils.deleteDirectorySilently(toDelete));

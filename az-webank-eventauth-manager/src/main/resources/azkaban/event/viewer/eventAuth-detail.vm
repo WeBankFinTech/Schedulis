@@ -9,9 +9,9 @@
     <script type="text/javascript">
         var langType = "${currentlangType}";
     </script>
-    <script type="text/javascript" src="/js/azkaban/i18n-config.js?version=1.43.0"></script>
-    <script type="text/javascript" src="/js/azkaban/util/ajax.js?version=1.43.0"></script>
-    <script type="text/javascript" src="/event/auth/js/authevent-manager.js?version=1.43.0"></script>
+    <script type="text/javascript" src="/js/azkaban/i18n-config.js?version=1.49.0"></script>
+    <script type="text/javascript" src="/js/azkaban/util/ajax.js?version=1.49.0"></script>
+    <script type="text/javascript" src="/event/auth/js/authevent-manager.js?version=1.49.0"></script>
 </head>
 
 <body>

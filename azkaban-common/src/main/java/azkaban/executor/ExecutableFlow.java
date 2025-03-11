@@ -28,6 +28,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
+import org.apache.linkis.errorcode.common.ErrorCode;
 
 // FIXME Added some attribute parameters, such as historical reruns, failed skips, failed reruns, etc.
 public class ExecutableFlow extends ExecutableFlowBase {
@@ -39,6 +40,8 @@ public class ExecutableFlow extends ExecutableFlowBase {
   public static final String SCHEDULEID_PARAM = "scheduleId";
   public static final String SUBMITUSER_PARAM = "submitUser";
   public static final String SUBMITTIME_PARAM = "submitTime";
+  public static final String SUBMIT_DEPARTMENT_ID_PARAM = "submitDepartmentId";
+  public static final String SUBMIT_DEPARTMENT_NAME_PARAM = "submitDepartmentName";
   public static final String VERSION_PARAM = "version";
   public static final String PROXYUSERS_PARAM = "proxyUsers";
   public static final String PROJECTNAME_PARAM = "projectName";
@@ -56,11 +59,17 @@ public class ExecutableFlow extends ExecutableFlowBase {
   public static final String EXECUTOR_IDS_PARAM = "executorIds";
   public static final String FLOW_FALIED_SKIPED_PARAM = "flowFailedSkiped";
   public static final String JOB_OUTPUT_GLOBAL_PARAM = "jobOutputGlobalParam";
-  public static final String RUN_DATE_PARAM = "runDate";
+
   public static final String NS_WTSS_PARAM = "nsWtss";
   public static final String LAST_NS_WTSS_PARAM = "lastNsWtss";
   public static final String COMMENT_PARAM = "comment";
   public static final String REPEAT_ID_PARAM = "repeatId";
+
+  public static final String LAST_EXEC_ID_PARAM = "lastExecId";
+
+  public static final String LAST_PARAMETER_TIME_PARAM = "lastParameterTime";
+  public static final String LAST_VERSION_PARAM = "lastVersion";
+  public static final String JOB_EXECUTE_LIMIT = "jobExecuteLimit";
 
   private final HashSet<String> proxyUsers = new HashSet<>();
   private int executionId = -1;
@@ -94,8 +103,7 @@ public class ExecutableFlow extends ExecutableFlowBase {
   private boolean failedSkipedAllJobs = false;
   //记录job输出的全局变量
   private ConcurrentHashMap<String, String> jobOutputGlobalParam = new ConcurrentHashMap<>();
-  //记录runDate 用于前端显示
-  private String runDate;
+
   //默认是全局变量模式
   private boolean nsWtss = true;
   //上一次执行全局变量值为
@@ -105,6 +113,47 @@ public class ExecutableFlow extends ExecutableFlowBase {
 
   private Integer repeatId;
 
+  private List<ErrorCode> errorCodeResult = new ArrayList<>();
+
+  // 记录上一次执行id
+  private int lastExecId = -1;
+
+  /**
+   * 上次时间内置参数时间戳
+   */
+  private long lastParameterTime = -1;
+
+  private byte[]  data;
+
+  /**
+   * 上次工作流执行版本
+   */
+  private int lastVersion;
+
+  /**
+   * 项目级别限制job并发数（非checker类型）
+   */
+  private int jobExecuteLimit;
+
+  private Set<DmsBusPath> jobCodeList = new HashSet<>();
+
+  /**
+   * 工作流所属子系统
+   */
+  private String subsystem;
+  /**
+   * 工作流所属关键路径
+   */
+  private String busPath;
+  /**
+   * 工作流提交人所属部门
+   */
+  private String submitDepartmentId;
+  /**
+   * 工作流提交人所属部门名称
+   */
+  private String submitDepartmentName;
+
   public ExecutableFlow(final Project project, final Flow flow) {
     this.projectId = project.getId();
     this.projectName = project.getName();
@@ -112,6 +161,7 @@ public class ExecutableFlow extends ExecutableFlowBase {
     this.scheduleId = -1;
     this.lastModifiedTimestamp = project.getLastModifiedTimestamp();
     this.lastModifiedUser = project.getLastModifiedUser();
+    this.jobExecuteLimit = project.getJobExecuteLimit();
     setAzkabanFlowVersion(flow.getAzkabanFlowVersion());
     this.setFlow(project, flow);
   }
@@ -127,12 +177,53 @@ public class ExecutableFlow extends ExecutableFlowBase {
     return exFlow;
   }
 
+  public byte[] getData() {
+    return data;
+  }
+
+  public void setData(byte[] data) {
+    this.data = data;
+  }
+
+  public String getSubsystem() {
+    return subsystem;
+  }
+
+  public void setSubsystem(String subsystem) {
+    this.subsystem = subsystem;
+  }
+
+  public String getBusPath() {
+    return busPath;
+  }
+
+  public void setBusPath(String busPath) {
+    this.busPath = busPath;
+  }
+
+  public String getSubmitDepartmentId() {
+    return submitDepartmentId;
+  }
+
+  public void setSubmitDepartmentId(String submitDepartmentId) {
+    this.submitDepartmentId = submitDepartmentId;
+  }
+
   public String getComment() {
     return comment;
   }
 
   public void setComment(String comment) {
     this.comment = comment;
+  }
+
+
+  public int getLastExecId() {
+    return lastExecId;
+  }
+
+  public void setLastExecId(int lastExecId) {
+    this.lastExecId = lastExecId;
   }
 
   @Override
@@ -153,6 +244,7 @@ public class ExecutableFlow extends ExecutableFlowBase {
     return new HashSet<>(this.proxyUsers);
   }
 
+  @Override
   public ExecutionOptions getExecutionOptions() {
     return this.executionOptions;
   }
@@ -171,14 +263,6 @@ public class ExecutableFlow extends ExecutableFlowBase {
 
   public void setNsWtss(boolean nsWtss) {
     this.nsWtss = nsWtss;
-  }
-
-  public String getRunDate() {
-    return runDate;
-  }
-
-  public void setRunDate(String runDate) {
-    this.runDate = runDate;
   }
 
   public void setExecutionOptions(final ExecutionOptions options) {
@@ -329,6 +413,7 @@ public class ExecutableFlow extends ExecutableFlowBase {
     this.cycleOption = cycleOption;
   }
 
+  @Override
   public int getFlowType() {
     return flowType;
   }
@@ -337,12 +422,31 @@ public class ExecutableFlow extends ExecutableFlowBase {
     this.flowType = flowType;
   }
 
+  @Override
   public Map<String, Object> getOtherOption() {
     return otherOption;
   }
 
   public void setOtherOption(Map<String, Object> otherOption) {
     this.otherOption = otherOption;
+  }
+
+  public List<ErrorCode> getErrorCodeResult() {
+    return errorCodeResult;
+  }
+
+  public void setErrorCodeResult(List<ErrorCode> errorCodeResult) {
+    this.errorCodeResult = errorCodeResult;
+  }
+
+  @Override
+  public Set<DmsBusPath> getJobCodeList() {
+    return jobCodeList;
+  }
+
+  @Override
+  public void setJobCodeList(Set<DmsBusPath> jobCodeList) {
+    this.jobCodeList = jobCodeList;
   }
 
   @Override
@@ -399,16 +503,20 @@ public class ExecutableFlow extends ExecutableFlowBase {
     final List<Integer> executorIds = this.getExecutorIds();
     flowObj.put(EXECUTOR_IDS_PARAM, executorIds);
 
-    final Map<String, String> jobOutputGlobalParam = this.getJobOutputGlobalParam();
+    final ConcurrentHashMap<String, String> jobOutputGlobalParam = this.getJobOutputGlobalParam();
     flowObj.put(JOB_OUTPUT_GLOBAL_PARAM, jobOutputGlobalParam);
-    String runDate = this.getRunDate();
-    if(runDate != null){
-      flowObj.put(RUN_DATE_PARAM, runDate);
-    }
+
     flowObj.put(NS_WTSS_PARAM, this.getNsWtss());
     flowObj.put(LAST_NS_WTSS_PARAM, this.getLastNsWtss());
     flowObj.put(COMMENT_PARAM, this.getComment());
     flowObj.put(REPEAT_ID_PARAM, this.getRepeatId());
+
+    flowObj.put(LAST_EXEC_ID_PARAM, this.lastExecId);
+
+    flowObj.put(LAST_PARAMETER_TIME_PARAM, this.getLastParameterTime());
+
+    flowObj.put(LAST_VERSION_PARAM, this.getLastVersion());
+    flowObj.put(JOB_EXECUTE_LIMIT, this.getJobExecuteLimit());
     return flowObj;
   }
 
@@ -429,6 +537,8 @@ public class ExecutableFlow extends ExecutableFlowBase {
     this.lastModifiedUser = flowObj.getString(LASTMODIFIEDUSER_PARAM);
     this.submitTime = flowObj.getLong(SUBMITTIME_PARAM);
     this.azkabanFlowVersion = flowObj.getDouble(AZKABANFLOWVERSION_PARAM);
+    this.submitDepartmentId = flowObj.getString(SUBMIT_DEPARTMENT_ID_PARAM);
+    this.submitDepartmentName = flowObj.getString(SUBMIT_DEPARTMENT_NAME_PARAM);
 
     if (flowObj.containsKey(EXECUTIONOPTIONS_PARAM)) {
       this.executionOptions =
@@ -495,13 +605,19 @@ public class ExecutableFlow extends ExecutableFlowBase {
       this.setJobOutputGlobalParam(jobOutputGlobalParam);
     }
 
-    if(flowObj.containsKey(RUN_DATE_PARAM)){
-      this.setRunDate(flowObj.getString(RUN_DATE_PARAM));
-    }
+    // 设置上次执行时间参数
+    this.setLastParameterTime(flowObj.getLong(LAST_PARAMETER_TIME_PARAM));
+
+    // 设置上次执行版本
+    this.setLastVersion(flowObj.getInt(LAST_VERSION_PARAM));
+
+    this.setJobExecuteLimit(flowObj.getInt(JOB_EXECUTE_LIMIT));
+
     this.setNsWtss(flowObj.getBool(NS_WTSS_PARAM, true));
     this.setLastNsWtss(flowObj.getBool(LAST_NS_WTSS_PARAM, true));
     this.setComment(flowObj.getString(COMMENT_PARAM, ""));
     this.setRepeatId(flowObj.getInt(REPEAT_ID_PARAM, null));
+    this.lastExecId = flowObj.getInt(LAST_EXEC_ID_PARAM, -1);
   }
 
   @Override
@@ -550,7 +666,39 @@ public class ExecutableFlow extends ExecutableFlowBase {
     this.jobOutputGlobalParam = jobOutputGlobalParam;
   }
 
-  public void addJobOutputGlobalParam(ConcurrentHashMap<String, String> jobOutputParam) {
+  public void addJobOutputGlobalParam(Map<String, String> jobOutputParam) {
     this.jobOutputGlobalParam.putAll(jobOutputParam);
+  }
+
+  public long getLastParameterTime() {
+    return lastParameterTime;
+  }
+
+  public void setLastParameterTime(long lastParameterTime) {
+    this.lastParameterTime = lastParameterTime;
+  }
+
+  public int getLastVersion() {
+    return lastVersion;
+  }
+
+  public void setLastVersion(int lastVersion) {
+    this.lastVersion = lastVersion;
+  }
+
+  public int getJobExecuteLimit() {
+    return jobExecuteLimit;
+  }
+
+  public void setJobExecuteLimit(int jobExecuteLimit) {
+    this.jobExecuteLimit = jobExecuteLimit;
+  }
+
+  public String getSubmitDepartmentName() {
+    return submitDepartmentName;
+  }
+
+  public void setSubmitDepartmentName(String submitDepartmentName) {
+    this.submitDepartmentName = submitDepartmentName;
   }
 }

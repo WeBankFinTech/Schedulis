@@ -11,6 +11,8 @@
     "projectDescLength": "项目描述长度不能超过 2048"
   },
   "azkaban.system.SystemManager": {
-    "errorFormatProxy": "代理用户名错误,请使用大小写字母,数字及下划线的组合,多个用户用逗号分隔."
+    "errorFormatProxy": "代理用户名错误,请使用大小写字母,数字及下划线的组合,多个用户用逗号分隔.",
+    "errorProxyTips": "封闭间用户不能为实名用户"
+
   }
 }

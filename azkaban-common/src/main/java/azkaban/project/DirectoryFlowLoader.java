@@ -26,9 +26,6 @@ import azkaban.project.FlowLoaderUtils.DirFilter;
 import azkaban.project.FlowLoaderUtils.SuffixFilter;
 import azkaban.project.validator.ValidationReport;
 import azkaban.utils.Props;
-import org.slf4j.LoggerFactory;
-import org.slf4j.Logger;
-
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -38,6 +35,9 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.regex.Pattern;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Loads job and properties files to flows from project directory.
@@ -46,6 +46,9 @@ public class DirectoryFlowLoader implements FlowLoader {
 
   private static final String PROPERTY_SUFFIX = ".properties";
   private static final String JOB_SUFFIX = ".job";
+  private static final String LABEL_PREFIX = "label.";
+
+  private static final Pattern LABEL_PATTERN = Pattern.compile("^[123]$");
 
   private static final Logger logger = LoggerFactory.getLogger(DirectoryFlowLoader.class);
 
@@ -63,6 +66,8 @@ public class DirectoryFlowLoader implements FlowLoader {
   private ArrayList<FlowProps> flowPropsList;
   private ArrayList<Props> propsList;
   private Set<String> duplicateJobs;
+
+  private List<String> elasticFlows = new ArrayList<>();
 
   /**
    * Creates a new DirectoryFlowLoader.
@@ -143,6 +148,7 @@ public class DirectoryFlowLoader implements FlowLoader {
 
     FlowLoaderUtils.checkJobProperties(project.getId(), this.props, this.jobPropsMap, this.errors);
 
+    FlowLoaderUtils.checkElasticFlow(this.elasticFlows, this.flowMap, this.errors);
     return FlowLoaderUtils.generateFlowLoaderReport(this.errors);
 
   }
@@ -160,12 +166,12 @@ public class DirectoryFlowLoader implements FlowLoader {
         final FlowProps flowProps = new FlowProps(parent);
         this.flowPropsList.add(flowProps);
       } catch (final IOException e) {
-        this.logger.error("Error loading properties {}, cause by :", file.getName(), e);
+        logger.error("Error loading properties {}, cause by :", file.getName(), e);
         this.errors.add("Error loading properties " + file.getName() + ", cause by :"
-            + e.getMessage());
+                + e.getMessage());
       }
 
-      this.logger.info("Adding " + relative);
+      logger.info("Adding " + relative);
       this.propsList.add(parent);
     }
 
@@ -190,8 +196,13 @@ public class DirectoryFlowLoader implements FlowLoader {
             if (type == null) {
               this.errors.add("Job type property not found in file '" + file.getName() + "', please check whether the file encoding is UNIX, UTF-8.");
             }
-
-            node.setType(type);
+            if(type != null && type.equalsIgnoreCase(SpecialJobTypes.ELASTIC_FLOW_TYPE)){
+              logger.debug("elastic flow, {}", jobName);
+              node.setType(SpecialJobTypes.EMBEDDED_FLOW_TYPE);
+              node.setElasticNode(true);
+            } else {
+              node.setType(type);
+            }
 
             final String outer = prop.getString("outer", null);
             if (outer != null) {
@@ -203,6 +214,20 @@ public class DirectoryFlowLoader implements FlowLoader {
               node.setPropsSource(parent.getSource());
             }
 
+            // Get label of node
+            List<Integer> nodeLabel = getNodeLabel(prop);
+            if (!nodeLabel.isEmpty()) {
+              node.setLabel(nodeLabel);
+            }
+
+            // Get comment of node
+            String comment = prop.getString("comment", "");
+            node.setComment(comment);
+
+            // get autoDisabled of node
+            boolean autoDisabled = prop.getBoolean(CommonJobProperties.JOB_AUTO_DISABLED, false);
+            node.setAutoDisabled(autoDisabled);
+
             // Force root node
             if (prop.getBoolean(CommonJobProperties.ROOT_NODE, false)) {
               this.rootNodes.add(jobName);
@@ -213,15 +238,38 @@ public class DirectoryFlowLoader implements FlowLoader {
           }
         }
       } catch (final IOException e) {
-        this.logger.error("Error loading job file {}, cause by :", file.getName(), e);
+        logger.error("Error loading job file {}, cause by :", file.getName(), e);
         this.errors.add("Error loading job file " + file.getName() + ", cause by : "
-            + e.getMessage());
+                + e.getMessage());
       }
     }
 
     for (final File file : dir.listFiles(new DirFilter())) {
       loadProjectFromDir(base, file, parent);
     }
+  }
+
+  private List<Integer> getNodeLabel(Props props) {
+    List<Integer> labelList = new ArrayList<>();
+    Map<String, String> labels = props.getMapByPrefix(LABEL_PREFIX);
+
+    labels.entrySet().stream()
+            .filter(k -> validLabel(k.getKey()))
+            .map(m -> Integer.valueOf(m.getKey()))
+            .sorted().forEach(x -> {
+              String key = String.valueOf(x);
+              if (labels.containsKey(key) && "true".equals(labels.get(key))) {
+                labelList.add(Integer.valueOf(key));
+              }
+            });
+    return labelList;
+  }
+
+  private boolean validLabel(String label) {
+    if (label == null) {
+      return false;
+    }
+    return LABEL_PATTERN.matcher(label).matches();
   }
 
   private void resolveEmbeddedFlows() {
@@ -241,11 +289,11 @@ public class DirectoryFlowLoader implements FlowLoader {
     for (final String embeddedFlowId : embeddedFlow) {
       if (visited.contains(embeddedFlowId)) {
         this.errors.add("Embedded flow cycle found in " + flowId + "->"
-            + embeddedFlowId);
+                + embeddedFlowId);
         return;
       } else if (!this.flowMap.containsKey(embeddedFlowId)) {
         this.errors.add("Flow " + flowId + " depends on " + embeddedFlowId
-            + " but can't be found.");
+                + " but can't be found.");
         return;
       } else {
         resolveEmbeddedFlow(embeddedFlowId, visited);
@@ -262,13 +310,13 @@ public class DirectoryFlowLoader implements FlowLoader {
       final Props props = this.jobPropsMap.get(node.getId());
 
       if (props == null) {
-        this.logger.error("Job props not found!! For some reason.");
+        logger.error("Job props not found!! For some reason.");
         continue;
       }
 
       final List<String> dependencyList =
-          props.getStringList(CommonJobProperties.DEPENDENCIES,
-              (List<String>) null);
+              props.getStringList(CommonJobProperties.DEPENDENCIES,
+                      (List<String>) null);
 
       if (dependencyList != null) {
         Map<String, Edge> dependencies = this.nodeDependencies.get(node.getId());
@@ -277,7 +325,7 @@ public class DirectoryFlowLoader implements FlowLoader {
 
           for (String dependencyName : dependencyList) {
             dependencyName =
-                dependencyName == null ? null : dependencyName.trim();
+                    dependencyName == null ? null : dependencyName.trim();
             if (dependencyName == null || dependencyName.isEmpty()) {
               continue;
             }
@@ -290,13 +338,13 @@ public class DirectoryFlowLoader implements FlowLoader {
                 dependencies.put(dependencyName, edge);
                 // 依赖关系不清晰
                 this.errors.add(node.getId() + " has ambiguous dependency, please check the dependency information."
-                    + dependencyName);
+                        + dependencyName);
               } else {
                 edge.setError("Dependency not found.");
                 dependencies.put(dependencyName, edge);
                 // 找不到依赖
                 this.errors.add(node.getId() + " cannot find dependency, please check the dependency information. "
-                    + dependencyName);
+                        + dependencyName);
               }
             } else if (dependencyNode == node) {
               // We have a self cycle
@@ -315,6 +363,10 @@ public class DirectoryFlowLoader implements FlowLoader {
         }
       }
     }
+
+    if (this.nodeDependencies.size() >= this.nodeMap.size()) {
+      this.errors.add("There is an endless loop, please check the dependency information.");
+    }
   }
 
   private void buildFlowsFromDependencies() {
@@ -330,7 +382,7 @@ public class DirectoryFlowLoader implements FlowLoader {
     for (final Node base : this.nodeMap.values()) {
       // Root nodes can be discovered when parsing jobs
       if (this.rootNodes.contains(base.getId())
-          || !nonRootNodes.contains(base.getId())) {
+              || !nonRootNodes.contains(base.getId())) {
         this.rootNodes.add(base.getId());
         final Flow flow = new Flow(base.getId());
         final Props jobProp = this.jobPropsMap.get(base.getId());
@@ -349,7 +401,7 @@ public class DirectoryFlowLoader implements FlowLoader {
   }
 
   private void constructFlow(final Flow flow, final Node node, final Set<String> visitedOnPath,
-      final Set<String> visitedEver) {
+                             final Set<String> visitedEver) {
     visitedOnPath.add(node.getId());
     visitedEver.add(node.getId());
 
@@ -357,7 +409,9 @@ public class DirectoryFlowLoader implements FlowLoader {
     if (SpecialJobTypes.EMBEDDED_FLOW_TYPE.equals(node.getType())) {
       final Props props = this.jobPropsMap.get(node.getId());
       final String embeddedFlow = props.get(SpecialJobTypes.FLOW_NAME);
-
+      if(node.isElasticNode()){
+        this.elasticFlows.add(embeddedFlow);
+      }
       Set<String> embeddedFlows = this.flowDependencies.get(flow.getId());
       if (embeddedFlows == null) {
         embeddedFlows = new HashSet<>();

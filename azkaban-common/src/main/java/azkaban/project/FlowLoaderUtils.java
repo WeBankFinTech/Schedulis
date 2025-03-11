@@ -18,6 +18,8 @@ package azkaban.project;
 import azkaban.Constants;
 import azkaban.flow.CommonJobProperties;
 import azkaban.flow.Flow;
+import azkaban.flow.Node;
+import azkaban.flow.SpecialJobTypes;
 import azkaban.jobcallback.JobCallbackValidator;
 import azkaban.project.validator.ValidationReport;
 import azkaban.utils.MemConfValue;
@@ -30,12 +32,9 @@ import java.io.FileFilter;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
+
+import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.io.FileUtils;
 import org.slf4j.LoggerFactory;
 import org.slf4j.Logger;
@@ -338,6 +337,46 @@ public class FlowLoaderUtils {
     @Override
     public boolean accept(final File pathname) {
       return pathname.isDirectory();
+    }
+  }
+
+  public static void checkElasticFlow(List<String> elasticFlows, Map<String, Flow> flowMap, Set<String> errors){
+    for(String elasticFlow: elasticFlows){
+      Flow flow = flowMap.get(elasticFlow);
+      if(flow != null){
+        Collection<Node> nodes = flow.getNodes();
+        if(nodes != null && nodes.size() > 1){
+          for(Node node: nodes){
+            if(node.isElasticNode()){
+              logger.error("elastic flow:{} cannot contain other elastic flows.", elasticFlow);
+              errors.add(String.format("elastic flow:%s cannot contain other elastic flows.", elasticFlow));
+              break;
+            } else if(node.getType().equals(SpecialJobTypes.EMBEDDED_FLOW_TYPE)){
+              hasElasticFlow(flowMap, errors, node, elasticFlow);
+            }
+          }
+        } else if(nodes != null && nodes.size() == 1) {
+          logger.error("elastic flow:{} cannot have only one node.", elasticFlow);
+          errors.add(String.format("elastic flow:%s cannot have only one node.", elasticFlow));
+        }
+      }
+    }
+  }
+
+  private static void hasElasticFlow(Map<String, Flow> flowMap, Set<String> errors, Node flowNode, String elasticFlow){
+    Flow flow = flowMap.get(flowNode.getEmbeddedFlowId());
+    if(flow != null){
+      Collection<Node> nodes = flow.getNodes();
+      if(nodes != null){
+        for(Node node: nodes){
+          if(node.isElasticNode()){
+            logger.error("elastic flow{} cannot contain other elastic flows.", elasticFlow);
+            errors.add(String.format("elastic flow:%s cannot contain other elastic flows.", elasticFlow));
+          } else if(node.getType().equals(SpecialJobTypes.EMBEDDED_FLOW_TYPE)){
+            hasElasticFlow(flowMap, errors, node, elasticFlow);
+          }
+        }
+      }
     }
   }
 }

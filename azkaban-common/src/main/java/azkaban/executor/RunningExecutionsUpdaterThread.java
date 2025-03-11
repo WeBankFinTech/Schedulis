@@ -65,7 +65,7 @@ public class RunningExecutionsUpdaterThread extends Thread {
   }
 
   private void waitForNewExecutions() {
-    synchronized (this.runningExecutions.get()) {
+    synchronized (this.runningExecutions) {
       try {
         final int waitTimeMillis =
             this.runningExecutions.get().size() > 0 ? this.waitTimeMs : this.waitTimeIdleMs;
@@ -73,7 +73,7 @@ public class RunningExecutionsUpdaterThread extends Thread {
           this.updater.getAlerterHolder().getFlowAlerterFlag().clear();
         }
         if (waitTimeMillis > 0) {
-          this.runningExecutions.get().wait(waitTimeMillis);
+          this.runningExecutions.wait(waitTimeMillis);
         }
       } catch (final InterruptedException e) {
         logger.error("InterruptedException in wait for new executions", e);
@@ -81,8 +81,7 @@ public class RunningExecutionsUpdaterThread extends Thread {
     }
   }
 
-  // FIXME change this method access as public type in order to outside package object can call this method.
-  public void shutdown() {
+  void shutdown() {
     this.shutdown = true;
   }
 
