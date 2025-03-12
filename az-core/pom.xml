@@ -76,12 +76,12 @@
     <!--<repository>-->
       <!--<id>webank-releases</id>-->
       <!--<name>webank-releases</name>-->
-      <!--<url>http://***REMOVED***/nexus/content/repositories/releases</url>-->
+      <!--<url>http:///nexus/content/repositories/releases</url>-->
     <!--</repository>-->
     <!--<snapshotRepository>-->
       <!--<id>webank-snapshots</id>-->
       <!--<name>webank-snapshots</name>-->
-      <!--<url>http://***REMOVED***/nexus/content/repositories/snapshots</url>-->
+      <!--<url>http:///nexus/content/repositories/snapshots</url>-->
     <!--</snapshotRepository>-->
   <!--</distributionManagement>-->
 </project>
