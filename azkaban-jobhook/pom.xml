@@ -8,7 +8,7 @@
     <parent>
         <artifactId>schedulis</artifactId>
         <groupId>com.webank.wedatasphere.schedulis</groupId>
-        <version>1.50.0</version>
+        <version>0.10.0</version>
     </parent>
 
     <artifactId>azkaban-jobhook</artifactId>
