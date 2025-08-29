@@ -6,7 +6,7 @@
 
     <groupId>com.webank.wedatasphere.schedulis</groupId>
     <artifactId>schedulis</artifactId>
-    <version>0.10.0</version>
+    <version>0.11.0</version>
     <packaging>pom</packaging>
 
     <modules>
@@ -36,10 +36,10 @@
     <properties>
         <opentracing.version>0.22.0</opentracing.version>
         <rocketmq.version>4.3.15.2</rocketmq.version>
-        <schedulis.version>0.10.0</schedulis.version>
+        <schedulis.version>0.11.0</schedulis.version>
         <assertj.version>3.8.0</assertj.version>
         <awaitility.version>3.0.0</awaitility.version>
-        <hadoop.version>2.7.2</hadoop.version>
+        <hadoop.version>3.4.0</hadoop.version>
         <codahale.metrics.core.version>3.0.2</codahale.metrics.core.version>
         <hive.version>2.3.3</hive.version>
         <commons.collections.version>3.2.2</commons.collections.version>
@@ -64,12 +64,12 @@
         <metrics.core.version>2.10.0</metrics.core.version>
         <mongo.driver.version>2.14.0</mongo.driver.version>
         <mysql.connector.version>8.0.18</mysql.connector.version>
-        <hutool.all.version>5.8.12</hutool.all.version>
-        <spring.web.version>5.2.22.RELEASE</spring.web.version>
+        <hutool.all.version>5.8.21</hutool.all.version>
+        <spring.web.version>5.3.38</spring.web.version>
         <spring.core.version>5.2.22.RELEASE</spring.core.version>
         <dropwizard.core.version>4.2.11</dropwizard.core.version>
         <mail.version>1.4.5</mail.version>
-        <jetty.version>9.4.51.v20230217</jetty.version>
+        <jetty.version>9.4.57.v20241219</jetty.version>
         <jackson.version>1.9.13</jackson.version>
         <joda.simple.version>4.3</joda.simple.version>
         <joda.time.version>2.0</joda.time.version>
@@ -88,7 +88,7 @@
         <log4j-api.version>2.17.0</log4j-api.version>
         <poi.version>3.17</poi.version>
         <c3p0.version>0.9.5.5</c3p0.version>
-        <commons-beanutils.version>1.9.4</commons-beanutils.version>
+        <commons-beanutils.version>1.11.0</commons-beanutils.version>
         <fasterxml.jackson.version>2.14.0</fasterxml.jackson.version>
         <dss.version>1.1.1</dss.version>
         <linkis.version>1.2.0</linkis.version>
@@ -97,6 +97,7 @@
         <MAVEN_HOME>${env.MAVEN_HOME}</MAVEN_HOME>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <werpc.version>1.8.2</werpc.version>
+        <java.diff.version>4.15</java.diff.version>
     </properties>
 
     <dependencies>
@@ -105,7 +106,7 @@
         <dependency>
             <groupId>org.apache.derby</groupId>
             <artifactId>derby</artifactId>
-            <version>127.0.0.1</version>
+            <version>10.17.1.0</version>
         </dependency>
 
         <dependency>
@@ -162,7 +163,7 @@
         <dependency>
             <groupId>com.google.protobuf</groupId>
             <artifactId>protobuf-java</artifactId>
-            <version>3.21.12</version>
+            <version>3.25.5</version>
         </dependency>
 
         <dependency>

@@ -12,10 +12,8 @@ import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.util.HashMap;
-import java.util.Iterator;
 import java.util.Map;
 import java.util.Properties;
-import java.util.concurrent.TimeUnit;
 
 /**
  * Created by johnnwang on 2/3/18.
@@ -172,55 +170,6 @@ public class HttpUtils {
     return DigestUtils.md5Hex(str.getBytes());
   }
 
-  public static void main(String[] args) {
 
-    Map resultMap = new HashMap();
-    String maskUrl = "http://***REMOVED***:8087/api/v1/mask-status?";
-
-    RequestBody requestBody = new FormBody.Builder()
-        .add("targetDb", "bdp_test_ods_mask")
-        .add("targetTable", "ccpd_dump")
-        .add("partition", "dcn_id=UA0/type_id=6042/ip=***REMOVED***/ds=2015-04-06")
-        .build();
-
-    FormBody.Builder formBuilder = new FormBody.Builder();
-
-    Map<String, String> map = new HashMap<>();
-    map.put("targetDb", "bdp_test_ods_mask");
-    map.put("targetTable", "ccpd_dump");
-    //map.put("partition", "ds=20180925");
-    map.put("partition", "ds\\=20180925");
-
-    //String params = gson.toJson(map);
-    MediaType JSON = MediaType.parse("application/json; charset=utf-8");
-
-    Iterator<String> iterator = map.keySet().iterator();
-    String key = "";
-    while(iterator.hasNext()){
-      key = iterator.next().toString();
-      formBuilder.add(key, map.get(key));
-    }
-
-    RequestBody requestBody2 = formBuilder.build();
-
-    Properties props = new Properties();
-    props.put(DataChecker.MASK_APP_ID, "wtss");
-    props.put(DataChecker.MASK_APP_TOKEN, "***REMOVED***");
-
-    Map<String, String> dataMap = HttpUtils.initSelectParams(props);
-
-    try {
-      String result = HttpUtils.httpClientHandle(maskUrl, requestBody, dataMap);
-      System.out.println(result);
-      Map resulMap = HttpUtils.getReturnMap(result);
-      if("200".equals(resulMap.get("code"))){
-        logger.info("数据查找成功变更datacheck状态");
-      }
-    } catch (Exception e) {
-      e.printStackTrace();
-      System.out.println(e.getMessage());
-    }
-
-  }
 
 }

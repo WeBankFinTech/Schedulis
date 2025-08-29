@@ -17,18 +17,13 @@
 package azkaban.project;
 
 import com.google.common.base.Preconditions;
-import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableMap.Builder;
+import org.apache.commons.lang.StringUtils;
+
+import javax.annotation.Nullable;
 import java.io.Serializable;
 import java.time.Duration;
-import java.util.Collection;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-import java.util.Set;
-import javax.annotation.Nullable;
-import org.apache.commons.lang.StringUtils;
+import java.util.*;
 
 /**
  * FlowTrigger is the logical representation of a trigger.
@@ -57,7 +52,7 @@ public class FlowTrigger implements Serializable {
 
     validateDependencies(dependencies);
     this.schedule = schedule;
-    final ImmutableMap.Builder builder = new Builder();
+    final Builder builder = new Builder();
     dependencies.forEach(dep -> builder.put(dep.getName(), dep));
     this.dependencies = builder.build();
     this.maxWaitDuration = maxWaitDuration;

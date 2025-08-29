@@ -12,7 +12,7 @@
     <parent>
         <groupId>com.webank.wedatasphere.schedulis</groupId>
         <artifactId>schedulis</artifactId>
-        <version>0.10.0</version>
+        <version>0.11.0</version>
     </parent>
 
     <dependencies>
@@ -27,9 +27,13 @@
             <dependency>
                 <groupId>com.alibaba</groupId>
                 <artifactId>fastjson</artifactId>
-                <version>1.2.78</version> <!-- 请检查最新版本 -->
+                <version>1.2.83</version> <!-- 请检查最新版本 -->
             </dependency>
-
+            <dependency>
+                <groupId>io.github.java-diff-utils</groupId>
+                <artifactId>java-diff-utils</artifactId>
+                <version>${java.diff.version}</version>
+            </dependency>
 
         <dependency>
             <groupId>com.webank.wedatasphere.schedulis</groupId>
@@ -281,6 +285,7 @@
             <artifactId>commons-dbutils</artifactId>
             <version>${commons.dbutils.version}</version>
         </dependency>
+
         <dependency>
             <groupId>commons-fileupload</groupId>
             <artifactId>commons-fileupload</artifactId>

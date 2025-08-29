@@ -19,6 +19,13 @@ package azkaban.database;
 import azkaban.database.DataSourceUtils.PropertyType;
 import azkaban.utils.FileIOUtils;
 import azkaban.utils.Props;
+import org.apache.commons.dbutils.DbUtils;
+import org.apache.commons.dbutils.QueryRunner;
+import org.apache.commons.dbutils.ResultSetHandler;
+import org.apache.commons.io.IOUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.io.BufferedInputStream;
 import java.io.File;
 import java.io.FileInputStream;
@@ -26,19 +33,7 @@ import java.io.IOException;
 import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import org.apache.commons.dbutils.DbUtils;
-import org.apache.commons.dbutils.QueryRunner;
-import org.apache.commons.dbutils.ResultSetHandler;
-import org.apache.commons.io.IOUtils;
-import org.slf4j.LoggerFactory;
-import org.slf4j.Logger;
+import java.util.*;
 
 /**
  * @deprecated in favor of {@link azkaban.db.DatabaseSetup}.
@@ -397,12 +392,12 @@ public class AzkabanDatabaseSetup {
       final String propertyName = table + ".version";
       if (!this.installedVersions.containsKey(table)) {
         runner.update(conn, INSERT_DB_PROPERTY, propertyName,
-            DataSourceUtils.PropertyType.DB.getNumVal(), version,
+            PropertyType.DB.getNumVal(), version,
             System.currentTimeMillis());
       } else {
         runner.update(conn, UPDATE_DB_PROPERTY, version,
             System.currentTimeMillis(), propertyName,
-            DataSourceUtils.PropertyType.DB.getNumVal());
+            PropertyType.DB.getNumVal());
       }
       conn.commit();
     } finally {

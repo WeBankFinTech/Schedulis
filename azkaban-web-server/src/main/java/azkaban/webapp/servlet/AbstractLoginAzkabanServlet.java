@@ -16,10 +16,6 @@
 
 package azkaban.webapp.servlet;
 
-import static azkaban.Constants.ConfigurationKeys.ENABLE_APPID_LOGIN;
-import static azkaban.Constants.WTSS_PUBLIC_KEY;
-import static azkaban.ServiceProvider.SERVICE_PROVIDER;
-
 import azkaban.ServiceProvider;
 import azkaban.i18n.utils.LoadJsonUtils;
 import azkaban.project.Project;
@@ -35,48 +31,32 @@ import azkaban.system.credential.CredentialServiceImpl;
 import azkaban.system.dto.CredentialDto;
 import azkaban.system.entity.WtssUser;
 import azkaban.trigger.TriggerManagerException;
-import azkaban.user.Permission;
-import azkaban.user.Role;
-import azkaban.user.SystemUserManager;
-import azkaban.user.User;
-import azkaban.user.UserManager;
-import azkaban.user.UserManagerException;
-import azkaban.user.UserType;
-import azkaban.utils.Props;
-import azkaban.utils.RSAUtils;
-import azkaban.utils.StringUtils;
-import azkaban.utils.WebUtils;
-import azkaban.utils.XSSFilterUtils;
+import azkaban.user.*;
+import azkaban.utils.*;
 import azkaban.webapp.AzkabanWebServer;
 import azkaban.webapp.WebMetrics;
-
 import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
-import java.io.BufferedInputStream;
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.IOException;
-import java.io.OutputStream;
-import java.io.Writer;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.UUID;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.TimeUnit;
-import javax.servlet.ServletConfig;
-import javax.servlet.ServletException;
-import javax.servlet.http.Cookie;
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.fileupload.servlet.ServletFileUpload;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang.ObjectUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import javax.servlet.ServletConfig;
+import javax.servlet.ServletException;
+import javax.servlet.http.Cookie;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+import java.io.*;
+import java.util.*;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
+
+import static azkaban.Constants.ConfigurationKeys.ENABLE_APPID_LOGIN;
+import static azkaban.Constants.WTSS_PUBLIC_KEY;
+import static azkaban.ServiceProvider.SERVICE_PROVIDER;
 
 /**
  * Abstract Servlet that handles auto login when the session hasn't been verified.
@@ -134,14 +114,14 @@ public abstract class AbstractLoginAzkabanServlet extends AbstractAzkabanServlet
     this.multipartParser = new MultipartParser(DEFAULT_UPLOAD_DISK_SPOOL_SIZE);
 
     this.shouldLogRawUserAgent = getApplication().getServerProps()
-            .getBoolean("accesslog.raw.useragent", false);
+        .getBoolean("accesslog.raw.useragent", false);
     //获取Web Server实体对象
     this.application = SERVICE_PROVIDER.getInstance(AzkabanWebServer.class);
     this.ajaxMaxSize = this.application.getServerProps().getInt("ajax.query.max.size", 500);
 
     this.notCheckSizeAjaxList = this.application.getServerProps()
-            .getStringList("request.size.limit.whitelist",
-                    new ArrayList<>());
+        .getStringList("request.size.limit.whitelist",
+            new ArrayList<>());
 
     this.requestWithoutSessionList = this.application.getServerProps().getStringList(REQUEST_WITHOUTSESSION,
             Arrays.asList("executeFlowCycleFromExecutor", "reloadWebData", "alertMissedSchedules", "reloadExecutors","recordRunningFlow"));
@@ -183,7 +163,7 @@ public abstract class AbstractLoginAzkabanServlet extends AbstractAzkabanServlet
       return;
     }
 
-    //session不为空，或者请求不需要检查session
+      //session不为空，或者请求不需要检查session
     if (session != null || isRequestWithoutSession(req)) {
       if("open".equals(nginxSSL)) {
         //XSS参数过滤
@@ -215,12 +195,12 @@ public abstract class AbstractLoginAzkabanServlet extends AbstractAzkabanServlet
       }
       //检查查询数量
       if (this.notCheckSizeAjaxList != null && !this.notCheckSizeAjaxList.contains(
-              getParam(req, "ajax", ""))) {
+          getParam(req, "ajax", ""))) {
         int querySize = getIntParam(req, "size", 0);
         int queryLength = getIntParam(req, "length", 0);
         int queryPageSize = getIntParam(req, "pageSize", 0);
         if (querySize > this.ajaxMaxSize || queryPageSize > this.ajaxMaxSize
-                || queryLength > this.ajaxMaxSize) {
+            || queryLength > this.ajaxMaxSize) {
           logger.error("request size more than {}, reject!", this.ajaxMaxSize);
           Map<String, Object> ret = new HashMap<>();
           ret.put("code", 400);
@@ -248,16 +228,16 @@ public abstract class AbstractLoginAzkabanServlet extends AbstractAzkabanServlet
   }
 
   private boolean validCsrf(HttpServletRequest req, HttpServletResponse resp, Session session,
-                            boolean isGet, Map<String, Object> params)
-          throws IOException, ServletException {
+      boolean isGet, Map<String, Object> params)
+      throws IOException, ServletException {
     if (!getApplication().getServerProps().getBoolean("azkaban.csrf.check", true) || session == null
-            || "/error".equals(req.getRequestURI()) || !StringUtils
-            .isFromBrowser(req.getHeader("User-Agent"))) {
+        || "/error".equals(req.getRequestURI()) || !StringUtils
+        .isFromBrowser(req.getHeader("User-Agent"))) {
       return false;
     }
     if (isGet) {
       if (!hasParam(req, "ajax") && !hasParam(req, "action") && !hasParam(req, "delete")
-              && !hasParam(req, "purge") && !hasParam(req, "download") && !hasParam(req, "logout")) {
+          && !hasParam(req, "purge") && !hasParam(req, "download") && !hasParam(req, "logout")) {
         return false;
       }
       String referer = req.getHeader("Referer");
@@ -268,7 +248,7 @@ public abstract class AbstractLoginAzkabanServlet extends AbstractAzkabanServlet
     } else {
       Object csrfToken = session.getSessionData("csrfToken");
       if (csrfToken != null && !csrfToken.equals(req.getHeader("csrfToken")) && (params == null
-              ? true : !csrfToken.equals(params.get("csrfToken") + ""))) {
+          ? true : !csrfToken.equals(params.get("csrfToken") + ""))) {
         resp.sendRedirect("/error");
         return true;
       }
@@ -427,17 +407,17 @@ public abstract class AbstractLoginAzkabanServlet extends AbstractAzkabanServlet
     Map<String, String> subPageMap1;
     if ("zh_CN".equalsIgnoreCase(languageType)) {
       // 添加国际化标签
-      loginMap = LoadJsonUtils.transJson("/conf/azkaban-web-server-zh_CN.json",
-              "azkaban.webapp.servlet.velocity.login.vm");
-      subPageMap1 = LoadJsonUtils.transJson("/conf/azkaban-web-server-zh_CN.json",
-              "azkaban.webapp.servlet.velocity.nav.vm");
+    loginMap = LoadJsonUtils.transJson("/conf/azkaban-web-server-zh_CN.json",
+            "azkaban.webapp.servlet.velocity.login.vm");
+    subPageMap1 = LoadJsonUtils.transJson("/conf/azkaban-web-server-zh_CN.json",
+            "azkaban.webapp.servlet.velocity.nav.vm");
       this.passwordPlaceholder = "密码";
     }else {
       loginMap = LoadJsonUtils.transJson("/conf/azkaban-web-server-en_US.json",
               "azkaban.webapp.servlet.velocity.login.vm");
       subPageMap1 = LoadJsonUtils.transJson("/conf/azkaban-web-server-en_US.json",
               "azkaban.webapp.servlet.velocity.nav.vm");
-      this.passwordPlaceholder = "Password";
+        this.passwordPlaceholder = "Password";
     }
     loginMap.forEach(page::add);
     subPageMap1.forEach(page::add);
@@ -518,7 +498,7 @@ public abstract class AbstractLoginAzkabanServlet extends AbstractAzkabanServlet
         }
 
         final String username = (String) params.get("username");
-        final String password = (String) params.get("userpwd");
+        final String password  = (String) params.get("userpwd");
         final String ip = getRealClientIpAddr(req);
         try {
           session = createSession(username, password, ip);
@@ -587,11 +567,11 @@ public abstract class AbstractLoginAzkabanServlet extends AbstractAzkabanServlet
    * Disallows users from logging in by passing their username and password via the request header
    * where it'd be logged.
    *
-   * Example of illegal post request: curl -X POST http://localhost:8081/?action=login\&username=azkaban\&password=azkaban
+   * Example of illegal post request: curl -X POST http://localhost:8081/?action=login\
    *
    * req.getParameterMap() or req.getParameterNames() cannot be used because they draw no
    * distinction between the illegal request above and the following valid request: curl -X POST -d
-   * "action=login&username=azkaban&password=azkaban" http://localhost:8081/
+   *  http://localhost:8081/
    *
    * "password=" is searched for because it leverages the query syntax to determine that the user is
    * passing the password as a parameter name. There is no other ajax call that has a parameter that
@@ -601,31 +581,32 @@ public abstract class AbstractLoginAzkabanServlet extends AbstractAzkabanServlet
     return (req.getQueryString() != null && req.getQueryString().contains("password="));
   }
 
-  private Session createDssSession(final String username, final HttpServletRequest req)
-          throws UserManagerException, ServletException, IOException {
-    final String ip = getRealClientIpAddr(req);
-    try {
-      if (!StringUtils.isFromBrowser(req.getHeader("User-Agent"))) {
-        logger.info("not browser.");
-        Session cacheSession = this.application.getSessionCache().getSessionByUsername(username);
-        if (cacheSession != null) {
-          logger.info("session not found.");
-          return cacheSession;
+    private Session createDssSession(final String username, final HttpServletRequest req)
+            throws UserManagerException, ServletException, IOException {
+      final String ip = getRealClientIpAddr(req);
+      try {
+        if (!StringUtils.isFromBrowser(req.getHeader("User-Agent"))) {
+          logger.info("not browser.");
+          Session cacheSession = this.application.getSessionCache().getSessionByUsername(username);
+          if (cacheSession != null) {
+            logger.info("session not found.");
+            return cacheSession;
+          }
         }
+      } catch (final Exception e) {
+        logger.error("no super user", e);
       }
-    } catch (final Exception e) {
-      logger.error("no super user", e);
+      Session newSession = createSession(username, "dssToken", ip, req);
+      return newSession;
     }
-    Session newSession = createSession(username, "dssToken", ip, req);
-    return newSession;
-  }
+
 
   private Session createSession(final HttpServletRequest req)
           throws UserManagerException, ServletException, IOException {
     final String username = getParam(req, "username");
     String password = getParam(req, "userpwd");
     String frompage = "";
-    if (hasParam(req, "frompage")) {
+    if(hasParam(req, "frompage")){
       frompage = getParam(req, "frompage");
     }
 
@@ -661,7 +642,7 @@ public abstract class AbstractLoginAzkabanServlet extends AbstractAzkabanServlet
     }
 
     Session session = this
-            .validSecret(req, props, username, password, ip, "common.secret", "common_secret");
+        .validSecret(req, props, username, password, ip, "common.secret", "common_secret");
     if (session != null) {
       return session;
     }
@@ -769,7 +750,7 @@ public abstract class AbstractLoginAzkabanServlet extends AbstractAzkabanServlet
    * @throws UserManagerException
    */
   private Session validSecret(HttpServletRequest req, Props props, String username, String password,
-                              String ip, String secretKey, String reqSecret) throws ServletException, UserManagerException {
+      String ip, String secretKey, String reqSecret) throws ServletException, UserManagerException {
     if (!hasParam(req, reqSecret)) {
       return null;
     }
@@ -1106,8 +1087,8 @@ public abstract class AbstractLoginAzkabanServlet extends AbstractAzkabanServlet
    */
   protected abstract void handlePost(HttpServletRequest req,
                                      HttpServletResponse resp, Session session)
-          throws ServletException,
-          IOException, TriggerManagerException, ScheduleManagerException;
+      throws ServletException,
+      IOException, TriggerManagerException, ScheduleManagerException;
 
   /**
    * The post request is handed off to the implementor after the user is logged in.
@@ -1134,17 +1115,6 @@ public abstract class AbstractLoginAzkabanServlet extends AbstractAzkabanServlet
     page.render();
     resp.sendError(230);
   }
-  public  boolean getBooleanParam(final HttpServletRequest request,
-                                        final String name, final boolean defaultVal) {
-    if (hasParam(request, name)) {
-      try {
-        return getBooleanParam(request, name,defaultVal);
-      } catch (final Exception e) {
-        return defaultVal;
-      }
-    }
 
-    return defaultVal;
-  }
 
 }

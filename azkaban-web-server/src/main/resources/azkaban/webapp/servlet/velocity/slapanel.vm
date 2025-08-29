@@ -33,6 +33,10 @@
               </div>
             <label>$alertEmailAddress</label>
             <textarea id="slaEmails" placeholder="$alertUserInputTips" class="form-control"></textarea>
+            <div style="margin-top:10px;">
+              <label>$configDutyGroup</label><br/>
+              <select class="form-control" id="SlaDutyGroup"></select>
+            </div>
                 <div  style="margin-top:10px">
                     <label class=" control-label">$alerterWay</label>
                     <span class="" id="aletType">

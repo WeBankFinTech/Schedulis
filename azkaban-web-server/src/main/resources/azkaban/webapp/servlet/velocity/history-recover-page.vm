@@ -23,7 +23,7 @@
   #parse("azkaban/webapp/servlet/velocity/style.vm")
   #parse("azkaban/webapp/servlet/velocity/javascript.vm")
 
-  <link rel="stylesheet" type="text/css" href="/css/bootstrap-datetimepicker.css?version=1.49.0" />
+  <link rel="stylesheet" type="text/css" href="/css/bootstrap-datetimepicker.css?version=0.11.0" />
   <script type="text/javascript">
     var currentTime = ${currentTime};
     var timezone = "${timezone}";
@@ -33,13 +33,13 @@
       jobTable.tablesorter();
     });
   </script>
-  <script type="text/javascript" src="/js/moment-2.29.4.min.js?version=1.49.0"></script>
-  <script type="text/javascript" src="/js/bootstrap-datetimepicker.min.js?version=1.49.0"></script>
-  <script type="text/javascript" src="/js/azkaban/i18n-config.js?version=1.49.0"></script>
-  <script type="text/javascript" src="/js/jquery/jquery.tablesorter.js?version=1.49.0"></script>
-  <script type="text/javascript" src="/js/azkaban/util/ajax.js?version=1.49.0"></script>
-  <script type="text/javascript" src="/js/azkaban/view/repeat-collection-page.js?version=1.49.0"></script>
-
+  <script type="text/javascript" src="/js/moment-2.29.4.min.js?version=0.11.0"></script>
+  <script type="text/javascript" src="/js/bootstrap-datetimepicker.min.js?version=0.11.0"></script>
+  <script type="text/javascript" src="/js/azkaban/i18n-config.js?version=0.11.0"></script>
+  <script type="text/javascript" src="/js/jquery/jquery.tablesorter.js?version=0.11.0"></script>
+  <script type="text/javascript" src="/js/azkaban/util/ajax.js?version=0.11.0"></script>
+  <script type="text/javascript" src="/js/azkaban/view/repeat-collection-page.js?version=0.11.0"></script>
+  
 </head>
 <body>
 
@@ -105,7 +105,7 @@
               #foreach ($recover in $historyRecover)
               <tr>
                 <td class="tb-name">
-                  $velocityCount
+                  ${foreach.count}
                 </td>
                 <td style="width:350px;word-break:break-all;">
                   <a href="javascript:void(0);" onclick="checkHrefUrlXss('/manager?project=$vmutils.getProjectName(${recover.projectId})&flow=${recover.flowId}')">${recover.flowId}</a>

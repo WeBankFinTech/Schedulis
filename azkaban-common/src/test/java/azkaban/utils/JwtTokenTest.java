@@ -22,7 +22,7 @@ public class JwtTokenTest {
 
     @Before
     public void init() {
-        String secret = "bdp";
+        String secret = "";
         //We will sign our JWT with our ApiKey secret
         byte[] apiKeySecretBytes = secret.getBytes(StandardCharsets.UTF_8);
         key = new SecretKeySpec(apiKeySecretBytes, signatureAlgorithm.getJcaName());

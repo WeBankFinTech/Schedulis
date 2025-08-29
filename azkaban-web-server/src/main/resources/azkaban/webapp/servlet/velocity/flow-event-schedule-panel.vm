@@ -208,6 +208,10 @@
                   </tbody>
                 </table>
               </div>
+              <p>$retryFailedWhitelist</p>
+              <div id="job-event-schedule-failed-retry-whitelist-view" style="margin-bottom: 10px;">
+                <select class="form-control" style="width: 100%;" id="job-event-schedule-failed-retry-whitelist-select"></select>
+              </div>
               <p>$skipFailed</p>
               <p class="help-block">$skipActionTips</p>
               <div id="event-schedule-job-skip-failed-view">
@@ -353,7 +357,7 @@
                       </tr>
                     </tbody>
                 </table>
-              </div>
+              </div>              
             </div>
 
           ## Schedule panel
@@ -365,7 +369,7 @@
                 <fieldset class="form-horizontal">
                   <div class="form-group">
 
-
+                    
                     <div class="form-group">
                       <div class="col-sm-11">
                         <label class="col-sm-4 control-label" id="event-work-flow-token_label">Work Flow Token</label>
@@ -382,7 +386,7 @@
                           </select>
                         </div>
                         <br/> <br/> <br/>
-
+                        
                         <label class="col-sm-4 control-label" id="event-schedule-msgname_label">$msgName</label>
                         <div class="col-sm-8">
                           <select id="event-schedule-msgname_input" class="form-control selectpicker"
@@ -391,7 +395,7 @@
                           </select>
                         </div>
                         <br/> <br/> <br/>
-
+                        
                         <label class="col-sm-4 control-label" id="event-schedule-savekey_label">$saveKey</label>
                         <div class="col-sm-8">
                           <input type="text" id="event-schedule-savekey_input" placeholder="${saveKeyInstruction}" value="" class="form-control">

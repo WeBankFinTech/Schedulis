@@ -17,8 +17,8 @@
 package azkaban.executor;
 
 import azkaban.utils.Pair;
-import org.slf4j.LoggerFactory;
 import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.Comparator;
 
@@ -40,7 +40,7 @@ public final class ExecutableFlowPriorityComparator implements
    *
    * {@inheritDoc}
    *
-   * @see java.util.Comparator#compare(java.lang.Object, java.lang.Object)
+   * @see Comparator#compare(Object, Object)
    */
   @Override
   public int compare(final Pair<ExecutionReference, ExecutableFlow> pair1,

@@ -8,45 +8,6 @@ import azkaban.jobtype.util.DataChecker;
 import azkaban.jobtype.util.HttpUtils;
 import azkaban.utils.QualitisUtil;
 import com.alibaba.druid.pool.DruidDataSource;
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.InputStreamReader;
-import java.math.BigDecimal;
-import java.sql.CallableStatement;
-import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
-import java.sql.SQLException;
-import java.text.ParseException;
-import java.text.SimpleDateFormat;
-import java.time.Instant;
-import java.time.LocalDate;
-import java.time.LocalDateTime;
-import java.time.LocalTime;
-import java.time.Period;
-import java.time.ZoneId;
-import java.time.format.DateTimeFormatter;
-import java.time.format.DateTimeParseException;
-import java.time.temporal.TemporalAdjusters;
-import java.util.AbstractMap;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Date;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Map.Entry;
-import java.util.Properties;
-import java.util.concurrent.Callable;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Future;
-import java.util.concurrent.LinkedBlockingQueue;
-import java.util.concurrent.ThreadPoolExecutor;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
-import javax.sql.DataSource;
 import okhttp3.FormBody;
 import okhttp3.RequestBody;
 import okhttp3.Response;
@@ -55,6 +16,26 @@ import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.lang.time.DateFormatUtils;
 import org.slf4j.Logger;
+
+import javax.sql.DataSource;
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.math.BigDecimal;
+import java.sql.*;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
+import java.time.*;
+import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeParseException;
+import java.time.temporal.TemporalAdjusters;
+import java.util.Date;
+import java.util.*;
+import java.util.Map.Entry;
+import java.util.concurrent.*;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 public class WBDataCheckerDao {
 
@@ -173,7 +154,7 @@ public class WBDataCheckerDao {
 		}
 		Connection jobConn = null;
 		try {
-			for (Map.Entry<Object, Object> entry : props.entrySet()) {
+			for (Entry<Object, Object> entry : props.entrySet()) {
 				entry.setValue(entry.getValue().toString().replace(" ", "").trim());
 			}
 		} catch (Exception e) {
@@ -925,7 +906,7 @@ public class WBDataCheckerDao {
 					})
 					.filter(entry -> entry.getValue() != null)
 					.findFirst()
-					.map(Map.Entry::getKey)
+					.map(Entry::getKey)
 					.orElseThrow(() -> new DateTimeParseException("Unable to parse date:", finaltime1, 0));
 			switch (operator1){
 				case ">":

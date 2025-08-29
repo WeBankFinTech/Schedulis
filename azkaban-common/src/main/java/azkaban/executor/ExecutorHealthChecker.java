@@ -19,21 +19,17 @@ import azkaban.Constants.ConfigurationKeys;
 import azkaban.utils.Pair;
 import azkaban.utils.Props;
 import com.google.common.annotations.VisibleForTesting;
-import org.slf4j.LoggerFactory;
 import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
+import javax.inject.Inject;
+import javax.inject.Singleton;
 import java.time.Duration;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.Map.Entry;
-import java.util.Optional;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
-import javax.inject.Inject;
-import javax.inject.Singleton;
 
 /**
  * Periodically checks the health of executors. Finalizes flows or sends alert emails when needed.
@@ -114,7 +110,7 @@ public class ExecutorHealthChecker {
   @VisibleForTesting
   public void checkExecutorHealth() {
     final Map<Optional<Executor>, List<ExecutableFlow>> exFlowMap = getFlowToExecutorMap();
-    for (final Map.Entry<Optional<Executor>, List<ExecutableFlow>> entry : exFlowMap.entrySet()) {
+    for (final Entry<Optional<Executor>, List<ExecutableFlow>> entry : exFlowMap.entrySet()) {
       final Optional<Executor> executorOption = entry.getKey();
       if (!executorOption.isPresent()) {
         final String finalizeReason = "Executor id of this execution doesn't exist.";

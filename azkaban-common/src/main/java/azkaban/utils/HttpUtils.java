@@ -5,16 +5,24 @@ import azkaban.ServiceProvider;
 import azkaban.executor.DmsBusPath;
 import azkaban.executor.ExecutableFlow;
 import azkaban.executor.ExecutorLoader;
-import azkaban.metrics.ProjectHourlyReportMertics;
 import azkaban.project.entity.FlowBusiness;
 import azkaban.project.entity.LineageBusiness;
 import azkaban.project.entity.ProjectHourlyReportConfig;
-import com.alibaba.excel.annotation.ExcelProperty;
 import com.alibaba.fastjson.JSONArray;
 import com.alibaba.fastjson.JSONObject;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.reflect.TypeToken;
+import okhttp3.*;
+import okhttp3.HttpUrl.Builder;
+import org.apache.commons.collections.CollectionUtils;
+import org.apache.commons.io.IOUtils;
+import org.apache.commons.lang.StringUtils;
+import org.apache.http.client.utils.URIBuilder;
+import org.jetbrains.annotations.NotNull;
+import org.joda.time.format.DateTimeFormat;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
@@ -32,24 +40,6 @@ import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
-
-import okhttp3.Call;
-import okhttp3.Callback;
-import okhttp3.HttpUrl;
-import okhttp3.HttpUrl.Builder;
-import okhttp3.MediaType;
-import okhttp3.OkHttpClient;
-import okhttp3.Request;
-import okhttp3.RequestBody;
-import okhttp3.Response;
-import org.apache.commons.collections.CollectionUtils;
-import org.apache.commons.io.IOUtils;
-import org.apache.commons.lang.StringUtils;
-import org.apache.http.client.utils.URIBuilder;
-import org.jetbrains.annotations.NotNull;
-import org.joda.time.format.DateTimeFormat;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
  *
@@ -127,9 +117,6 @@ public class HttpUtils {
      * 工作流执行IMS上报 接口 HTTP同步远程执行方法
      * <p>
      * 参数格式
-     * subSystemId=1001&jobCode=111&jobDate=10214&ip=12312&status=3&alertLevel=1
-     * 请求地址
-     * http://***REMOVED***:10815/ims_config/job_report.do
      *
      * @param actionUrl
      * @param requestBody
@@ -156,17 +143,16 @@ public class HttpUtils {
     }
 
     public static String getValue(Props props, String key) {
-        if (org.apache.commons.lang.StringUtils.isNotBlank(props.get(key))) {
+        if (StringUtils.isNotBlank(props.get(key))) {
             return props.get(key) == null ? props.get(key) : props.get(key).trim();
         }
-        if (props.getParent() != null && org.apache.commons.lang.StringUtils.isNotBlank(props.getParent().get(key))) {
+        if (props.getParent() != null && StringUtils.isNotBlank(props.getParent().get(key))) {
             return props.getParent().get(key) == null ? props.getParent().get(key) : props.getParent().get(key).trim();
         }
         return null;
     }
 
     /**
-     * curl http://***REMOVED***:10815/ims_config/add_itsm_batch_job.do -d \
      * '[{
      * "subsystem_id": "1234",
      * "planStartTime": "19:46",
@@ -616,6 +602,7 @@ public class HttpUtils {
 
         String appId = prop.get("wtss.dms.appid");
         String token = prop.get("wtss.dms.token");
+        username = prop.get("wtss.dms.user");
         int interval = prop.getInt("wtss.dms.lineage.month.interval", 1);
 
         ret.put("jobCode", jobCode);
@@ -790,43 +777,6 @@ public class HttpUtils {
 
     }
 
-    public static void main(String[] args) throws IOException {
-
-        // getFindgapisDisableJobs(null, "cdvd_wtss","bdp_last_finish");
-        long timestamp = System.currentTimeMillis();
-        int nonce = new Random().nextInt(90000) + 10000;
-        String resultJson = "";
-        String signature = Encrypt(Encrypt("4383905086bbb12dd1d70775f61ff585f80f5315c4010a1968b312481ac11b97" + nonce + "lebronwang" + timestamp, null) + "", null);
-        HttpUrl httpUrl = HttpUrl.parse("http://***REMOVED***:8001/api/v1/isolate/metadata-service/findgapis/disableJobs").newBuilder()
-                .addQueryParameter("projectName", "duo_subflows_for_test_failed_0730")
-                // .addQueryParameter("flowId", "bdp_last_finish")
-                .addQueryParameter("timestamp", timestamp + "").addQueryParameter("loginUser", "lebronwang")
-                .addQueryParameter("appid", "4383905086bbb12dd1d70775f61ff585f80f5315c4010a1968b312481ac11b97")
-                .addQueryParameter("nonce", nonce + "")
-                .addQueryParameter("signature", signature)
-                //.addQueryParameter("isolateEvFlag","prod")
-                .build();
-        Request request = new Request.Builder().url(httpUrl).get().build();
-        Call call = okHttpClient.newCall(request);
-        Response response = call.execute();
-        resultJson = response.body().string();
-        IOUtils.closeQuietly(response);
-        List<Object> jobs = new ArrayList<>();
-        if (StringUtils.isNotEmpty(resultJson)) {
-            JSONObject jsonObject = JSONObject.parseObject(resultJson);
-            //获取data数字
-            JSONArray data = jsonObject.getJSONArray("data");
-            if (Objects.nonNull(data)) {
-                for (int i = 0; i < data.size(); i++) {
-                    JSONObject job = data.getJSONObject(i);
-                    if (job.getString("flowId").equals("alter_test_end_all_jobs")) {
-                        jobs.add(job.getString("jobName"));
-                    }
-                }
-            }
-        }
-        System.out.println(jobs);
-    }
 
 
 }

@@ -23,11 +23,11 @@
   #parse("azkaban/webapp/servlet/velocity/style.vm")
   #parse("azkaban/webapp/servlet/velocity/javascript.vm")
   #parse("azkaban/webapp/servlet/velocity/svgflowincludes.vm")
-  <script type="text/javascript" src="/js/raphael.min.js?version=1.49.0"></script>
-  <script type="text/javascript" src="/js/morris.min.js?version=1.49.0"></script>
-  <script type="text/javascript" src="/js/moment-2.29.4.min.js?version=1.49.0"></script>
-  <script type="text/javascript" src="/js/jquery/jquery.tablesorter.js?version=1.49.0"></script>
-  <script type="text/javascript" src="/js/bootstrap-datetimepicker.min.js?version=1.49.0"></script>
+  <script type="text/javascript" src="/js/raphael.min.js?version=0.11.0"></script>
+  <script type="text/javascript" src="/js/morris.min.js?version=0.11.0"></script>
+  <script type="text/javascript" src="/js/moment-2.29.4.min.js?version=0.11.0"></script>
+  <script type="text/javascript" src="/js/jquery/jquery.tablesorter.js?version=0.11.0"></script>
+  <script type="text/javascript" src="/js/bootstrap-datetimepicker.min.js?version=0.11.0"></script>
 <script type="text/javascript">
     var currentTime = ${currentTime};
     var timezone = "${timezone}";
@@ -46,29 +46,29 @@
     var yarnUsername = "${yarnUsername}";
     var yarnPassword = "${yarnPassword}";
   </script>
-  <script type="text/javascript" src="/js/dust-full-2.2.3.min.js?version=1.49.0"></script>
-  <script type="text/javascript" src="/js/azkaban/i18n-config.js?version=1.49.0"></script>
-  <script type="text/javascript" src="/js/flowstats.js?version=1.49.0"></script>
-  <script type="text/javascript" src="/js/flowstats-no-data.js?version=1.49.0"></script>
+  <script type="text/javascript" src="/js/dust-full-2.2.3.min.js?version=0.11.0"></script>
+  <script type="text/javascript" src="/js/azkaban/i18n-config.js?version=0.11.0"></script>
+  <script type="text/javascript" src="/js/flowstats.js?version=0.11.0"></script>
+  <script type="text/javascript" src="/js/flowstats-no-data.js?version=0.11.0"></script>
 
-  <script type="text/javascript" src="/js/azkaban/view/execute-job-list.js?version=1.49.0"></script>
+  <script type="text/javascript" src="/js/azkaban/view/execute-job-list.js?version=0.11.0"></script>
 
-  <script type="text/javascript" src="/js/azkaban/view/flow-execution-list.js?version=1.49.0"></script>
-  <script type="text/javascript" src="/js/azkaban/view/flow-trigger-list.js?version=1.49.0"></script>
-  <script type="text/javascript" src="/js/azkaban/view/flow-execute-dialog.js?version=1.49.0"></script>
-  <script type="text/javascript" src="/js/azkaban/view/flow-stats.js?version=1.49.0"></script>
-  <script type="text/javascript" src="/js/azkaban/view/exflow.js?version=1.49.0"></script>
-  <script type="text/javascript" src="/js/azkaban/view/history-recover.js?version=1.49.0"></script>
-  <script type="text/javascript" src="/js/azkaban/view/cycle-execution.js?version=1.49.0"></script>
-  <link rel="stylesheet" href="/css/kalendae.css?version=1.49.0" type="text/css">
+  <script type="text/javascript" src="/js/azkaban/view/flow-execution-list.js?version=0.11.0"></script>
+  <script type="text/javascript" src="/js/azkaban/view/flow-trigger-list.js?version=0.11.0"></script>
+  <script type="text/javascript" src="/js/azkaban/view/flow-execute-dialog.js?version=0.11.0"></script>
+  <script type="text/javascript" src="/js/azkaban/view/flow-stats.js?version=0.11.0"></script>
+  <script type="text/javascript" src="/js/azkaban/view/exflow.js?version=0.11.0"></script>
+  <script type="text/javascript" src="/js/azkaban/view/history-recover.js?version=0.11.0"></script>
+  <script type="text/javascript" src="/js/azkaban/view/cycle-execution.js?version=0.11.0"></script>
+  <link rel="stylesheet" href="/css/kalendae.css?version=0.11.0" type="text/css">
   <script type='text/javascript' src='/js/kalendae.standalone.js?version=1.40.0'></script>
   <script type='text/javascript' src='/js/lodash.min.js?version=1.40.0'></script>
 
-  <link rel="stylesheet" type="text/css" href="/css/morris.css?version=1.49.0"/>
-  <link rel="stylesheet" type="text/css" href="/css/jquery-ui-1.10.1.custom.css?version=1.49.0"/>
-  <link rel="stylesheet" type="text/css" href="/css/bootstrap-datetimepicker.css?version=1.49.0"/>
-  <script type="text/javascript" src="/js/later.min.js?version=1.49.0">
-  <script type="text/javascript" src="/js/moment-2.29.4.min.js?version=1.49.0"></script>
+  <link rel="stylesheet" type="text/css" href="/css/morris.css?version=0.11.0"/>
+  <link rel="stylesheet" type="text/css" href="/css/jquery-ui-1.10.1.custom.css?version=0.11.0"/>
+  <link rel="stylesheet" type="text/css" href="/css/bootstrap-datetimepicker.css?version=0.11.0"/>
+  <script type="text/javascript" src="/js/later.min.js?version=0.11.0">
+  <script type="text/javascript" src="/js/moment-2.29.4.min.js?version=0.11.0"></script>
   <style type="text/css">
     .select2-container .select2-selection--single .select2-selection__rendered {
       display: block;
@@ -136,7 +136,7 @@
     </div>
   </div>
 
-  <script type="text/javascript" src="/js/azkaban/view/hideHead.js?version=1.49.0"></script>
+  <script type="text/javascript" src="/js/azkaban/view/hideHead.js?version=0.11.0"></script>
 
   <div class="container-full">
 
@@ -233,6 +233,7 @@
       </div>
     </div>
   </div>
+
   ##强制结束工作流会话框
     <div class="modal" id="superkill-flow-modal">
       <div class="modal-dialog">

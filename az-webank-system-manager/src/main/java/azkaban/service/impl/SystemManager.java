@@ -62,19 +62,19 @@ public class SystemManager {
   public static final Pattern USER_ID_PATTERN = Pattern.compile("^[0-9]+$");
 
 
-  public static final  String WTSS_PROXY_USER_SWITCH = "wtss.proxy.user.switch";
+  public static final String WTSS_PROXY_USER_SWITCH = "wtss.proxy.user.switch";
 
-  public static final  String WTSS_CLOSE_USER_ENDWITH = "wtss.close.user.endWith";
+  public static final String WTSS_CLOSE_USER_ENDWITH = "wtss.close.user.endWith";
 
   @Inject
   public SystemManager(
-      final ProjectLoader loader,
-      final StorageManager storageManager,
-      final SystemUserLoader systemUserLoader,
-      final JdbcExecutorLoader jdbcExecutorLoader,
-      final ActiveExecutors activeExecutors,
-      final Props props,
-      final ExceptionalUserLoader exceptionalUserLoader) {
+          final ProjectLoader loader,
+          final StorageManager storageManager,
+          final SystemUserLoader systemUserLoader,
+          final JdbcExecutorLoader jdbcExecutorLoader,
+          final ActiveExecutors activeExecutors,
+          final Props props,
+          final ExceptionalUserLoader exceptionalUserLoader) {
     this.exceptionalUserLoader = requireNonNull(exceptionalUserLoader);
     this.projectLoader = requireNonNull(loader);
     this.props = requireNonNull(props);
@@ -109,10 +109,10 @@ public class SystemManager {
     Map<String, String> dataMap;
     if ("zh_CN".equalsIgnoreCase(languageType)) {
       dataMap = LoadJsonUtils.transJson("/conf/azkaban-common-zh_CN.json",
-          "azkaban.system.SystemManager");
+              "azkaban.system.SystemManager");
     } else {
       dataMap = LoadJsonUtils.transJson("/conf/azkaban-common-en_US.json",
-          "azkaban.system.SystemManager");
+              "azkaban.system.SystemManager");
     }
     return dataMap;
   }
@@ -145,7 +145,7 @@ public class SystemManager {
   }
 
   public List<WebankUser> findAllWebankUserPageList(final String searchName, final int pageNum, final int pageSize)
-      throws SystemUserManagerException {
+          throws SystemUserManagerException {
 
     List<WebankUser> webankUserList = null;
 
@@ -163,7 +163,7 @@ public class SystemManager {
 
   public List<WtssUser> findSystemUserPage(String preciseSearch, final String userName, final String fullName
           , final String departmentName, int start, int pageSize) throws SystemUserManagerException {
-    List<WtssUser> wtssUserList = this.systemUserLoader.findSystemUserPage(preciseSearch,userName, fullName, departmentName, start, pageSize);
+    List<WtssUser> wtssUserList = this.systemUserLoader.findSystemUserPage(preciseSearch, userName, fullName, departmentName, start, pageSize);
     return wtssUserList;
   }
 
@@ -177,7 +177,7 @@ public class SystemManager {
 
 
   public int addSystemUser(final String userId, final String password, final int roleId, int categoryId,
-      final String proxyUser, final int departmentId, final String email) throws SystemUserManagerException {
+                           final String proxyUser, final int departmentId, final String email, String dutyManager) throws SystemUserManagerException {
 
     Map<String, String> dataMap = loadSystemManagerI18nData();
 
@@ -214,23 +214,23 @@ public class SystemManager {
     wtssUser.setPassword(encodePwd);
 
 
-    boolean proxyUserSwitch =  props.getBoolean(WTSS_PROXY_USER_SWITCH, false);
+    boolean proxyUserSwitch = props.getBoolean(WTSS_PROXY_USER_SWITCH, false);
     String closeUserEndWith = props.getString(WTSS_CLOSE_USER_ENDWITH, Constants.CLOSE_USER_END_WITH);
 
-    if (proxyUserSwitch){
+    if (proxyUserSwitch) {
       checkProxyUser(proxyUser, dataMap, wtssUser, closeUserEndWith);
 
-    }else {
-    if (null != proxyUser && !"".equals(proxyUser)) {
-
-      // 代理用户正则表达式增加下划线校验通过
-      if (!PROXY_USER_PATTERN.matcher(proxyUser).matches()) {
-        throw new SystemUserManagerException(dataMap.get("errorFormatProxy"));
-      }
-      wtssUser.setProxyUsers(proxyUser);
     } else {
-      wtssUser.setProxyUsers(wtssUser.getUsername());
-    }
+      if (null != proxyUser && !"".equals(proxyUser)) {
+
+        // 代理用户正则表达式增加下划线校验通过
+        if (!PROXY_USER_PATTERN.matcher(proxyUser).matches()) {
+          throw new SystemUserManagerException(dataMap.get("errorFormatProxy"));
+        }
+        wtssUser.setProxyUsers(proxyUser);
+      } else {
+        wtssUser.setProxyUsers(wtssUser.getUsername());
+      }
 
     }
     wtssUser.setRoleId(roleId);
@@ -242,15 +242,15 @@ public class SystemManager {
 
     // 用户类型默默认为实名用户
     String userCategory;
-    if (categoryId ==1) {
+    if (categoryId == 1) {
       userCategory = "ops";
-    } else if (categoryId ==2) {
+    } else if (categoryId == 2) {
       userCategory = "system";
     } else {
       userCategory = "personal";
     }
     wtssUser.setUserCategory(userCategory);
-
+    wtssUser.setDutyManager(dutyManager);
     return this.systemUserLoader.addWtssUser(wtssUser);
   }
 
@@ -261,15 +261,15 @@ public class SystemManager {
       if (!PROXY_USER_PATTERN.matcher(proxyUser).matches()) {
         throw new SystemUserManagerException(dataMap.get("errorFormatProxy"));
       }
-      if(proxyUser.trim().equals(wtssUser.getUsername())){
+      if (proxyUser.trim().equals(wtssUser.getUsername())) {
         throw new SystemUserManagerException(dataMap.get("errorProxyTips"));
       }
-      if(!(wtssUser.getUsername()+ closeUserEndWith).equals(proxyUser)){
-        throw new SystemUserManagerException("代理用户只能是"+ wtssUser.getUsername()+ closeUserEndWith);
+      if (!(wtssUser.getUsername() + closeUserEndWith).equals(proxyUser)) {
+        throw new SystemUserManagerException("代理用户只能是" + wtssUser.getUsername() + closeUserEndWith);
       }
       wtssUser.setProxyUsers(proxyUser);
     } else {
-      wtssUser.setProxyUsers(wtssUser.getUsername()+ closeUserEndWith);
+      wtssUser.setProxyUsers(wtssUser.getUsername() + closeUserEndWith);
     }
   }
 
@@ -302,7 +302,7 @@ public class SystemManager {
    * @throws SystemUserManagerException
    */
   public int updateSystemUser(final String userId, final String password, final int roleId, final String proxyUser,
-      final int departmentId, String email) throws SystemUserManagerException {
+                              final int departmentId, String email, String dutyManager) throws SystemUserManagerException {
 
 
     Map<String, String> dataMap = loadSystemManagerI18nData();
@@ -351,7 +351,7 @@ public class SystemManager {
       wtssUser.setRoleId(roleId);
       wtssUser.setUserType(WtssUser.UserType.ACTIVE.getUserTypeNum());
       wtssUser.setUpdateTime(System.currentTimeMillis());
-
+      wtssUser.setDutyManager(dutyManager);
       if (SystemServlet.department_maintainer_check_switch) {
         String userCategory;
         if (USER_ID_PATTERN.matcher(userId).matches()) {
@@ -367,10 +367,10 @@ public class SystemManager {
         wtssUser.setUserCategory(userCategory);
       }
       wtssUser.setEmail(email);
-      boolean proxyUserSwitch =  props.getBoolean(WTSS_PROXY_USER_SWITCH, false);
+      boolean proxyUserSwitch = props.getBoolean(WTSS_PROXY_USER_SWITCH, false);
       String closeUserEndWith = props.getString(WTSS_CLOSE_USER_ENDWITH, Constants.CLOSE_USER_END_WITH);
 
-      if (proxyUserSwitch){
+      if (proxyUserSwitch) {
         checkProxyUser(proxyUser, dataMap, wtssUser, closeUserEndWith);
 
       }
@@ -407,7 +407,7 @@ public class SystemManager {
         List<WtssPermissions> wtssPermissionsList = this.systemUserLoader.getWtssPermissionsListByIds(wtssRole.getPermissionsIds());
         //获取角色对应的权限
         List<String> permissionsNameList = wtssPermissionsList.stream()
-            .map(WtssPermissions::getPermissionsName).collect(Collectors.toList());
+                .map(WtssPermissions::getPermissionsName).collect(Collectors.toList());
         userPermString = String.join(",", permissionsNameList);
       }
     } catch (SystemUserManagerException e) {
@@ -418,7 +418,7 @@ public class SystemManager {
 
 
   public List<WebankDepartment> findAllWebankDepartmentPageList(final String searchName, final int pageNum, final int pageSize)
-      throws SystemUserManagerException {
+          throws SystemUserManagerException {
 
     List<WebankDepartment> webankDepartmentList = null;
 
@@ -436,7 +436,7 @@ public class SystemManager {
   }
 
   public List<WebankDepartment> findAllWebankDepartmentList(final String searchName)
-      throws SystemUserManagerException {
+          throws SystemUserManagerException {
 
     List<WebankDepartment> webankDepartmentList = null;
 
@@ -450,15 +450,15 @@ public class SystemManager {
   }
 
   public WebankDepartment getWebankDepartmentByDpId(final int dpId)
-      throws SystemUserManagerException {
+          throws SystemUserManagerException {
 
     return this.systemUserLoader.getWebankDepartmentByDpId(dpId);
 
   }
 
   public List<WebankDepartment> findAllWebankDepartmentPageOrSearch(final String searchName, int pageNum
-      , int pageSize)
-      throws SystemUserManagerException {
+          , int pageSize)
+          throws SystemUserManagerException {
 
     List<WebankDepartment> webankDepartmentList = null;
 
@@ -507,7 +507,7 @@ public class SystemManager {
         wtssUser.setUsername(username);
         wtssUser.setFullName(username);
         wtssUser.setEmail("");
-        wtssUser.setPassword("");
+        wtssUser.setPassword("");//这里应工单要求，注掉了密码
       }
 
       if (null == existUser) {
@@ -551,7 +551,7 @@ public class SystemManager {
           userCategory = "personal";
         }
         wtssUser.setUserCategory(userCategory);
-
+        wtssUser.setDutyManager("N");
         try {
           this.systemUserLoader.addWtssUser(wtssUser);
         } catch (SystemUserManagerException e) {
@@ -571,8 +571,8 @@ public class SystemManager {
   }
 
   public int addDeparment(final int dpId, final int pid, final String dpName, final String dpChName,
-      final int orgId, final String orgName, final String division, final Integer groupId,
-      final Integer uploadFlag) throws SystemUserManagerException {
+                          final int orgId, final String orgName, final String division, final Integer groupId,
+                          final Integer uploadFlag) throws SystemUserManagerException {
 
     WebankDepartment webankDepartment = new WebankDepartment();
 
@@ -591,8 +591,8 @@ public class SystemManager {
   }
 
   public int updateDeparment(final int dpId, final int pid, final String dpName, final String dpChName,
-      final int orgId, final String orgName, final String division, final Integer groupId,
-      final Integer uploadFlag
+                             final int orgId, final String orgName, final String division, final Integer groupId,
+                             final Integer uploadFlag
   ) throws SystemUserManagerException {
 
     WebankDepartment webankDepartment = new WebankDepartment();
@@ -895,36 +895,36 @@ public class SystemManager {
     return this.systemUserLoader.getDepartmentMaintainerDepListByUserName(loginUserName);
   }
 
-  public Map<Long, List<Integer>> getDepartmentExecutor(List<Long> dpIds) throws SystemUserManagerException{
+  public Map<Long, List<Integer>> getDepartmentExecutor(List<Long> dpIds) throws SystemUserManagerException {
     return this.systemUserLoader.getDepartmentExecutor(dpIds);
   }
 
 
-  public void addExceptionalUser(String userId) throws Exception{
+  public void addExceptionalUser(String userId) throws Exception {
     WebankUser webankUser = this.systemUserLoader.getWebankUserByUserId(userId);
     ExceptionalUser exceptionalUser = new ExceptionalUser(webankUser.userId, webankUser.urn, webankUser.fullName, webankUser.departmentId, webankUser.departmentName, webankUser.email);
     this.exceptionalUserLoader.add(exceptionalUser);
   }
 
-  public void deleteExceptionalUser(String userId) throws Exception{
+  public void deleteExceptionalUser(String userId) throws Exception {
     this.exceptionalUserLoader.delete(userId);
   }
 
-  public List<ExceptionalUser> fetchAllExceptionalUsers(String searchName, int pageNum, int pageSize) throws Exception{
+  public List<ExceptionalUser> fetchAllExceptionalUsers(String searchName, int pageNum, int pageSize) throws Exception {
     return this.exceptionalUserLoader.fetchAllExceptionUsers(searchName, pageNum, pageSize);
   }
 
-  public int getTotalExceptionalUser(String searchName) throws Exception{
+  public int getTotalExceptionalUser(String searchName) throws Exception {
     return this.exceptionalUserLoader.getTotal(searchName);
   }
 
-  public List<ExceptionalUser> fetchAllExceptionalUsers() throws Exception{
+  public List<ExceptionalUser> fetchAllExceptionalUsers() throws Exception {
     return this.exceptionalUserLoader.fetchAllExceptionUsers();
   }
 
-  public boolean checkUserIsExceptionalUser(String userId) throws Exception{
-    for(ExceptionalUser exceptionalUser: this.fetchAllExceptionalUsers()){
-      if(exceptionalUser.getUserId().equals(userId)){
+  public boolean checkUserIsExceptionalUser(String userId) throws Exception {
+    for (ExceptionalUser exceptionalUser : this.fetchAllExceptionalUsers()) {
+      if (exceptionalUser.getUserId().equals(userId)) {
         return true;
       }
     }
@@ -933,9 +933,10 @@ public class SystemManager {
 
   /**
    * 权限上报接口
+   *
    * @throws Exception
    */
-  public List<PrivilegeReportDto> getPrivilegeReport() throws SystemUserManagerException{
+  public List<PrivilegeReportDto> getPrivilegeReport() throws SystemUserManagerException {
     List<PrivilegeReportDto> list = new ArrayList<>();
     // 获取所有wtssuser
     List<WtssUser> wtssUserList = this.systemUserLoader.getAllWtssUser();
@@ -960,7 +961,7 @@ public class SystemManager {
       String permissionsIds = wtssRole.getPermissionsIds();
       String[] permissionIdList = permissionsIds.split(",");
       List<PrivilegeReportDto.Roles.Priv> privList = new ArrayList<>();
-      for (String permissionId: permissionIdList) {
+      for (String permissionId : permissionIdList) {
         PrivilegeReportDto.Roles.Priv priv = new PrivilegeReportDto.Roles.Priv();
         WtssPermissions permission = wtssPermissionsList.stream()
                 .filter(ele -> Integer.parseInt(permissionId) == ele.getPermissionsId())

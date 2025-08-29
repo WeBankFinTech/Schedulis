@@ -16,9 +16,6 @@
 
 package azkaban;
 
-import azkaban.project.FlowLoaderUtils;
-import org.apache.commons.io.filefilter.SuffixFileFilter;
-
 import java.io.File;
 
 public class ExecutionsTestUtil {
@@ -40,10 +37,6 @@ public class ExecutionsTestUtil {
     return new File(DATA_ROOT_PATH + "/" + flowName + "/" + fileName);
   }
 
-  public static void main(String[] args) throws Exception{
-    File f = getFlowDir("testProject");
-    File[] projectFileList = f.listFiles(new FlowLoaderUtils.SuffixFilter(Constants
-        .PROJECT_FILE_SUFFIX));
-  }
+
 
 }

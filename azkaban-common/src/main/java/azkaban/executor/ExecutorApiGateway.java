@@ -16,7 +16,6 @@
 
 package azkaban.executor;
 
-import azkaban.Constants;
 import azkaban.utils.*;
 import com.google.inject.Inject;
 import okhttp3.*;
@@ -78,12 +77,13 @@ public class ExecutorApiGateway {
               .valueOf(executionId)));
       paramList.add(new Pair<>(ConnectorParams.USER_PARAM, user));
 
-      String dss_secret = "***REMOVED***";
+
+      String dss_secret = azkProps.getString("dss.secret", "");
       String token = JwtTokenUtils.getToken(null,false,dss_secret,300);
       paramList.add(new Pair<>(ConnectorParams.TOKEN_PARAM, token));
 
 
-      String newDss_secret = azkProps.getString(ConnectorParams.TOKEN_PARAM_NEW_KEY, "zzee|getsdghthb&dss@2021");
+      String newDss_secret = azkProps.getString(ConnectorParams.TOKEN_PARAM_NEW_KEY, "");
       String token1 = JwtTokenUtils.getToken(null,false,newDss_secret,300);
       paramList.add(new Pair<>(ConnectorParams.TOKEN_PARAM_NEW, token1));
 
@@ -134,12 +134,12 @@ public class ExecutorApiGateway {
     @SuppressWarnings("unchecked") final URI uri =
             AbstractRestfulApiClient.buildUri(host, port, path, true);
 
-    String dss_secret = "***REMOVED***";
+    String dss_secret = azkProps.getString("dss.secret", "");
     String token = JwtTokenUtils.getToken(null,false,dss_secret,300);
     paramList.add(new Pair<>(ConnectorParams.TOKEN_PARAM, token));
 
 
-    String newDss_secret = azkProps.getString(ConnectorParams.TOKEN_PARAM_NEW_KEY, "zzee|getsdghthb&dss@2021");
+    String newDss_secret = azkProps.getString(ConnectorParams.TOKEN_PARAM_NEW_KEY, "");
     String token1 = JwtTokenUtils.getToken(null,false,newDss_secret,300);
     paramList.add(new Pair<>(ConnectorParams.TOKEN_PARAM_NEW, token1));
 

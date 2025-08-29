@@ -233,37 +233,7 @@ public class EventChecker {
 		return pid;
 	}
 
-	public static void main(String[] args) {
-		Properties p = new Properties();
-		p.put("azkaban.flow.execid","111");
 
-		p.put("msg.type","RECEIVE");
-		p.put("msg.receiver","project@job@v_zhu");
-		p.put("msg.topic","bdp_new_test");
-		p.put("msg.name","TestCheck");
-		p.put("msg.savekey","msg.body");
-		p.put("query.frequency","60");
-		p.put("wait.time","1");
-		p.put("msg.rece.today","true");
-		p.put("msg.after.send","true");
-		p.put("auto.trigger.time","12:50:45");
-		p.put("auto.trigger.param","qiaoyihang");
-//		p.put("wait.for.time","22:00");
-
-//		p.put("msg.type","SEND");
-//		p.put("msg.sender","project@job@v_zhu");
-//		p.put("msg.topic","bdp_new_test");
-//		p.put("msg.name","TestCheck");
-//		p.put("msg.body","msg.body");
-
-		p.put("msg.eventchecker.jdo.option.name","msg");
-		p.put("msg.eventchecker.jdo.option.url","");
-		p.put("msg.eventchecker.jdo.option.username","");
-		p.put("msg.eventchecker.jdo.option.password","");
-
-		EventChecker ec = new EventChecker("AA",p);
-		ec.run();
-	}
 
 
 }

@@ -2,16 +2,17 @@ package azkaban.system.credential;
 
 import azkaban.db.DatabaseOperator;
 import azkaban.system.dto.CredentialDto;
+import org.apache.commons.dbutils.ResultSetHandler;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import javax.inject.Inject;
+import javax.inject.Singleton;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import javax.inject.Inject;
-import javax.inject.Singleton;
-import org.apache.commons.dbutils.ResultSetHandler;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
  * @author lebronwang
@@ -25,6 +26,10 @@ public class CredentialDaoImpl implements CredentialDao {
   public static final String BASE_SQL_TABLE_CREDENTIAL = "SELECT subsystem_id, app_id, app_secret, "
       + "ip_whitelist FROM wtss_app_credentials ";
 
+  public static final String UPDATE_IPWHITE_LIST_BY_APPID = "update wtss_app_credentials set ip_whitelist =?,updated_time =? where app_id = ? ";
+
+  public static final String ADD_IPWHITE_LIST = "insert into wtss_app_credentials(subsystem_id,app_id,app_secret,ip_whitelist,created_time,updated_time)" +
+          " values(?,?,?,?,?,?) ";
   private final DatabaseOperator dbOperator;
 
   @Inject
@@ -47,6 +52,20 @@ public class CredentialDaoImpl implements CredentialDao {
     String querySql = BASE_SQL_TABLE_CREDENTIAL + "WHERE app_id = ? ";
 
     return this.dbOperator.query(querySql, new CredentialHandler(), appId);
+  }
+
+  @Override
+  public void updateCredential(CredentialDto credentialDto) throws SQLException {
+
+     this.dbOperator.update(UPDATE_IPWHITE_LIST_BY_APPID, credentialDto.getIpWhitelist(), credentialDto.getUpdateTime(), credentialDto.getAppId());
+
+  }
+
+  @Override
+  public void addCredential(CredentialDto addCredentialDto)throws SQLException {
+    this.dbOperator.update(ADD_IPWHITE_LIST,addCredentialDto.getSubsystemId(),addCredentialDto.getAppId(),
+                                          addCredentialDto.getAppSecret(),addCredentialDto.getIpWhitelist(),
+                                          addCredentialDto.getCreateTime(),addCredentialDto.getUpdateTime());
   }
 
   private static class CredentialHandler implements ResultSetHandler<List<CredentialDto>> {

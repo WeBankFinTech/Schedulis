@@ -1123,11 +1123,11 @@ Schedulis 目前支持项目级别、工作流级别、job 级别应用信息录
    
    环境 API 地址
    
-   - SIT 环境： http://127.0.0.1
-   - UAT 环境：http://127.0.0.1
-   - 生产环境（OA）：http://imsplus.webank.oa.com
-   - 生产环境：http://imsplus.webank.com
-   - 云管理：http://127.0.0.1
+   - SIT 环境： 
+   - UAT 环境：
+   - 生产环境（OA）：
+   - 生产环境：
+   - 云管理：
    
    ![](../docs/assets/manual/img/schedulis_117.png)
 
@@ -1476,7 +1476,7 @@ wait.for.time=15：00
 如果需要将接收到的传递到后续 Job 使用，则使用 ${msg.mycontent} ，msg.mycontent 为 msg.savekey 定义的字段
 
 ```
-user.to.proxy=hadoop
+user.to.proxy=
 command=echo ${msg.mycontent}
 command.1=sh test.sh ${msg.mycontent}
 dependencies=eventreceive
@@ -1492,7 +1492,7 @@ echo "{"'"mycontent"':'"'$cc'"'"}" >> ${JOB_OUTPUT_PROP_FILE}
 
 ```
 type=command
-user.to.proxy=hadoop
+user.to.proxy=
 command=echo ${mycontent}
 dependencies=savekeytest1
 ```
@@ -1666,7 +1666,7 @@ run\_date 核心变量定义：run\_date 支持用户自己设定，默认设置
 ### 9.6.2 运维侧操作 --开发确认好验证文件打包目录后，联系运维进行自动化验证模板设置
 
 1. 新建自动化验证触发aomp模板  
-    在aomp的对应系统下新建自动化验证触发模板：可以复用RRS-DM(3391)下的<font color='green'>数据组-DM自动化验证信息入库[AUTOVALID]</font>，（执行用户hduser1006,执行机器：127.0.0及部署路径保持原值即可）并修改执行部署操作中如下几个部分，其中：
+    在aomp的对应系统下新建自动化验证触发模板：可以复用RRS-DM(3391)下的<font color='green'>数据组-DM自动化验证信息入库[AUTOVALID]</font>，（执行用户hduser1006,执行机器：及部署路径保持原值即可）并修改执行部署操作中如下几个部分，其中：
    - AUTOVALIDATE_DEPLOY_PATH：修改为开发侧操作第二步中设定的固定路径
    - sysid修改为本系统名：用于后台快速区分验证发起系统
    - 工作流验证脚本目录&脚本名：需要与开发确认清楚验证环境（生产or灰度）后进行修改

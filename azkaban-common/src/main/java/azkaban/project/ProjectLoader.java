@@ -18,16 +18,13 @@ package azkaban.project;
 
 import azkaban.flow.Flow;
 import azkaban.project.ProjectLogEvent.EventType;
-import azkaban.project.entity.FlowBusiness;
-import azkaban.project.entity.ProjectChangeOwnerInfo;
-import azkaban.project.entity.ProjectHourlyReportConfig;
-import azkaban.project.entity.ProjectPermission;
-import azkaban.project.entity.ProjectVersion;
+import azkaban.project.entity.*;
 import azkaban.system.entity.WtssUser;
 import azkaban.user.Permission;
 import azkaban.user.User;
 import azkaban.utils.Props;
 import azkaban.utils.Triple;
+
 import java.io.File;
 import java.io.IOException;
 import java.sql.SQLException;
@@ -81,20 +78,20 @@ public interface ProjectLoader {
    * @throws ProjectManagerException if an active project of the same name exists.
    */
   Project createNewProject(String name, String description, User creator, String source)
-          throws ProjectManagerException;
+      throws ProjectManagerException;
 
   void updateProjectCreateUser(Project project, WtssUser newCreateUser, User user) throws Exception;
   /**
    * Removes the project by marking it inactive.
    */
   void removeProject(Project project, String user)
-          throws ProjectManagerException;
+      throws ProjectManagerException;
 
   /**
    * restore the project by marking it active.
    */
   int restoreProject(String projectName, int projectId, String user)
-          throws ProjectManagerException;
+      throws ProjectManagerException;
 
 
   /**
@@ -112,26 +109,26 @@ public interface ProjectLoader {
    * 获取该工程没有结束的flow
    */
   List<Flow> getRunningFlow(Project project)
-          throws ProjectManagerException;
+      throws ProjectManagerException;
 
   /**
    * Adds and updates the user permissions. Does not check if the user is valid. If the permission
    * doesn't exist, it adds. If the permission exists, it updates.
    */
   void updatePermission(Project project, String name, Permission perm,
-                        boolean isGroup) throws ProjectManagerException;
+      boolean isGroup) throws ProjectManagerException;
 
   void removePermission(Project project, String name, boolean isGroup)
-          throws ProjectManagerException;
+      throws ProjectManagerException;
 
   /**
    * Modifies and commits the project description.
    */
   void updateDescription(Project project, String description, String user)
-          throws ProjectManagerException;
+      throws ProjectManagerException;
 
   void updateJobLimit(Project project, int jobLimit, String user)
-          throws ProjectManagerException;
+      throws ProjectManagerException;
 
   void updateProjectLock(Project project) throws ProjectManagerException;
 
@@ -141,13 +138,13 @@ public interface ProjectLoader {
    * @param message return true if the posting was success.
    */
   boolean postEvent(Project project, EventType type, String user,
-                    String message);
+      String message);
 
   /**
    * Returns all the events for a project sorted
    */
   List<ProjectLogEvent> getProjectEvents(Project project, int num,
-                                         int skip) throws ProjectManagerException;
+      int skip) throws ProjectManagerException;
 
   /**
    * Returns 10 version for a project sorted
@@ -156,23 +153,30 @@ public interface ProjectLoader {
                                           int skip) throws ProjectManagerException;
 
   /**
+   * @param project
+   * @param version
+   * @return
+   */
+  List<ProjectVersion> getProjectVersion(Project project, int version);
+
+  /**
    * Will upload the files and return the version number of the file uploaded.
    */
   void uploadProjectFile(int projectId, int version, File localFile, String user)
-          throws ProjectManagerException;
+      throws ProjectManagerException;
 
   /**
    * Will upload the files and pass the version number of the file uploaded.
    */
   void uploadProjectFile(final int projectId, final int version, final File localFile,
-                         final String uploader, String resourceID);
+      final String uploader, String resourceID);
   /**
    * Add project and version info to the project_versions table. This current maintains the metadata
    * for each uploaded version of the project
    */
   void addProjectVersion(int projectId, int version, File localFile, String uploader, byte[] md5,
-                         String resourceId)
-          throws ProjectManagerException;
+      String resourceId)
+      throws ProjectManagerException;
 
   /**
    * Fetch project metadata from project_versions table
@@ -187,89 +191,89 @@ public interface ProjectLoader {
    * Get file that's uploaded.
    */
   ProjectFileHandler getUploadedFile(int projectId, int version)
-          throws ProjectManagerException;
+      throws ProjectManagerException;
 
   /**
    * Changes and commits different project version.
    */
   void changeProjectVersion(Project project, int version, String user)
-          throws ProjectManagerException;
+      throws ProjectManagerException;
 
   void updateFlow(Project project, int version, Flow flow)
-          throws ProjectManagerException;
+      throws ProjectManagerException;
 
   /**
    * Uploads all computed flows
    */
   void uploadFlows(Project project, int version, Collection<Flow> flows)
-          throws ProjectManagerException;
+      throws ProjectManagerException;
 
   /**
    * Upload just one flow.
    */
   void uploadFlow(Project project, int version, Flow flow)
-          throws ProjectManagerException;
+      throws ProjectManagerException;
 
   /**
    * Fetches one particular flow.
    */
   Flow fetchFlow(Project project, String flowId)
-          throws ProjectManagerException;
+      throws ProjectManagerException;
 
   /**
    * Fetches all flows.
    */
   List<Flow> fetchAllProjectFlows(Project project)
-          throws ProjectManagerException;
+      throws ProjectManagerException;
 
   Flow fetchAllProjectFlows(int project, int version, String flowId)
-          throws ProjectManagerException;
+      throws ProjectManagerException;
 
   /**
    * Gets the latest upload version.
    */
   int getLatestProjectVersion(Project project)
-          throws ProjectManagerException;
+      throws ProjectManagerException;
 
   /**
    * Upload Project properties
    */
   void uploadProjectProperty(Project project, Props props)
-          throws ProjectManagerException;
+      throws ProjectManagerException;
 
   /**
    * Upload Project properties. Map contains key value of path and properties
    */
   void uploadProjectProperties(Project project, List<Props> properties)
-          throws ProjectManagerException;
+      throws ProjectManagerException;
 
   /**
    * Fetch project properties
    */
   Props fetchProjectProperty(Project project, String propsName)
-          throws ProjectManagerException;
+      throws ProjectManagerException;
 
   /**
    * Fetch all project properties
    */
   Map<String, Props> fetchProjectProperties(int projectId, int version)
-          throws ProjectManagerException;
+      throws ProjectManagerException;
 
   /**
    * Cleans all project versions less than the provided version, except the versions to exclude
    * given as argument
    */
   void cleanOlderProjectVersion(int projectId, int version, final List<Integer> excludedVersions)
-          throws ProjectManagerException;
+      throws ProjectManagerException;
 
   void updateProjectProperty(Project project, Props props)
-          throws ProjectManagerException;
+      throws ProjectManagerException;
 
   Props fetchProjectProperty(int projectId, int projectVer, String propsName)
-          throws ProjectManagerException;
+      throws ProjectManagerException;
 
   List<Triple<String, Boolean, Permission>> getProjectPermissions(Project project)
-          throws ProjectManagerException;
+      throws ProjectManagerException;
 
   void updateProjectSettings(Project project) throws ProjectManagerException;
 
@@ -277,32 +281,32 @@ public interface ProjectLoader {
    * Uploads flow file.
    */
   void uploadFlowFile(int projectId, int projectVersion, File flowFile, int flowVersion)
-          throws ProjectManagerException;
+      throws ProjectManagerException;
 
   /**
    * Gets flow file that's uploaded.
    */
   File getUploadedFlowFile(int projectId, int projectVersion, String flowFileName, int
-          flowVersion, final File tempDir)
-          throws ProjectManagerException, IOException;
+      flowVersion, final File tempDir)
+      throws ProjectManagerException, IOException;
 
   /**
    * Gets the latest flow version.
    */
   int getLatestFlowVersion(int projectId, int projectVersion, String flowName)
-          throws ProjectManagerException;
+      throws ProjectManagerException;
 
   /**
    * Check if flow file has been uploaded.
    */
   boolean isFlowFileUploaded(int projectId, int projectVersion)
-          throws ProjectManagerException;
+      throws ProjectManagerException;
 
   /**
    * 添加项目的组和组权限接口
    */
   void updatePermission(Project project, String name, Permission perm,
-                        boolean isGroup, String group) throws ProjectManagerException;
+      boolean isGroup, String group) throws ProjectManagerException;
 
   /**
    *
@@ -311,7 +315,7 @@ public interface ProjectLoader {
    * @throws ProjectManagerException
    */
   void removeProjectPermission(Project project, String userId)
-          throws ProjectManagerException;
+      throws ProjectManagerException;
 
   /**
    * 获取当天创建的项目列表
@@ -363,7 +367,7 @@ public interface ProjectLoader {
   void deleteFlowBusiness(int projectId, String flowId, String jobId);
 
   List<ProjectPermission> fetchAllPermissionsForProject(Project project)
-          throws ProjectManagerException;
+      throws ProjectManagerException;
 
   /**
    * 修改项目关联 ITSM 单号
@@ -373,11 +377,11 @@ public interface ProjectLoader {
   void changeProjectItsmId(Project project);
 
   int updateProjectChangeOwnerInfo(long itsmNo, Project project, String newOwner, User user)
-          throws SQLException;
+      throws SQLException;
 
   List<Project> preciseSearchFetchProjects(String projContain, String flowContain,
-                                           String description, String userContain, String subsystem,
-                                           String busPath, String departmentId, int active) throws ProjectManagerException;
+      String description, String userContain, String subsystem,
+      String busPath, String departmentId, int active) throws ProjectManagerException;
 
   ProjectChangeOwnerInfo getProjectChangeOwnerInfo(Project project) throws SQLException;
 
@@ -392,8 +396,8 @@ public interface ProjectLoader {
   File getProjectFiles(List<Project> projectList) throws ProjectManagerException;
 
   int updateProjectHourlyReportConfig(Project project, User user, String reportWay,
-                                      String reportReceiverString)
-          throws SQLException;
+      String reportReceiverString)
+      throws SQLException;
 
   int removeProjectHourlyReportConfig(Project project) throws SQLException;
 

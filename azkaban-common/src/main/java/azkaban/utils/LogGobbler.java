@@ -16,8 +16,6 @@
 
 package azkaban.utils;
 
-import static azkaban.ServiceProvider.SERVICE_PROVIDER;
-
 import azkaban.Constants;
 import azkaban.flow.CommonJobProperties;
 import azkaban.jobid.BDPClientJobInfo;
@@ -25,20 +23,19 @@ import azkaban.jobid.relation.JobIdRelation;
 import azkaban.jobid.relation.JobIdRelationService;
 import com.google.common.base.Joiner;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
+import org.apache.commons.collections4.CollectionUtils;
+import org.apache.commons.lang3.StringUtils;
+import org.slf4j.Logger;
+
 import java.io.BufferedReader;
 import java.io.Reader;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.LinkedBlockingQueue;
-import java.util.concurrent.ThreadFactory;
-import java.util.concurrent.ThreadPoolExecutor;
-import java.util.concurrent.TimeUnit;
+import java.util.concurrent.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-import org.apache.commons.collections4.CollectionUtils;
-import org.apache.commons.lang3.StringUtils;
-import org.slf4j.Logger;
+
+import static azkaban.ServiceProvider.SERVICE_PROVIDER;
 
 public class LogGobbler extends Thread {
 
@@ -67,7 +64,7 @@ public class LogGobbler extends Thread {
   private boolean ignoreJobServerId = false;
 
   public LogGobbler(final Reader inputReader, final Logger logger,
-                    final String level, final int bufferLines) {
+      final String level, final int bufferLines) {
     this.inputReader = new BufferedReader(inputReader);
     this.logger = logger;
     this.loggingLevel = level;
@@ -75,8 +72,8 @@ public class LogGobbler extends Thread {
   }
 
   public LogGobbler(final Reader inputReader, final Logger logger,
-                    final String level, final int bufferLines, Props props, List<String> yarnAppIds,
-                    List<BDPClientJobInfo> bdpJobserverIds, List<String> linkisTaskIds) {
+      final String level, final int bufferLines, Props props, List<String> yarnAppIds,
+      List<BDPClientJobInfo> bdpJobserverIds, List<String> linkisTaskIds) {
     this.inputReader = new BufferedReader(inputReader);
     this.logger = logger;
     this.loggingLevel = level;
@@ -95,7 +92,7 @@ public class LogGobbler extends Thread {
             .setNameFormat("Log-pool-" + execId + "-job-" + jobId)
             .build();
     this.uploadJobIdRelationPool = new ThreadPoolExecutor(size, size, 0L,
-            TimeUnit.MILLISECONDS, new LinkedBlockingQueue<>(), threadFactory);
+        TimeUnit.MILLISECONDS, new LinkedBlockingQueue<>(), threadFactory);
   }
 
   @Override
@@ -129,6 +126,7 @@ public class LogGobbler extends Thread {
       boolean needSaveToDb = false;
       //获取appId
       List<String> appIdInfos = findIdInfos(APPLICATION_ID_PATTERN.matcher(line), 0);
+
       List<String> jobServerInfos = null;
       if (CollectionUtils.isEmpty(appIdInfos)) {
         //获取JobserverURL
@@ -168,7 +166,7 @@ public class LogGobbler extends Thread {
       }
 
       if (CollectionUtils.isEmpty(appIdInfos) && CollectionUtils.isEmpty(jobServerInfos)
-              && CollectionUtils.isEmpty(jobServerIdInfos)) {
+          && CollectionUtils.isEmpty(jobServerIdInfos)) {
         // 获取 linkis task id
         List<String> linkisIdInfos = findIdInfos(LINKIS_ID_PATTERN.matcher(line), 0);
         if (CollectionUtils.isNotEmpty(linkisIdInfos)) {

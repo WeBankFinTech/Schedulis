@@ -1,0 +1,118 @@
+## Modal dialog to be displayed to create a new duty-group.
+
+<div
+    class="modal"
+    id="add-duty-group-panel"
+>
+    <div class="modal-dialog" style="width: 900px;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <button
+                    type="button"
+                    class="close"
+                    data-dismiss="modal"
+                    aria-hidden="true"
+                >&times;
+                </button>
+                <h4 id="add-duty-group-panel-title" class="modal-title">$addDutyGroup</h4>
+                <h4 id="edit-duty-group-panel-title" class="modal-title">$editDutyGroup</h4>
+            </div>
+            <div class="modal-body">
+                <div
+                    class="alert alert-danger"
+                    id="add-duty-group-modal-error-msg"
+                    style="word-break:break-all;"
+                ></div>
+                <form id="dutyForm">
+                    <!-- 值班组名称 -->
+                    <div class="form-group">
+                        <label for="dutyGroupName">$dutyGroupName</label>
+                        <input
+                            type="text"
+                            class="form-control"
+                            id="dutyGroupName"
+                            placeholder="${inputDutyGroupName}"
+                            maxlength="30"
+                            required
+                        >
+                    </div>
+
+                    <!-- 值班组成员 -->
+                    <div id="membersContainer">
+                        <div class="member-row form-group">
+                            <div class="row">
+                                <div class="col-md-3">
+                                    <label>$memberName</label>
+                                    <select class="form-control member-name">
+                                    </select>
+                                </div>
+                                <div class="col-md-2">
+                                    <label>$dutyStartDate</label>
+                                    <input
+                                        type="text"
+                                        class="form-control datepicker start-date"
+                                        placeholder="${selectDate}"
+                                        required
+                                    >
+                                </div>
+                                <div class="col-md-2">
+                                    <label>$dutyEndDate</label>
+                                    <input
+                                        type="text"
+                                        class="form-control datepicker end-date"
+                                        placeholder="${selectDate}"
+                                        required
+                                    >
+                                </div>
+                                <div class="col-md-3">
+                                    <label>$dutyNaturalDate</label>
+                                    <input
+                                        type="text"
+                                        class="form-control datepicker duty-date"
+                                        placeholder="${selectDate}"
+                                    >
+                                </div>
+                                <div class="col-md-2">
+                                    <label>&nbsp;</label>
+                                    <button
+                                        type="button"
+                                        class="btn btn-danger btn-block remove-member"
+                                    >$delete</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 添加成员按钮 -->
+                    <button
+                        type="button"
+                        id="addMember"
+                        class="btn btn-primary"
+                    >$addMember</button>
+                <form>
+            </div>
+            <div class="modal-footer">
+                <input
+                    name="action"
+                    type="hidden"
+                    value="create"
+                >
+                <input
+                    name="redirect"
+                    type="hidden"
+                    value="$!context/"
+                >
+                <button
+                    type="button"
+                    class="btn btn-default"
+                    data-dismiss="modal"
+                >$cancel</button>
+                <button
+                    type="submit"
+                    class="btn btn-primary"
+                    id="duty-group-create-btn"
+                >$save</button>
+            </div>
+        </div>
+    </div>
+</div>

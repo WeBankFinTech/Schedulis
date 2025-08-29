@@ -42,14 +42,14 @@
 
     });
   </script>
-   <script type="text/javascript" src="/js/azkaban/util/utils.js?version=1.49.0"></script>
-
-    <link href="/css/bootstrap-select.min.css?version=1.49.0" rel="stylesheet">
-  <script type="text/javascript" src="/js/azkaban/i18n-config.js?version=1.49.0"></script>
-  <script type="text/javascript" src="/js/azkaban/view/table-sort.js?version=1.49.0"></script>
-  <script type="text/javascript" src="/js/azkaban/view/main.js?version=1.49.0"></script>
-  <script src="/js/select2/select2.js?version=1.49.0"></script>
-  <script type="text/javascript" src="/js/bootstrap-select.js?version=1.49.0"></script>
+   <script type="text/javascript" src="/js/azkaban/util/utils.js?version=0.11.0"></script>
+   
+    <link href="/css/bootstrap-select.min.css?version=0.11.0" rel="stylesheet">
+  <script type="text/javascript" src="/js/azkaban/i18n-config.js?version=0.11.0"></script>
+  <script type="text/javascript" src="/js/azkaban/view/table-sort.js?version=0.11.0"></script>
+  <script type="text/javascript" src="/js/azkaban/view/main.js?version=0.11.0"></script>
+  <script src="/js/select2/select2.js?version=0.11.0"></script>
+  <script type="text/javascript" src="/js/bootstrap-select.js?version=0.11.0"></script>
   <style type="text/css">
 
   </style>
@@ -100,7 +100,7 @@
            ##        </span>
             </div>
           </div>
-
+          
           #if (!$hideCreateProject)
             <div class="form-group" id="create-project">
             ## Note: The Create Project button is not completely flush to the right because
@@ -204,7 +204,7 @@
                 <h4 style="word-break:break-all;"><a
                     href="javascript:void(0);" onclick="checkHrefUrlXss('/manager?project=${project.name}')">$esc.html($project.name)</a>
                 </h4>
-                <p class="project-description">$esc.html($project.description)</p>
+                <p class="project-description">$esc.html($project.description)</p> 
                 <p class="project-last-modified">$projectLastModified1
 		              <strong>$project.lastModifiedUser</strong>.
 		            </p> $projectLastModified2
@@ -428,7 +428,7 @@
               <button class="btn btn-success" id="filter-btn">$commit</button>
             </div>
           </div>
-
+         
         </div>
       </div>
     </div>

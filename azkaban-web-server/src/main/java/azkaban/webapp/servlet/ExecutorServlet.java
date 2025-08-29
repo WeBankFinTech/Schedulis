@@ -16,29 +16,13 @@
 
 package azkaban.webapp.servlet;
 
-import static azkaban.Constants.ConfigurationKeys.WTSS_JOB_LOG_DIAGNOSIS_SCRIPT_PATH;
-import static azkaban.ServiceProvider.SERVICE_PROVIDER;
-
 import azkaban.Constants;
 import azkaban.alert.Alerter;
 import azkaban.batch.HoldBatchContext;
 import azkaban.eventnotify.EventNotifyService;
-import azkaban.executor.AlerterHolder;
-import azkaban.executor.ConnectorParams;
-import azkaban.executor.ExecutableFlow;
-import azkaban.executor.ExecutableFlowBase;
-import azkaban.executor.ExecutableJobInfo;
-import azkaban.executor.ExecutableNode;
-import azkaban.executor.ExecutingQueryParam;
-import azkaban.executor.ExecutionControllerUtils;
-import azkaban.executor.ExecutionCycle;
-import azkaban.executor.ExecutionOptions;
-import azkaban.executor.ExecutionOptions.FailureAction;
+import azkaban.executor.*;
 import azkaban.executor.Executor;
-import azkaban.executor.ExecutorManagerAdapter;
-import azkaban.executor.ExecutorManagerException;
-import azkaban.executor.HistoryQueryParam;
-import azkaban.executor.Status;
+import azkaban.executor.ExecutionOptions.FailureAction;
 import azkaban.flow.Flow;
 import azkaban.flow.FlowUtils;
 import azkaban.flow.Node;
@@ -55,11 +39,7 @@ import azkaban.log.diagnosis.service.JobLogDiagnosisServiceImpl;
 import azkaban.project.Project;
 import azkaban.project.ProjectManager;
 import azkaban.project.ProjectManagerException;
-import azkaban.scheduler.EventSchedule;
-import azkaban.scheduler.EventScheduleServiceImpl;
-import azkaban.scheduler.Schedule;
-import azkaban.scheduler.ScheduleManager;
-import azkaban.scheduler.ScheduleManagerException;
+import azkaban.scheduler.*;
 import azkaban.server.HttpRequestUtils;
 import azkaban.server.session.Session;
 import azkaban.sla.SlaOption;
@@ -70,79 +50,18 @@ import azkaban.system.entity.WebankUser;
 import azkaban.system.entity.WtssUser;
 import azkaban.trigger.TriggerManager;
 import azkaban.trigger.TriggerManagerException;
-import azkaban.user.Permission;
+import azkaban.user.*;
 import azkaban.user.Permission.Type;
-import azkaban.user.SystemUserManager;
-import azkaban.user.User;
-import azkaban.user.UserManagerException;
-import azkaban.utils.AlertUtil;
-import azkaban.utils.DateUtils;
-import azkaban.utils.ElasticUtils;
-import azkaban.utils.ExternalLinkUtils;
-import azkaban.utils.FileIOUtils;
+import azkaban.utils.*;
 import azkaban.utils.FileIOUtils.LogData;
-import azkaban.utils.GsonUtils;
-import azkaban.utils.HttpUtils;
-import azkaban.utils.JSONUtils;
-import azkaban.utils.LogErrorCodeFilterUtils;
-import azkaban.utils.Pair;
-import azkaban.utils.Props;
-import azkaban.utils.WebUtils;
 import azkaban.webapp.AzkabanWebServer;
 import azkaban.webapp.WebMetrics;
 import azkaban.webapp.plugin.PluginRegistry;
 import azkaban.webapp.plugin.ViewerPlugin;
 import com.google.common.collect.Lists;
-import com.google.gson.Gson;
-import com.google.gson.JsonObject;
-import com.google.gson.JsonParser;
+import com.google.gson.*;
 import com.google.gson.reflect.TypeToken;
 import com.opencsv.CSVWriter;
-
-import java.io.BufferedInputStream;
-import java.io.BufferedOutputStream;
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileWriter;
-import java.io.IOException;
-import java.io.OutputStream;
-import java.math.BigDecimal;
-import java.sql.SQLException;
-import java.text.ParseException;
-import java.text.SimpleDateFormat;
-import java.time.Duration;
-import java.time.Instant;
-import java.time.LocalDateTime;
-import java.time.LocalTime;
-import java.time.ZoneId;
-import java.time.temporal.ChronoUnit;
-import java.time.temporal.TemporalAdjusters;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.Comparator;
-import java.util.Date;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-import java.util.Set;
-import java.util.StringJoiner;
-import java.util.TreeMap;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.LinkedBlockingQueue;
-import java.util.concurrent.ThreadPoolExecutor;
-import java.util.concurrent.TimeUnit;
-import java.util.stream.Collectors;
-import javax.servlet.ServletConfig;
-import javax.servlet.ServletException;
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
-
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.collections4.MapUtils;
 import org.apache.commons.io.IOUtils;
@@ -156,6 +75,26 @@ import org.joda.time.format.DateTimeFormat;
 import org.joda.time.format.DateTimeFormatter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import javax.servlet.ServletConfig;
+import javax.servlet.ServletException;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+import java.io.*;
+import java.math.BigDecimal;
+import java.sql.SQLException;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
+import java.time.*;
+import java.time.temporal.ChronoUnit;
+import java.time.temporal.TemporalAdjusters;
+import java.util.*;
+import java.util.concurrent.*;
+import java.util.stream.Collectors;
+
+import static azkaban.Constants.ConfigurationKeys.WTSS_JOB_LOG_DIAGNOSIS_SCRIPT_PATH;
+import static azkaban.Constants.FlowTriggerProps.AUTO_DISABLED_JOBS;
+import static azkaban.ServiceProvider.SERVICE_PROVIDER;
 
 
 public class ExecutorServlet extends AbstractLoginAzkabanServlet {
@@ -199,6 +138,8 @@ public class ExecutorServlet extends AbstractLoginAzkabanServlet {
 
     private JobLogDiagnosisService jobLogDiagnosisService;
 
+    private boolean personalCheckSwitch;
+
     @Override
     public void destroy() {
         if (threadPoolService != null) {
@@ -235,7 +176,7 @@ public class ExecutorServlet extends AbstractLoginAzkabanServlet {
         this.holdBatchSwitch = props.getBoolean("azkaban.holdbatch.switch", false);
         this.holdBatchWhiteList = props.getStringList("hold.batch.whitelist");
         this.checkRealNameSwitch = props.getBoolean("realname.check.switch", true);
-
+        this.personalCheckSwitch = server.getServerProps().getBoolean("wtss.personal.check.switch", false);
         this.jobLogDiagnosisService = SERVICE_PROVIDER.getInstance(
                 JobLogDiagnosisServiceImpl.class);
     }
@@ -390,6 +331,8 @@ public class ExecutorServlet extends AbstractLoginAzkabanServlet {
         } else if ("repeatCollection".equals(ajaxName)) {
             ajaxAttRepeatExecuteFlow(req, resp, ret, session.getUser());
             // FIXME Added interface to stop history and rerun ajax method.
+        } else if ("batchRepeatCollection".equals(ajaxName)) {
+            ajaxBatchAttRepeatExecuteFlow(req, resp, ret, session.getUser());
         } else if ("stopRepeat".equals(ajaxName)) {
             ajaxStopRepeat(req, resp, ret, session.getUser());
             // FIXME Added interface to get historical rerun data.
@@ -399,6 +342,8 @@ public class ExecutorServlet extends AbstractLoginAzkabanServlet {
         } else if ("recoverParamVerify".equals(ajaxName)) {
             ajaxRecoverParamVerify(req, resp, ret, session.getUser());
             // FIXME Added interface to get information about tasks performed.
+        } else if ("batchRecoverParamVerify".equals(ajaxName)) {
+            ajaxBatchRecoverParamVerify(req, resp, ret, session.getUser());
         } else if ("fetchexecutionflowgraphNew".equals(ajaxName)) {
             final String projectName = getParam(req, "project");
             final String flowName = getParam(req, "flow");
@@ -1082,6 +1027,7 @@ public class ExecutorServlet extends AbstractLoginAzkabanServlet {
             ret.put("execid", exFlow.getExecutionId());
             ret.put("projectId", exFlow.getProjectId());
             ret.put("project", project.getName());
+            ret.put(AUTO_DISABLED_JOBS, exFlow.getExecutionOptions().getAutoDisabledJobs());
             FlowUtils.applyDisabledJobs(executionOptions.getDisabledJobs(), exFlow);
             final Map<String, Object> flowObj = getExecutableNodeInfo(project, exFlow, exFlow.getExecutionId());
             ret.putAll(flowObj);
@@ -1488,7 +1434,7 @@ public class ExecutorServlet extends AbstractLoginAzkabanServlet {
     }
 
     protected Project getProjectPageByPermission(final Page page, final int projectId,
-                                                 final User user, final Permission.Type type) {
+                                                 final User user, final Type type) {
         final Project project = this.projectManager.getProject(projectId);
 
         Map<String, String> dataMap = loadExecutorServletI18nData();
@@ -1506,7 +1452,7 @@ public class ExecutorServlet extends AbstractLoginAzkabanServlet {
     }
 
     protected Project getProjectAjaxByPermission(final Map<String, Object> ret, final String projectName,
-                                                 final User user, final Permission.Type type) {
+                                                 final User user, final Type type) {
         final Project project = this.projectManager.getProject(projectName);
 
         Map<String, String> dataMap = loadExecutorServletI18nData();
@@ -1524,7 +1470,7 @@ public class ExecutorServlet extends AbstractLoginAzkabanServlet {
     }
 
     protected Project getProjectAjaxByPermission(final Map<String, Object> ret, final int projectId,
-                                                 final User user, final Permission.Type type) {
+                                                 final User user, final Type type) {
 
         final Project project = this.projectManager.getProject(projectId);
 
@@ -1974,6 +1920,17 @@ public class ExecutorServlet extends AbstractLoginAzkabanServlet {
         if (sflow != null) {
             ret.put("scheduled", sflow.getNextExecTime());
         }
+        try {
+            ExecutionCycle execFlow = executorManagerAdapter.getExecutionCycleFlowDescId(flow.getProjectId() + "", flowId);
+            ret.put("otherOptions", execFlow.getOtherOption());
+            ret.put("cycleOptions", execFlow.getCycleOption());
+            ret.put("executionOptions", execFlow.getExecutionOptions());
+            ret.put("slaOptions", execFlow.getSlaOptions());
+        } catch (Exception e) {
+            logger.error("查询Options失败", e);
+        }
+
+
     }
 
     private void ajaxFetchExecutableFlowInfo(final HttpServletRequest req, final HttpServletResponse resp,
@@ -2092,6 +2049,8 @@ public class ExecutorServlet extends AbstractLoginAzkabanServlet {
 
             List<Map<String, String>> jobFailedRetryOptions = (List<Map<String, String>>) otherOption.get("jobFailedRetryOptions");
             ret.put("jobFailedRetryOptions", jobFailedRetryOptions);
+            //失败重跑白名单
+            ret.put("whiteFlows", otherOption.get("whiteFlows"));
 
             List<String> jobSkipList = (List<String>) otherOption.get("jobSkipFailedOptions");
             ret.put("jobSkipFailedOptions", jobSkipList);
@@ -2505,7 +2464,7 @@ public class ExecutorServlet extends AbstractLoginAzkabanServlet {
                                          final HashMap<String, Object> ret, final User user,
                                          final ExecutableFlow exFlow) throws ServletException {
 
-        logger.info("Fetching " + exFlow.getExecutionId());
+        logger.debug("Fetching " + exFlow.getExecutionId());
 
         final Project project = getProjectAjaxByPermission(ret, exFlow.getProjectId(), user, Type.READ);
         if (project == null) {
@@ -2525,7 +2484,7 @@ public class ExecutorServlet extends AbstractLoginAzkabanServlet {
 
         Map<String, String> repeatMap = exFlow.getRepeatOption();
         if (exFlow.getRunDate() != null) {
-            logger.info("run_date: {}", exFlow.getRunDate());
+            logger.debug("run_date: {}", exFlow.getRunDate());
             DateTimeFormatter dateTimeFormatter = DateTimeFormat.forPattern("yyyyMMdd");
             LocalDate localDate = LocalDate.parse(exFlow.getRunDate(), dateTimeFormatter);
             runDate = localDate.toDate().getTime();
@@ -2612,8 +2571,36 @@ public class ExecutorServlet extends AbstractLoginAzkabanServlet {
             ret.put("error", dataMap.get("flow") + flowId + dataMap.get("notExist") + project);
             return;
         }
+        if (personalCheckSwitch && !personalPermission(user)) {
+            ret.put("error", "the real name user have no permission.");
+            return;
+        }
+
 
         ajaxExecuteFlow(req, resp, ret, user);
+    }
+
+    private boolean personalPermission(User user) {
+        // 1、判断用户是否管理员
+        for (final String roleName : user.getRoles()) {
+            final Role role = user.getRoleMap().get(roleName);
+            if (role != null && role.getPermission().isPermissionSet(Type.ADMIN)) {
+                return true;
+            }
+        }
+        try {
+            WtssUser wtssUser = systemManager.getSystemUserByUserName(user.getUserId());
+            if (wtssUser.getUserCategory().equals(WtssUser.PERSONAL)) {
+                return false;
+            }
+
+        } catch (Exception e) {
+
+            logger.error("获取用户信息失败:{}", e.getMessage());
+        }
+
+
+        return true;
     }
 
     /*  //立即执行 Flow 的方法
@@ -2684,6 +2671,12 @@ public class ExecutorServlet extends AbstractLoginAzkabanServlet {
             logger.error(projectName + ", 没有作业流。");
             return;
         }
+
+        if (personalCheckSwitch && !personalPermission(user)) {
+            ret.put("error", "the real name user have no permission.");
+            return;
+        }
+
         List<Flow> rootFlows = project.getAllRootFlows();
         StringBuilder sb = new StringBuilder();
         for (Flow flow : rootFlows) {
@@ -2693,6 +2686,8 @@ public class ExecutorServlet extends AbstractLoginAzkabanServlet {
                 logger.warn("submit " + flow.getId() + " error." + se);
             }
         }
+
+
         ret.put("message", sb.toString());
         ret.put("code", "200");
     }
@@ -2725,7 +2720,7 @@ public class ExecutorServlet extends AbstractLoginAzkabanServlet {
 
         ExecutionOptions options = null;
         try {
-            options = HttpRequestUtils.parseFlowOptions(request);
+            options = HttpRequestUtils.parseFlowOptions(exflow, request);
         } catch (Exception e) {
             ret.put("error", e.getMessage());
             return false;
@@ -2951,7 +2946,7 @@ public class ExecutorServlet extends AbstractLoginAzkabanServlet {
 
         ExecutionOptions options = null;
         try {
-            options = HttpRequestUtils.parseFlowOptions(req);
+            options = HttpRequestUtils.parseFlowOptions(new ExecutableFlow(project, flow), req);
         } catch (Exception e) {
             ret.put("error", e.getMessage());
             return;
@@ -3031,20 +3026,27 @@ public class ExecutorServlet extends AbstractLoginAzkabanServlet {
             String interval = setOption[1].trim();
             String count = setOption[2].trim();
             if ("all_jobs".equals(jobName.split(" ")[0])) {
-                Map<String, String> flowFailedRetryOption = new HashMap<>();
-                flowFailedRetryOption.put("job.failed.retry.interval", interval);
-                flowFailedRetryOption.put("job.failed.retry.count", count);
-                exflow.setFlowFailedRetry(flowFailedRetryOption);
+                String whiteFlows = getParam(req, "whiteFlows", "");
+                if (!whiteFlows.contains(jobName)) {
+                    Map<String, String> flowFailedRetryOption = new HashMap<>();
+                    flowFailedRetryOption.put("job.failed.retry.interval", interval);
+                    flowFailedRetryOption.put("job.failed.retry.count", count);
+                    otherOptions.put("flowFailedRetryOption", flowFailedRetryOption);
+                }
             }
             jobOption.put("jobName", jobName);
             jobOption.put("interval", interval);
             jobOption.put("count", count);
             jobRetryList.add(jobOption);
 
-
         }
 
         otherOptions.put("jobFailedRetryOptions", jobRetryList);
+        //失败重跑白名单
+        if (hasParam(req, "whiteFlows")) {
+            String whiteFlows = req.getParameter("whiteFlows");
+            otherOptions.put("whiteFlows", whiteFlows);
+        }
 
         // 定时调度测试执行
         // 任务跳过时间配置
@@ -3365,7 +3367,7 @@ public class ExecutorServlet extends AbstractLoginAzkabanServlet {
             msg.append(String.format("Error, flow:%s, msg: " + dataMap.get("haveHisReRun") + "<br/>", flow.getId()));
             return false;
         }
-        final ExecutionOptions options = HttpRequestUtils.parseFlowOptions(json);
+        final ExecutionOptions options = HttpRequestUtils.parseFlowOptions(new ExecutableFlow(project, flow), json);
         final List<String> failureEmails = options.getFailureEmails();
         List<WebankUser> userList = systemManager.findAllWebankUserList(null);
         if (this.checkRealNameSwitch && WebUtils
@@ -3521,7 +3523,10 @@ public class ExecutorServlet extends AbstractLoginAzkabanServlet {
             logger.error("The endtime cannot be later than the current time.");
             return;
         }
-
+        if (personalCheckSwitch && !personalPermission(user)) {
+            ret.put("error", "the real name user have no permission.");
+            return;
+        }
         final Project project = getProjectAjaxByPermission(ret, projectName, user, Type.EXECUTE);
         if (project == null) {
             logger.error("Project '" + projectName + "' doesn't exist.");
@@ -3551,7 +3556,7 @@ public class ExecutorServlet extends AbstractLoginAzkabanServlet {
             return;
         }
 
-        final ExecutionOptions options = HttpRequestUtils.parseFlowOptions(json);
+        final ExecutionOptions options = HttpRequestUtils.parseFlowOptions(new ExecutableFlow(project, flow), json);
         if (!options.isFailureEmailsOverridden()) {
             options.setFailureEmails(flow.getFailureEmails());
         }
@@ -3660,17 +3665,23 @@ public class ExecutorServlet extends AbstractLoginAzkabanServlet {
             }.getType());
         }
         final List<Map<String, String>> jobRetryList = new ArrayList<>();
+        String whiteFlows = json.get("whiteFlows")==null ? "":json.get("whiteFlows").getAsString();
         for (final String set : jobFailedRetrySettings.keySet()) {
             String[] setOption = jobFailedRetrySettings.get(set).split(",");
             Map<String, String> jobOption = new HashMap<>();
             String jobName = setOption[0].trim();
             String interval = setOption[1].trim();
             String count = setOption[2].trim();
+
             if ("all_jobs".equals(jobName.split(" ")[0])) {
-                Map<String, String> flowFailedRetryOption = new HashMap<>();
-                flowFailedRetryOption.put("job.failed.retry.interval", interval);
-                flowFailedRetryOption.put("job.failed.retry.count", count);
-                otherOptions.put("flowFailedRetryOption", flowFailedRetryOption);
+
+                if (!whiteFlows.contains(jobName)) {
+                    Map<String, String> flowFailedRetryOption = new HashMap<>();
+                    flowFailedRetryOption.put("job.failed.retry.interval", interval);
+                    flowFailedRetryOption.put("job.failed.retry.count", count);
+                    otherOptions.put("flowFailedRetryOption", flowFailedRetryOption);
+
+                }
             }
             jobOption.put("jobName", jobName);
             jobOption.put("interval", interval);
@@ -3678,6 +3689,10 @@ public class ExecutorServlet extends AbstractLoginAzkabanServlet {
             jobRetryList.add(jobOption);
         }
         otherOptions.put("jobFailedRetryOptions", jobRetryList);
+        //失败重跑白名单
+        if (StringUtils.isNotEmpty(whiteFlows)) {
+            otherOptions.put("whiteFlows", whiteFlows);
+        }
 
         // 设置历史重跑告警
         otherOptions.put("historyRerunAlertLevel", json.get("historyRerunAlertLevel").getAsString());
@@ -3799,6 +3814,369 @@ public class ExecutorServlet extends AbstractLoginAzkabanServlet {
 
     }
 
+
+    /**
+     * 批量历史重跑
+     *
+     * @param req
+     * @param resp
+     * @param ret
+     * @param user
+     * @throws ServletException
+     */
+    private void ajaxBatchAttRepeatExecuteFlow(final HttpServletRequest req,
+                                               final HttpServletResponse resp,
+                                               final HashMap<String, Object> ret, final User user) throws ServletException {
+        JsonObject json = HttpRequestUtils.parseRequestToJsonObject(req);
+        if (json == null) {
+            logger.warn("解析请求参数异常.");
+            return;
+        }
+
+        if (!json.has("projects") || !json.get("projects").isJsonArray()) {
+            logger.warn("参数 'projects' 缺失或格式错误（需为数组）");
+            ret.put("error", "Missing or invalid 'projects' array");
+            return;
+        }
+        JsonArray projects = json.getAsJsonArray("projects");
+
+        if (!json.has("flows") || !json.get("flows").isJsonArray()) {
+            logger.warn("参数 'flows' 缺失或格式错误（需为数组）");
+            ret.put("error", "Missing or invalid 'flows' parameter");
+            return;
+        }
+        JsonArray flows = json.getAsJsonArray("flows");
+
+        if (projects.size() != flows.size()) {
+            logger.warn("projects 与 flows 数量不一致");
+            ret.put("error", "Length of 'projects' and 'flows' must match");
+            return;
+        }
+
+        final String end = json.get("end").getAsString();
+        if (checkEndTime(end)) {
+            logger.warn("The endtime cannot be later than the current time.");
+            return;
+        }
+
+        for (int i = 0; i < projects.size(); i++) {
+            JsonElement projectElement = projects.get(i);
+            JsonElement flowElement = flows.get(i);
+
+            if (!projectElement.isJsonPrimitive() || !flowElement.isJsonPrimitive()) {
+                logger.warn("项目或流程名称非法");
+                ret.put("error", "Invalid project/flow name at index " + i);
+                continue;
+            }
+
+            String projectName = projectElement.getAsString();
+            String flowId = flowElement.getAsString();
+
+            // 此处复用原有检查及流程触发的逻辑...
+            final Project project = getProjectAjaxByPermission(ret, projectName, user,
+                    Type.EXECUTE);
+            if (project == null) {
+                logger.warn("Project '" + projectName + "' doesn't exist.");
+                continue;
+            }
+
+            //ret.put("flow", flowId);
+            final Flow flow = project.getFlow(flowId);
+            if (flow == null) {
+                logger.warn("Flow '" + flowId + "' cannot be found in project " + project);
+                continue;
+            }
+
+            ExecutionRecover nowRuningRecover = null;
+
+            //查询这个Flow的补采记录
+            try {
+                nowRuningRecover =
+                        this.executorManagerAdapter.getHistoryRecoverFlowByPidAndFid(
+                                String.valueOf(project.getId()), flow.getId());
+            } catch (ExecutorManagerException e) {
+                logger.warn("get flow history recover failed, caused by:", e);
+            }
+
+            //校验这个Flow是否已经开始补采
+            if (null != nowRuningRecover && (
+                    Status.RUNNING.equals(nowRuningRecover.getRecoverStatus())
+                            || Status.PREPARING.equals(nowRuningRecover.getRecoverStatus()))) {
+                logger.warn("This flow '" + flow.getId() + "' has running history recover.");
+                continue;
+            }
+
+            final ExecutionOptions options = HttpRequestUtils.parseFlowOptions(
+                    new ExecutableFlow(project, flow), json);
+            if (!options.isFailureEmailsOverridden()) {
+                options.setFailureEmails(flow.getFailureEmails());
+            }
+            if (!options.isSuccessEmailsOverridden()) {
+                options.setSuccessEmails(flow.getSuccessEmails());
+            }
+            options.setMailCreator(flow.getMailCreator());
+            options.setConcurrentOption(ExecutionOptions.CONCURRENT_OPTION_IGNORE);
+            Map<String, String> reqMap = new HashMap<>();
+            reqMap.put("projectName", projectName);
+            reqMap.put("projectId", project.getId() + "");
+            reqMap.put("flowId", flow.getId());
+            //获取前端的历史重跑错误设置
+            String recoverErrorOption = json.get("recoverErrorOption").getAsString();
+            reqMap.put("recoverErrorOption", recoverErrorOption);
+
+            final Map<String, Object> repeatOptionMap = new HashMap<>();
+            try {
+                //解析前端的参数 获取数据补采参数集合
+                repeatOptionMap.putAll(repeatDateCompute(json));
+            } catch (Exception e) {
+                logger.warn("数据补采输入参数处理异常!", e);
+
+            }
+
+            //repeatOptionMap.put("flowOption", options);
+
+            ExecutionRecover executionRecover = new ExecutionRecover();
+            //组装历史补采数据
+            executionRecover.setSubmitUser(user.getUserId());
+            executionRecover.setRecoverStatus(Status.PREPARING);
+            executionRecover.setRecoverStartTime(
+                    Long.valueOf(String.valueOf(repeatOptionMap.get("recoverStartTime"))));
+            executionRecover.setRecoverEndTime(
+                    Long.valueOf(String.valueOf(repeatOptionMap.get("recoverEndTime"))));
+            executionRecover.setExInterval(String.valueOf(repeatOptionMap.get("exInterval")));
+
+            executionRecover.setProjectId(project.getId());
+            executionRecover.setFlowId(flowId);
+            executionRecover.setExecutionOptions(options);
+
+            //repeatOptionMap.put("repeatOptionList", repeatOptionMap);
+            executionRecover.setRepeatOption(repeatOptionMap);
+
+            //设置提交用户的proxyUser
+            WtssUser wtssUser = null;
+            try {
+                wtssUser = transitionService.getSystemUserByUserName(user.getUserId());
+            } catch (SystemUserManagerException e) {
+                logger.error("get wtssUser failed, caused by: ", e);
+            }
+            if (wtssUser != null && wtssUser.getProxyUsers() != null) {
+                executionRecover.setProxyUsers(wtssUser.getProxyUsers());
+            }
+
+            executionRecover.setRecoverErrorOption(recoverErrorOption);
+            List<Long> runDateTimeList = GsonUtils.jsonToJavaObject(
+                    json.getAsJsonArray("runDateTimeList"), new TypeToken<List<Long>>() {
+                    }.getType());
+            List<Long> skipDateTimeList = GsonUtils.jsonToJavaObject(
+                    json.getAsJsonArray("skipDateTimeList"), new TypeToken<List<Long>>() {
+                    }.getType());
+            executionRecover.setRunDateTimeList(runDateTimeList);
+            executionRecover.setSkipDateTimeList(skipDateTimeList);
+            int taskSize = 1;
+            if (json.has("taskSize")) {
+                taskSize = json.get("taskSize").getAsInt();
+                executionRecover.setTaskSize(taskSize);
+                String taskDistributeMethod = ExecutionRecover.TASK_UNIFORMLY_DISTRIBUTE;
+                if (json.has(ExecutionRecover.TASK_DISTRIBUTE_METHOD)) {
+                    taskDistributeMethod = json.get(ExecutionRecover.TASK_DISTRIBUTE_METHOD)
+                            .getAsString();
+                }
+                executionRecover.setTaskDistributeMethod(taskDistributeMethod);
+            }
+
+            int reRunTimeInterval = 0;
+            if (json.has("reRunTimeInterval")) {
+                reRunTimeInterval = json.get("reRunTimeInterval").getAsInt();
+            }
+            if (reRunTimeInterval > 0 && taskSize > 1) {
+                ret.put("error", "reRunTimeInterval and taskSize cannot be set at the same time");
+                continue;
+            }
+            executionRecover.setReRunTimeInterval(reRunTimeInterval);
+
+            boolean finishedAlert = true;
+            if (json.has("finishedAlert")) {
+                finishedAlert = json.get("finishedAlert").getAsBoolean();
+            }
+            executionRecover.setFinishedAlert(finishedAlert);
+
+            if (json.has("currentVersionFlag") && json.get("currentVersionFlag").getAsBoolean()) {
+                executionRecover.setProjectVersion(project.getVersion());
+            }
+
+            Map<String, Object> otherOptions = new HashMap<>();
+            //设置通用告警级别failureAlertLevel
+            if (json.has("failureAlertLevel")) {
+                otherOptions.put("failureAlertLevel", json.get("failureAlertLevel").getAsString());
+            }
+            if (json.has("successAlertLevel")) {
+                otherOptions.put("successAlertLevel", json.get("successAlertLevel").getAsString());
+            }
+
+            //设置失败重跑配置
+            Map<String, String> jobFailedRetrySettings = new HashMap<>();
+            if (json.has("jobFailedRetryOptions")) {
+                jobFailedRetrySettings = GsonUtils.jsonToJavaObject(
+                        json.get("jobFailedRetryOptions").getAsJsonObject(),
+                        new TypeToken<Map<String, String>>() {
+                        }.getType());
+            }
+            final List<Map<String, String>> jobRetryList = new ArrayList<>();
+            String whiteFlows = json.get("whiteFlows")==null ? "":json.get("whiteFlows").getAsString();
+            for (final String set : jobFailedRetrySettings.keySet()) {
+                String[] setOption = jobFailedRetrySettings.get(set).split(",");
+                Map<String, String> jobOption = new HashMap<>();
+                String jobName = setOption[0].trim();
+                String interval = setOption[1].trim();
+                String count = setOption[2].trim();
+                if ("all_jobs".equals(jobName.split(" ")[0])) {
+
+                    if (!whiteFlows.contains(jobName)) {
+                        Map<String, String> flowFailedRetryOption = new HashMap<>();
+                        flowFailedRetryOption.put("job.failed.retry.interval", interval);
+                        flowFailedRetryOption.put("job.failed.retry.count", count);
+                        otherOptions.put("flowFailedRetryOption", flowFailedRetryOption);
+                    }
+
+                }
+                jobOption.put("jobName", jobName);
+                jobOption.put("interval", interval);
+                jobOption.put("count", count);
+                jobRetryList.add(jobOption);
+            }
+            otherOptions.put("jobFailedRetryOptions", jobRetryList);
+            //失败重跑白名单
+            if (StringUtils.isNotEmpty(whiteFlows)) {
+                otherOptions.put("whiteFlows", whiteFlows);
+            }
+
+            // 设置历史重跑告警
+            otherOptions.put("historyRerunAlertLevel",
+                    json.get("historyRerunAlertLevel").getAsString());
+            otherOptions.put("historyRerunAlertEmails",
+                    json.get("historyRerunAlertEmails").getAsString());
+
+            //设置失败跳过配置
+            Map<String, String> jobSkipFailedSettings = new HashMap<>();
+            if (json.has("jobSkipFailedOptions")) {
+                jobSkipFailedSettings = GsonUtils
+                        .jsonToJavaObject(json.get("jobSkipFailedOptions").getAsJsonObject(),
+                                new TypeToken<Map<String, String>>() {
+                                }.getType());
+            }
+            List<String> jobSkipActionOptions = new ArrayList<>();
+            if (json.has("jobSkipActionOptions")) {
+                jobSkipActionOptions = new Gson()
+                        .fromJson(json.get("jobSkipActionOptions").getAsString(),
+                                new TypeToken<List<String>>() {
+                                }.getType());
+            }
+
+            final List<String> jobSkipActionList = new ArrayList<>();
+            final List<String> jobSkipList = new ArrayList<>();
+            for (final String set : jobSkipFailedSettings.keySet()) {
+                String jobName = jobSkipFailedSettings.get(set).trim();
+                if ("all_jobs".equals(jobName.split(" ")[0])) {
+                    otherOptions.put("flowFailedSkiped", true);
+                }
+                if (jobSkipActionOptions.contains(jobName)) {
+                    jobSkipActionList.add(jobName);
+                }
+                jobSkipList.add(jobName);
+            }
+
+            otherOptions.put("jobSkipFailedOptions", jobSkipList);
+
+            otherOptions.put("jobSkipActionOptions", jobSkipActionList);
+
+            //set normal user
+            otherOptions.put("normalSubmitUser", user.getNormalUser());
+
+            //set execute time
+            if (json.get("executeTimeBegin") != null) {
+                otherOptions.put("repeatExecuteTimeBegin",
+                        json.get("executeTimeBegin").getAsString());
+            }
+            if (json.get("executeTimeEnd") != null) {
+                otherOptions.put("repeatExecuteTimeEnd", json.get("executeTimeEnd").getAsString());
+            }
+
+            Map<String, String> jobCronExpressMap = new HashMap<>();
+            try {
+                for (Schedule schedule : this.scheduleManager.getSchedules()) {
+                    if (schedule.getFlowName().equals(flowId) && schedule.getProjectName()
+                            .equals(projectName) && (Boolean) schedule.getOtherOption()
+                            .get("activeFlag")) {
+                        jobCronExpressMap = (Map<String, String>) schedule.getOtherOption()
+                                .get("job.cron.expression");
+                    }
+                }
+            } catch (ScheduleManagerException e) {
+                logger.warn("query schedules failed", e);
+            }
+
+            otherOptions.put("job.cron.expression", jobCronExpressMap);
+
+            executionRecover.setOtherOption(otherOptions);
+
+            ret.put("repeatOptionMap", repeatOptionMap);
+
+            //---超时告警设置---
+            boolean useTimeoutSetting = false;
+            if (json.has("useTimeoutSetting")) {
+                useTimeoutSetting = json.get("useTimeoutSetting").getAsBoolean();
+            }
+            final List<SlaOption> slaOptions = new ArrayList<>();
+            if (useTimeoutSetting) {
+                final String emailStr = json.get("slaEmails").getAsString();
+                final String[] emailSplit = emailStr.split("\\s*,\\s*|\\s*;\\s*|\\s+");
+                final List<String> slaEmails = Arrays.asList(emailSplit);
+                final Map<String, String> settings = GsonUtils.jsonToJavaObject(
+                        json.getAsJsonObject("settings"), new TypeToken<Map<String, String>>() {
+                        }.getType());
+                ;
+                //设置SLA 超时告警配置项
+                for (final String set : settings.keySet()) {
+                    final SlaOption sla;
+                    try {
+                        sla = AlertUtil.parseSlaSetting(settings.get(set), flow, project);
+                    } catch (final Exception e) {
+                        logger.error("parse sla setting failed.");
+                        throw new ServletException(e);
+                    }
+                    if (sla != null) {
+                        sla.getInfo().put(SlaOption.INFO_FLOW_NAME, flowId);
+                        sla.getInfo().put(SlaOption.INFO_EMAIL_LIST, slaEmails);
+                        sla.getInfo().put(SlaOption.INFO_TIME_SET, sla.getTimeSet());
+                        sla.getInfo().put(SlaOption.INFO_EMAIL_ACTION_SET, sla.getEmailAction());
+                        sla.getInfo().put(SlaOption.INFO_KILL_FLOW_ACTION_SET, sla.getKillAction());
+                        slaOptions.add(sla);
+                    }
+                }
+            }
+            executionRecover.setSlaOptions(slaOptions);
+            //---超时告警设置---
+
+            if (json.has("lastExecId")) {
+                int lastExecId = json.get("lastExecId").getAsInt();
+                executionRecover.setLastExecId(lastExecId);
+            }
+            //新增历史补采数据记录
+            try {
+                Map<String, Object> recoverHandleMap = new HashMap<>();
+                recoverHandleMap.putAll(repeatOptionMap);
+                recoverHandleMap.put("project", project);
+                recoverHandleMap.put("flow", flow);
+
+                this.executorManagerAdapter.saveHistoryRecoverFlow(executionRecover);
+                logger.info("提交历史重跑成功" + project.getId() + " - " + flowId);
+            } catch (Exception e) {
+                logger.warn("历史补采线程终止： ", e);
+            }
+        }
+
+    }
+
     public static boolean checkEndTime(String end) {
         // end 不得晚于当前时间
         boolean flag = false;
@@ -3832,7 +4210,10 @@ public class ExecutorServlet extends AbstractLoginAzkabanServlet {
         Project project = validateCycleFlowRes.get().getFirst();
         Flow flow = validateCycleFlowRes.get().getSecond();
         String flowId = flow.getId();
-
+        if (personalCheckSwitch && !personalPermission(user)) {
+            ret.put("error", "the real name user have no permission.");
+            return;
+        }
         if (this.holdBatchSwitch && StringUtils.isNotEmpty(this.holdBatchContext
                 .isInBatch(project.getName(), flowId, user.getUserId()))) {
             ret.put("error", "server is holding, reject all operation");
@@ -4018,7 +4399,7 @@ public class ExecutorServlet extends AbstractLoginAzkabanServlet {
         executionCycle.setProjectId(project.getId());
         executionCycle.setFlowId(flow.getId());
         executionCycle.setStartTime(System.currentTimeMillis());
-        ExecutionOptions executionOptions = generateExecutionOptions(req, flow);
+        ExecutionOptions executionOptions = generateExecutionOptions(req, project, flow);
         executionCycle.setExecutionOptions(executionOptions);
         executionCycle.setCycleOption(cycleOption);
         executionCycle.setProxyUsers(ArrayUtils.toString(user.getProxyUsers()));
@@ -4030,8 +4411,8 @@ public class ExecutorServlet extends AbstractLoginAzkabanServlet {
         return executionCycle;
     }
 
-    private ExecutionOptions generateExecutionOptions(HttpServletRequest req, Flow flow) throws ServletException {
-        final ExecutionOptions executionOptions = HttpRequestUtils.parseFlowOptions(req);
+    private ExecutionOptions generateExecutionOptions(HttpServletRequest req, Project project, Flow flow) throws ServletException {
+        final ExecutionOptions executionOptions = HttpRequestUtils.parseFlowOptions(new ExecutableFlow(project, flow), req);
         if (!executionOptions.isFailureEmailsOverridden()) {
             executionOptions.setFailureEmails(flow.getFailureEmails());
         }
@@ -4062,10 +4443,15 @@ public class ExecutorServlet extends AbstractLoginAzkabanServlet {
                 String interval = setOption[1].trim();
                 String count = setOption[2].trim();
                 if ("all_jobs".equals(jobName.split(" ")[0])) {
-                    Map<String, String> flowFailedRetryOption = new HashMap<>();
-                    flowFailedRetryOption.put("job.failed.retry.interval", interval);
-                    flowFailedRetryOption.put("job.failed.retry.count", count);
-                    otherOptions.put("flowFailedRetryOption", flowFailedRetryOption);
+
+                    String whiteFlows = getParam(req, "whiteFlows", "");
+                    if (!whiteFlows.contains(jobName)) {
+                        Map<String, String> flowFailedRetryOption = new HashMap<>();
+                        flowFailedRetryOption.put("job.failed.retry.interval", interval);
+                        flowFailedRetryOption.put("job.failed.retry.count", count);
+                        otherOptions.put("flowFailedRetryOption", flowFailedRetryOption);
+                    }
+
                 }
                 jobOption.put("jobName", jobName);
                 jobOption.put("interval", interval);
@@ -4075,6 +4461,11 @@ public class ExecutorServlet extends AbstractLoginAzkabanServlet {
 
             }
             otherOptions.put("jobFailedRetryOptions", jobRetryList);
+        }
+        //失败重跑白名单
+        if (hasParam(req, "whiteFlows")) {
+            String whiteFlows = req.getParameter("whiteFlows");
+            otherOptions.put("whiteFlows", whiteFlows);
         }
         //设置失败跳过配置
         if (hasParam(req, "jobSkipFailedOptions")) {
@@ -4666,7 +5057,10 @@ public class ExecutorServlet extends AbstractLoginAzkabanServlet {
                     + project);
             return;
         }
-
+        if (personalCheckSwitch && !personalPermission(user)) {
+            ret.put("error", "the real name user have no permission.");
+            return;
+        }
         //check is set business
         boolean hasBusiness = this.projectManager.getFlowBusiness(project.getId(), "", "") != null
                 || this.projectManager.getFlowBusiness(project.getId(), flowId, "") != null;
@@ -4675,6 +5069,7 @@ public class ExecutorServlet extends AbstractLoginAzkabanServlet {
             ret.put("error", dataMap.get("flow") + flow.getId() + dataMap.get("setBusiness"));
             return;
         }
+
 
         //check email name
         final boolean failureOverride = HttpRequestUtils
@@ -4734,7 +5129,8 @@ public class ExecutorServlet extends AbstractLoginAzkabanServlet {
         //concurrentOption,
         final String concurrentOption = getParam(req, "concurrentOption");
         //判断flow是否真正运行
-        if ("skip".equals(concurrentOption) && this.executorManagerAdapter.getRunningFlows(project.getId(), flowId).size() != 0) {
+        if ("skip".equals(concurrentOption) && !this.executorManagerAdapter.getRunningFlows(
+                project.getId(), flowId).isEmpty()) {
             ret.put("error", "flow: " + flowId + dataMap.get("runningCanNotCommit"));
             return;
         }
@@ -4743,6 +5139,148 @@ public class ExecutorServlet extends AbstractLoginAzkabanServlet {
         if (!repeatOptionCheck(req)) {
             ret.put("error", dataMap.get("dataCompensateinputParamError"));
             return;
+        }
+
+    }
+
+    /**
+     * 批量历史重跑参数校验
+     *
+     * @param req
+     * @param resp
+     * @param ret
+     * @param user
+     * @throws ServletException
+     */
+    private void ajaxBatchRecoverParamVerify(final HttpServletRequest req,
+                                             final HttpServletResponse resp,
+                                             final HashMap<String, Object> ret, final User user) throws ServletException {
+
+        String[] projectNames = getParamValues(req, "projects", new String[0]);
+        String[] flowNames = getParamValues(req, "flows", new String[0]);
+
+        if (projectNames.length == 0 || flowNames.length == 0) {
+            ret.put("error", "no project or flow is selected");
+            return;
+        }
+
+        if (projectNames.length != flowNames.length) {
+            ret.put("error", "the number of projects and the number of flows are not match");
+            return;
+        }
+
+        Map<String, String> dataMap = loadExecutorServletI18nData();
+
+        for (int i = 0; i < projectNames.length; i++) {
+            String projectName = projectNames[i];
+            String flowId = flowNames[i];
+
+            if (this.holdBatchSwitch && StringUtils.isNotEmpty(this.holdBatchContext
+                    .isInBatch(projectName, flowId, user.getUserId()))) {
+                ret.put("error", "server is holding, reject all operation");
+                return;
+            }
+
+            // 检查项目是否存在，工作流基于project这一层级
+            final Project project = getProjectAjaxByPermission(ret, projectName, user,
+                    Type.EXECUTE);
+            if (project == null) {
+                ret.put("error", "Project '" + projectName + "' doesn't exist.");
+                return;
+            }
+
+            // 检查工作流是否存在
+            final Flow flow = project.getFlow(flowId);
+            if (flow == null) {
+                ret.put("error", "Flow '" + flowId + "' cannot be found in project "
+                        + project);
+                return;
+            }
+
+            //check is set business
+            boolean hasBusiness =
+                    this.projectManager.getFlowBusiness(project.getId(), "", "") != null
+                            || this.projectManager.getFlowBusiness(project.getId(), flowId, "") != null;
+            if (getApplication().getServerProps().getBoolean("wtss.set.business.check", true)
+                    && !hasBusiness) {
+                ret.put("error", dataMap.get("flow") + flow.getId() + dataMap.get("setBusiness"));
+                return;
+            }
+
+            boolean isCycleFlowRunning = isCycleFlowRunning(project.getId(), flow.getId());
+            if (isCycleFlowRunning) {
+                ret.put("error",
+                        "Exist cyclic execution job, please wait until that job run finished then commit again.");
+                return;
+            }
+
+            ExecutionRecover nowRuningRecover = null;
+            //查询这个Flow的补采记录
+            try {
+                nowRuningRecover =
+                        this.executorManagerAdapter.getHistoryRecoverFlowByPidAndFid(
+                                String.valueOf(project.getId()), flow.getId());
+
+            } catch (ExecutorManagerException e) {
+                logger.error("获取历史重跑任务失败", e);
+            }
+            //校验这个Flow是否已经开始补采
+            if (null != nowRuningRecover && (
+                    Status.RUNNING.equals(nowRuningRecover.getRecoverStatus())
+                            || Status.PREPARING.equals(nowRuningRecover.getRecoverStatus()))) {
+                logger.error("recover id: " + nowRuningRecover.getRecoverId() + ", status : "
+                        + nowRuningRecover.getRecoverStatus());
+                ret.put("error", dataMap.get("existHisJob"));
+                return;
+            }
+
+            //concurrentOption,
+            final String concurrentOption = getParam(req, "concurrentOption");
+            //判断flow是否真正运行
+            if ("skip".equals(concurrentOption) && !this.executorManagerAdapter.getRunningFlows(
+                    project.getId(), flowId).isEmpty()) {
+                ret.put("error", "flow: " + flowId + dataMap.get("runningCanNotCommit"));
+                return;
+            }
+
+        }
+
+        //check email name
+        final boolean failureOverride = HttpRequestUtils
+                .getBooleanParam(req, "failureEmailsOverride", false);
+        final boolean successOverride = HttpRequestUtils
+                .getBooleanParam(req, "successEmailsOverride", false);
+        List<WebankUser> userList = systemManager.findAllWebankUserList(null);
+        if (hasParam(req, "failureEmails")) {
+            final String emails = getParam(req, "failureEmails");
+            if (!emails.isEmpty()) {
+                final String[] emailSplit = emails.split("\\s*,\\s*|\\s*;\\s*|\\s+");
+                if (this.checkRealNameSwitch && WebUtils.checkEmailNotRealName(
+                        Lists.newArrayList(emailSplit), failureOverride,
+                        userList)) {
+                    ret.put("error",
+                            "Please configure the correct real-name user for failure email");
+                    return;
+                }
+            }
+        }
+        if (hasParam(req, "successEmails")) {
+            final String emails = getParam(req, "successEmails");
+            if (!emails.isEmpty()) {
+                final String[] emailSplit = emails.split("\\s*,\\s*|\\s*;\\s*|\\s+");
+                if (this.checkRealNameSwitch && WebUtils.checkEmailNotRealName(
+                        Lists.newArrayList(emailSplit), successOverride,
+                        userList)) {
+                    ret.put("error",
+                            "Please configure the correct real-name user for success email");
+                    return;
+                }
+            }
+        }
+
+        //参数校验
+        if (!repeatOptionCheck(req)) {
+            ret.put("error", dataMap.get("dataCompensateinputParamError"));
         }
 
     }
@@ -4825,6 +5363,9 @@ public class ExecutorServlet extends AbstractLoginAzkabanServlet {
         } else {
             nodeObj.put("status", node.getStatus());
         }
+//        if ("READY".equals(node.getStatus().name()) && node.isFinished()) {
+//            nodeObj.put("status", Status.DISABLED);
+//        }
 
         nodeObj.put("startTime", node.getStartTime());
         nodeObj.put("endTime", node.getEndTime());
@@ -4852,8 +5393,14 @@ public class ExecutorServlet extends AbstractLoginAzkabanServlet {
         if (node instanceof ExecutableFlowBase) {
             final ExecutableFlowBase base = (ExecutableFlowBase) node;
             final ArrayList<Map<String, Object>> nodeList = new ArrayList<>();
-
+            //同步子节点状态
             for (final ExecutableNode subNode : base.getExecutableNodes()) {
+                if (node.getStatus().equals(Status.DISABLED)) {
+                    subNode.setStatus(Status.DISABLED);
+                }
+                if (node.getStatus().equals(Status.SKIPPED)) {
+                    subNode.setStatus(Status.SKIPPED);
+                }
                 final Map<String, Object> subNodeObj = getExecutableNodeInfo(subNode, runDate, executionId, comments);
                 if (!subNodeObj.isEmpty()) {
                     nodeList.add(subNodeObj);
@@ -4905,7 +5452,7 @@ public class ExecutorServlet extends AbstractLoginAzkabanServlet {
     }
 
     private Permission getPermissionObject(final Project project, final User user,
-                                           final Permission.Type type) {
+                                           final Type type) {
         final Permission perm = project.getCollectivePermission(user);
 
         for (final String roleName : user.getRoles()) {
@@ -5403,7 +5950,7 @@ public class ExecutorServlet extends AbstractLoginAzkabanServlet {
         exflow.addAllProxyUsers(proxyUserSet);
         ExecutionOptions options = null;
         try {
-            options = HttpRequestUtils.parseFlowOptions(req);
+            options = HttpRequestUtils.parseFlowOptions(new ExecutableFlow(project, flow), req);
         } catch (Exception e) {
             ret.put("error", e.getMessage());
             return;

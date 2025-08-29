@@ -61,7 +61,7 @@ import java.util.stream.Collectors;
  */
 public class WeBankAlerter implements Alerter {
 
-  private static final org.slf4j.Logger logger = LoggerFactory.getLogger(WeBankAlerter.class);
+  private static final Logger logger = LoggerFactory.getLogger(WeBankAlerter.class);
   private static final Logger MISSED_ALERT_LOGGER = LoggerFactory.getLogger("MissedAlertLogger");
 
   private Props props;
@@ -167,7 +167,7 @@ public class WeBankAlerter implements Alerter {
 
 
   @Override
-  public void alertOnIMSRegistFlowStart(ExecutableFlow exflow, Map<String, Props> sharedProps, org.slf4j.Logger logger,
+  public void alertOnIMSRegistFlowStart(ExecutableFlow exflow, Map<String, Props> sharedProps, Logger logger,
                                         FlowBusiness flowBusiness, Props props) throws Exception {
     //    loadAllProperties(exflow);
     //上报IMS 业务逻辑实现
@@ -186,7 +186,7 @@ public class WeBankAlerter implements Alerter {
   }
 
   @Override
-  public void alertOnIMSRegistNodeStart(ExecutableFlow exflow, org.slf4j.Logger logger,
+  public void alertOnIMSRegistNodeStart(ExecutableFlow exflow, Logger logger,
                                         FlowBusiness flowBusiness, Props props, ExecutableNode node) throws Exception {
     //上报IMS 业务逻辑实现
     logger.info("Start to Register to IMS. node {} ", node.getId());
@@ -2060,7 +2060,7 @@ public class WeBankAlerter implements Alerter {
     body += "请联系" + receiverList + "或 [" + userDept + "] 部门大数据运维组 "
             + departmentAlarmReceiver;
 
-    IMSAlert.AlertLevel imsAlertLevel = AlertLevel.valueOf(alertLevel);
+    AlertLevel imsAlertLevel = AlertLevel.valueOf(alertLevel);
     // 1 企微渠道
     if (imsAlerterWays.contains("1")) {
       this.addAlertWay(1);

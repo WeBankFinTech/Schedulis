@@ -35,15 +35,15 @@
     // load cmdb data switch
     var isCmdbLoaded=false;
   </script>
-  <script type="text/javascript" src="/js/azkaban/view/project-permissions.js?version=1.49.0"></script>
-  <script type="text/javascript" src="/js/azkaban/view/project-modals.js?version=1.49.0"></script>
-  <script type="text/javascript" src="/js/azkaban/i18n-config.js?version=1.49.0"></script>
-  <script src="/js/select2/select2.full.min.js?version=1.49.0"></script>
-  <link href="/css/select2/select2.min.css?version=1.49.0" rel="stylesheet" />
-  <link href="/css/bootstrap-select.min.css?version=1.49.0" rel="stylesheet">
-  <script type="text/javascript" src="/js/bootstrap-select.js?version=1.49.0"></script>
-  <script type="text/javascript" src="/js/moment-2.29.4.min.js?version=1.49.0"></script>
-  <script type="text/javascript" src="/js/bootstrap-datetimepicker.min.js?version=1.49.0"></script>
+  <script type="text/javascript" src="/js/azkaban/view/project-permissions.js?version=0.11.0"></script>
+  <script type="text/javascript" src="/js/azkaban/view/project-modals.js?version=0.11.0"></script>
+  <script type="text/javascript" src="/js/azkaban/i18n-config.js?version=0.11.0"></script>
+  <script src="/js/select2/select2.full.min.js?version=0.11.0"></script>
+  <link href="/css/select2/select2.min.css?version=0.11.0" rel="stylesheet" />
+  <link href="/css/bootstrap-select.min.css?version=0.11.0" rel="stylesheet">
+  <script type="text/javascript" src="/js/bootstrap-select.js?version=0.11.0"></script>
+  <script type="text/javascript" src="/js/moment-2.29.4.min.js?version=0.11.0"></script>
+  <script type="text/javascript" src="/js/bootstrap-datetimepicker.min.js?version=0.11.0"></script>
   
 </head>
 <body>
@@ -472,6 +472,5 @@
     $("#start-all-flow-btn").hide()
     $("#start-all-schedule-btn").hide()
   </script>
-
 </body>
 </html>

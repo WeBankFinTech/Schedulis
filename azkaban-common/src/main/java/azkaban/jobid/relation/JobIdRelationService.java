@@ -17,4 +17,6 @@ public interface JobIdRelationService {
   void updateJobIdRelation(Map<String,String> jobIdRelation, String... params);
 
   void updateProxyUrl(JobIdRelation jobIdRelation);
+
+  JobIdRelation  getJobIdRelationByAppId(String appId);
 }

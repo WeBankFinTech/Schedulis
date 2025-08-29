@@ -32,22 +32,17 @@ import azkaban.utils.Pair;
 import azkaban.utils.Props;
 import azkaban.utils.WebUtils;
 import azkaban.webapp.AzkabanWebServer;
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.stream.Collectors;
+import org.apache.commons.lang.StringUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import javax.servlet.ServletConfig;
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
-import org.apache.commons.lang.StringUtils;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import java.io.IOException;
+import java.util.*;
+import java.util.stream.Collectors;
 
 /**
  * The main page
@@ -211,7 +206,7 @@ public class ProjectServlet extends AbstractLoginAzkabanServlet {
 
     page.add("userGroups", user.getGroups());
 
-    if (this.lockdownCreateProjects && !UserUtils.hasPermissionforAction(user, Permission.Type.CREATEPROJECTS)) {
+    if (this.lockdownCreateProjects && !UserUtils.hasPermissionforAction(user, Type.CREATEPROJECTS)) {
       page.add("hideCreateProject", true);
     }
 
@@ -645,7 +640,7 @@ public class ProjectServlet extends AbstractLoginAzkabanServlet {
       pmap.put("lastModifiedUser",project.getLastModifiedUser());
       pmap.put("lastModifiedTimestamp", webUtils.formatDateTime(project.getLastModifiedTimestamp()));
       // 页面删除按钮显示判断
-      if(isAdmin || hasPermission(project, user, Permission.Type.ADMIN)
+      if(isAdmin || hasPermission(project, user, Type.ADMIN)
               || hasPermission(project, user, Type.DEPMAINTAINER)){
         pmap.put("showDeleteBtn", "true");
       }

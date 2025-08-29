@@ -30,6 +30,8 @@ import azkaban.project.*;
 import azkaban.project.entity.*;
 import azkaban.project.validator.ValidationReport;
 import azkaban.project.validator.ValidatorConfigs;
+import azkaban.projectdiff.entity.DiffResult;
+import azkaban.projectdiff.service.ProjectDiffService;
 import azkaban.scheduler.*;
 import azkaban.server.HttpRequestUtils;
 import azkaban.server.session.Session;
@@ -50,9 +52,10 @@ import com.alibaba.fastjson.JSONArray;
 import com.alibaba.fastjson.JSONObject;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.reflect.TypeToken;
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
 import com.google.gson.JsonObject;
 import com.google.inject.Injector;
-import com.webank.wedatasphere.dss.common.utils.IoUtils;
 import org.apache.commons.beanutils.BeanUtils;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.fileupload.FileItem;
@@ -155,6 +158,8 @@ public class ProjectManagerServlet extends AbstractLoginAzkabanServlet {
 
     private UserParamsService userParamsService;
 
+    private ProjectDiffService projectDiffService;
+
     @Override
     public void init(final ServletConfig config) throws ServletException {
         super.init(config);
@@ -199,6 +204,8 @@ public class ProjectManagerServlet extends AbstractLoginAzkabanServlet {
                         8192);
 
         logger.info("downloadBufferSize: " + this.downloadBufferSize);
+
+        this.projectDiffService = new ProjectDiffService(projectManager, server.getServerProps());
     }
 
     @Override
@@ -269,6 +276,11 @@ public class ProjectManagerServlet extends AbstractLoginAzkabanServlet {
                 ret.put("message", "同步成功");
 
             }
+
+            if ("fetchProjectDiff".equals(ajaxName)) {
+                ajaxFetchProjectVersionDiff(req, resp, session);
+                return;
+            }
         }
         if (hasParam(req, "project")) {
             if (hasParam(req, "ajax")) {
@@ -313,6 +325,54 @@ public class ProjectManagerServlet extends AbstractLoginAzkabanServlet {
                         "azkaban/webapp/servlet/velocity/projectpage.vm");
         page.add("errorMsg", "No project set.");
         page.render();
+    }
+
+    private void ajaxFetchProjectVersionDiff(final HttpServletRequest req,
+        final HttpServletResponse resp,
+        final Session session) throws ServletException, IOException {
+        HashMap<String, Object> ret = new HashMap<>();
+        User user = session.getUser();
+        String projectName = getParam(req, "project");
+
+        Project project = this.projectManager.getProject(projectName);
+
+        if (project == null) {
+            ret.put("error", "Project " + projectName + " does not exist!");
+            this.writeJSON(resp, ret);
+            return;
+        }
+
+        try {
+            int leftVersion = getIntParam(req, "leftVersion");
+            int rightVersion = getIntParam(req, "rightVersion");
+
+            if (!hasPermission(project, user, Type.READ)) {
+                ret.put("error", "User does not have read permission for project " + projectName);
+                this.writeJSON(resp, ret);
+                return;
+            }
+
+            logger.info("User '" + user.getUserId() + "' requested diff for project '" + projectName
+                + "' versions " + leftVersion + " and " + rightVersion);
+            DiffResult result = projectDiffService.getProjectDiff(projectName, leftVersion,
+                rightVersion);
+
+            resp.setContentType("application/json");
+            resp.setCharacterEncoding("UTF-8");
+            Gson gson = new GsonBuilder().create();
+            resp.getWriter().write(gson.toJson(result));
+            return;
+
+        } catch (IllegalArgumentException e) {
+            logger.warn("Bad request for project diff: " + e.getMessage());
+            ret.put("error", "Bad request for project diff: " + e.getMessage());
+        } catch (Exception e) {
+            logger.error("Error processing project diff for project '" + projectName + "': "
+                + e.getMessage(), e);
+            ret.put("error", "An internal error occurred. Please check server logs.");
+        }
+
+        this.writeJSON(resp, ret);
     }
 
     private FlowBusiness buildFlowBusiness(Map<String, Object> itsmMap, String itsmNo, Project project, FlowBusiness flowBusiness) {
@@ -419,7 +479,9 @@ public class ProjectManagerServlet extends AbstractLoginAzkabanServlet {
                 ajaxBatchVerifyProjectsPermission(req, resp, session);
             } else if ("ajaxRefreshProjectFlowConfig".equals(ajaxName)) {
                 ajaxRefreshProjectFlowConfig(req, resp, session);
-            }/*else if ("linkJobHook".equals(ajaxName)) {
+            }
+
+            /*else if ("linkJobHook".equals(ajaxName)) {
         ajaxHandleLinkJobHook(req, resp, session);
       }*/
         }
@@ -594,6 +656,22 @@ public class ProjectManagerServlet extends AbstractLoginAzkabanServlet {
                             ret.put("error", "Project " + projectName + " doesn't exist.");
                         } else {
                             ajaxFetchFlow(project, ret, req);
+//
+//                            if(!ret.isEmpty()){
+//                              List<Object> nodes= (List<Object>) ret.get("nodes");
+//                              if(CollectionUtils.isNotEmpty(nodes)){
+//                                  for (Object node:nodes) {
+//                                      HashMap<String, Object> mapNode = (HashMap<String, Object>) node;
+//                                      String id = mapNode.get("id") != null ? mapNode.get("id").toString():"";
+//
+//
+//                                  }
+//
+//                              }
+//
+//
+//                            }
+
                         }
                     }
                 } else if ("fetchflowdetails".equals(ajaxName)) {
@@ -733,14 +811,14 @@ public class ProjectManagerServlet extends AbstractLoginAzkabanServlet {
                         ajaxFetchJobNestedIdList(project, ret, req);
                     }
 
-//                    if (handleAjaxPermission(project, user, Type.READ, ret)) {
-//                        project = getProjectFromDB(req, projectName);
-//                        if (project == null) {
-//                            ret.put("error", "Project " + projectName + " doesn't exist.");
-//                        } else {
-//                            ajaxFetchJobNestedIdList(project, ret, req);
-//                        }
-//                    }
+                } else if ("getChildNodes".equals(ajaxName)) {
+                    if (project == null) {
+                        ret.put("error", "Project " + projectName + " doesn't exist.");
+                    }
+                    if (hasPermission(project, session.getUser(), Type.READ)) {
+                        ajaxGetChildNodes(project, ret, req);
+                    }
+
                 } else if ("fetchJobHistoryPage".equals(ajaxName)) {
 
                     project = getProjectFromDB(req, projectName);
@@ -864,6 +942,8 @@ public class ProjectManagerServlet extends AbstractLoginAzkabanServlet {
                 fetchUserPermProjects(req, ret);
             } else if ("ajaxFetchMaintainedDeptUsers".equals(ajaxName)) {
                 fetchMaintainedDeptUsers(req, ret);
+            } else if ("ajaxFetchNoRealNameUsers".equals(ajaxName)) {
+                ajaxFetchNoRealNameUsers(req, ret);
             } else if ("ajaxRequestToItsm4ExchangeProjectOwner".equals(ajaxName)) {
                 requestToItsm4ExchangeProjectOwner(req, ret, session);
             } else if ("batchCheckUserSwitchScheduleFlowPermission".equals(ajaxName)) {
@@ -884,6 +964,69 @@ public class ProjectManagerServlet extends AbstractLoginAzkabanServlet {
         }
 
         this.writeJSON(resp, ret);
+    }
+
+    private void ajaxFetchNoRealNameUsers(HttpServletRequest req, HashMap<String, Object> ret) {
+        try {
+            String userName = getParam(req, "userName", "");
+            if (StringUtils.isEmpty(userName)) {
+                ret.put("error", "empty user name");
+                return;
+            }
+            Set<String> users = this.systemManager.getMaintainedDeptUser(userName);
+            users.add(userName);
+            //剔除集合中的实名用户
+            if (CollectionUtils.isNotEmpty(users)) {
+                Iterator<String> iterator = users.iterator();
+                while (iterator.hasNext()) {
+                    WtssUser user = this.systemManager.getSystemUserByUserName(iterator.next());
+                    if (user == null || user.getUserCategory().equals(WtssUser.PERSONAL) || user.getUserCategory().equals(WtssUser.TEST)) {
+                        iterator.remove();
+                    }
+
+                }
+
+            }
+            ret.put("users", users);
+            WtssUser wtssUser = this.systemManager.getSystemUserByUserName(userName);
+            if (null != wtssUser && wtssUser.getProxyUsers() != null) {
+                ret.put("proxyUser", Arrays.asList(wtssUser.getProxyUsers().split(",")));
+            }
+
+        } catch (Exception e) {
+            logger.error("fetch maintained dept user error", e);
+            ret.put("error", e.getMessage());
+        }
+
+    }
+
+    private void ajaxGetChildNodes(Project project, HashMap<String, Object> ret, HttpServletRequest req) {
+
+        if (hasParam(req, "superFlows")) {
+            String superFlow = req.getParameter("superFlows");
+            String[] split = superFlow.split(",");
+            HashSet<String> superFlowSets = new HashSet<>(Arrays.asList(split));
+            List<String> allJobList = new ArrayList<>();
+            for (String flowName : superFlowSets) {
+                Flow flow = project.getFlowMap().get(flowName);
+                List<String> jobList = new ArrayList<>();
+                allJobList.add(flowName);
+                if (flowName.contains("all_jobs ")) {
+                    flow = project.getFlow(flowName.split(" ")[1]);
+                    FlowUtils.getAllExecutableNodeId(new ExecutableFlow(project, flow), jobList, "");
+                    allJobList.addAll(jobList);
+                    break;
+                } else {
+                    if (flow != null) {
+                        allJobList.add(flowName);
+                    }
+                }
+            }
+            ret.put("jobList", new HashSet<>(allJobList));
+
+        }
+
+
     }
 
     private void ajaxFetchProjectHourlyReport(HttpServletRequest req, HashMap<String, Object> ret, Session session) {
@@ -1211,8 +1354,8 @@ public class ProjectManagerServlet extends AbstractLoginAzkabanServlet {
                     if (ret.containsKey("requestStatus")) {
                         int requestStatus = (int) ret.get("requestStatus");
                         if (requestStatus != 1009 && requestStatus != 1013
-                                && requestStatus != 1001) {
-                            // 1009 —— 验收中，1013 —— 已完成，驳回可以重新提单 1001 —— 待确认
+                                && requestStatus != 1001 && requestStatus != 1003) {
+                            // 1009 —— 验收中，1013 —— 已完成，驳回可以重新提单 1001 —— 待确认，1003 取消，可以重新提单
                             ret.put("error", "项目【" + projectName + "】 正在交接审批中，不可再次发起交接! "
                                     + "ITSM 服务请求单号 " + itsmNo);
                             return;
@@ -2076,7 +2219,7 @@ public class ProjectManagerServlet extends AbstractLoginAzkabanServlet {
     }
 
     protected Project getProjectAjaxByPermission(final Map<String, Object> ret, final String projectName,
-                                                 final User user, final Permission.Type type) {
+                                                 final User user, final Type type) {
         final Project project = this.projectManager.getProject(projectName);
 
         Map<String, String> dataMap = loadProjectManagerServletI18nData();
@@ -2936,10 +3079,10 @@ public class ProjectManagerServlet extends AbstractLoginAzkabanServlet {
                                     final HttpServletRequest req) throws ServletException {
         final String flowId = getParam(req, "flow");
 
-        fillFlowInfo(project, flowId, ret);
+        fillFlowInfo(project, flowId, ret, "");
     }
 
-    private void fillFlowInfo(final Project project, final String flowId, final HashMap<String, Object> ret) {
+    private void fillFlowInfo(final Project project, final String flowId, final HashMap<String, Object> ret, String nestedId) {
         final Flow flow = project.getFlow(flowId);
         if (flow == null) {
             ret.put("error", "Flow " + flowId + " not found in project " + project.getName());
@@ -2954,11 +3097,21 @@ public class ProjectManagerServlet extends AbstractLoginAzkabanServlet {
             if (node.getCondition() != null) {
                 nodeObj.put("condition", node.getCondition());
             }
+            nestedId = nestedId + ":" + node.getId();
             if (node.getEmbeddedFlowId() != null) {
                 nodeObj.put("flowId", node.getEmbeddedFlowId());
-                fillFlowInfo(project, node.getEmbeddedFlowId(), nodeObj);
+                fillFlowInfo(project, node.getEmbeddedFlowId(), nodeObj, nestedId);
             }
-
+            nodeObj.put("nestedId", nestedId);
+            //再次循环迭代过来时，去掉最后的一个元素
+            String[] split = nestedId.split(":");
+            if (split.length > 1) {
+                List<String> nestedIds = new ArrayList<>();
+                for (int i = 0; i < split.length - 1; i++) {
+                    nestedIds.add(split[i]);
+                }
+                nestedId = nestedIds.stream().collect(Collectors.joining(":"));
+            }
             nodeObj.put("comment", node.getComment());
 
             nodeList.add(nodeObj);
@@ -2972,7 +3125,7 @@ public class ProjectManagerServlet extends AbstractLoginAzkabanServlet {
                 nodeObj.put("in", inEdgesList);
             }
         }
-
+        nestedId = "";
         Collections.sort(nodeList, (o1, o2) -> {
             final String id = (String) o1.get("id");
             return id.compareTo((String) o2.get("id"));
@@ -3018,7 +3171,7 @@ public class ProjectManagerServlet extends AbstractLoginAzkabanServlet {
 
         if ("flow".equals(node.getType())) {
             if (node.getEmbeddedFlowId() != null) {
-                fillFlowInfo(project, node.getEmbeddedFlowId(), ret);
+                fillFlowInfo(project, node.getEmbeddedFlowId(), ret, "");
             }
         }
     }
@@ -3026,7 +3179,7 @@ public class ProjectManagerServlet extends AbstractLoginAzkabanServlet {
     private void ajaxFetchFlow(final Project project, final HashMap<String, Object> ret,
                                final HttpServletRequest req) throws ServletException {
         final String flowId = getParam(req, "flow");
-        getProjectNodeTree(project, flowId, ret);
+        getProjectNodeTree(project, flowId, ret, "");
     }
 
     private void ajaxAddProxyUser(final Project project, final HashMap<String, Object> ret,
@@ -3566,6 +3719,7 @@ public class ProjectManagerServlet extends AbstractLoginAzkabanServlet {
         final String jobId = getParam(req, "job");
         final int pageNum = getIntParam(req, "page", 1);
         final int pageSize = getIntParam(req, "size", 25);
+        String nestedId = getParam(req, "nestedId", "");
 
         page.add("projectId", project.getId());
         page.add("projectName", project.getName());
@@ -3576,10 +3730,10 @@ public class ProjectManagerServlet extends AbstractLoginAzkabanServlet {
 
         int numResults = 0;
         try {
-            numResults = this.executorManagerAdapter.getNumberOfJobExecutions(project, jobId);
+            numResults = this.executorManagerAdapter.getNumberOfJobExecutions(project, jobId, nestedId);
             final int maxPage = (numResults / pageSize) + 1;
             List<ExecutableJobInfo> jobInfo =
-                    this.executorManagerAdapter.getExecutableJobs(project, jobId, skipPage, pageSize);
+                    this.executorManagerAdapter.getExecutableJobs(project, jobId, skipPage, pageSize, nestedId);
 
             if (jobInfo == null || jobInfo.isEmpty()) {
                 jobInfo = null;
@@ -4774,7 +4928,7 @@ public class ProjectManagerServlet extends AbstractLoginAzkabanServlet {
             } catch (Exception e) {
                 logger.error("应用信息解析失败,project:{},ERROR:{}", project.getName(), e);
                 throw new ServletException("应用信息解析失败: " + e.getMessage());
-            }finally {
+            } finally {
                 IOUtils.closeQuietly(zipStoreFile);
                 IOUtils.closeQuietly(inputStream);
 
@@ -4837,7 +4991,7 @@ public class ProjectManagerServlet extends AbstractLoginAzkabanServlet {
     }
 
     private Permission getPermissionObject(final Project project, final User user,
-                                           final Permission.Type type) {
+                                           final Type type) {
         final Permission perm = project.getCollectivePermission(user);
         for (final String roleName : user.getRoles()) {
             if ("admin".equals(roleName) || systemManager.isDepartmentMaintainer(user)) {
@@ -4852,7 +5006,7 @@ public class ProjectManagerServlet extends AbstractLoginAzkabanServlet {
                                               final HttpServletResponse resp, final Session session) throws IOException {
         final HashMap<String, Object> ret = new HashMap<>();
 
-        if (hasPermission(session.getUser(), Permission.Type.ADMIN)) {
+        if (hasPermission(session.getUser(), Type.ADMIN)) {
             try {
                 if (this.projectManager.loadProjectWhiteList()) {
                     ret.put("success", "Project whitelist re-loaded!");
@@ -4872,12 +5026,12 @@ public class ProjectManagerServlet extends AbstractLoginAzkabanServlet {
         this.writeJSON(resp, ret);
     }
 
-    protected boolean hasPermission(final User user, final Permission.Type type) {
+    protected boolean hasPermission(final User user, final Type type) {
         for (final String roleName : user.getRoles()) {
             //final Role role = this.userManager.getRole(roleName);
             final Role role = user.getRoleMap().get(roleName);
             if (role != null && role.getPermission().isPermissionSet(type)
-                    || role.getPermission().isPermissionSet(Permission.Type.ADMIN)) {
+                    || role.getPermission().isPermissionSet(Type.ADMIN)) {
                 return true;
             }
         }
@@ -4937,21 +5091,34 @@ public class ProjectManagerServlet extends AbstractLoginAzkabanServlet {
 
     //组装出项目中Flow的树形结构数据
     private void getProjectNodeTree(final Project project, final String flowId,
-                                    final HashMap<String, Object> ret) {
+                                    final HashMap<String, Object> ret, String nestedId) {
         final Flow flow = project.getFlow(flowId);
 
         final ArrayList<Map<String, Object>> nodeList =
                 new ArrayList<>();
+
         for (final Node node : flow.getNodes()) {
             final HashMap<String, Object> nodeObj = new HashMap<>();
             nodeObj.put("id", node.getId());
             nodeObj.put("type", node.getType());
             nodeObj.put("projectName", project.getName());
             nodeObj.put("level", node.getLevel());
+            nestedId = nestedId + ":" + node.getId();
             if (node.getEmbeddedFlowId() != null) {
                 nodeObj.put("flowId", node.getEmbeddedFlowId());
-                getProjectNodeTree(project, node.getEmbeddedFlowId(), nodeObj);
+                getProjectNodeTree(project, node.getEmbeddedFlowId(), nodeObj, nestedId);
             }
+            nodeObj.put("nestedId", nestedId);
+            //再次循环迭代过来时，去掉最后的一个元素
+            String[] split = nestedId.split(":");
+            if (split.length > 1) {
+                List<String> nestedIds = new ArrayList<>();
+                for (int i = 0; i < split.length - 1; i++) {
+                    nestedIds.add(split[i]);
+                }
+                nestedId = nestedIds.stream().collect(Collectors.joining(":"));
+            }
+
 
             final ArrayList<String> dependencies = new ArrayList<>();
             Collection<Edge> collection = flow.getInEdges(node.getId());
@@ -4985,7 +5152,7 @@ public class ProjectManagerServlet extends AbstractLoginAzkabanServlet {
             }
 
         }
-
+        nestedId = "";
         Collections.sort(nodeList, new Comparator<Map<String, Object>>() {
             @Override
             public int compare(final Map<String, Object> o1, final Map<String, Object> o2) {
@@ -5039,14 +5206,15 @@ public class ProjectManagerServlet extends AbstractLoginAzkabanServlet {
         final String jobId = getParam(req, "job");
         final int from = Integer.valueOf(getParam(req, "start"));
         final int length = Integer.valueOf(getParam(req, "length"));
+        String nestedId = getParam(req, "nestedId");
 
         final List<ExecutableJobInfo> jobInfoList = new ArrayList<>();
         int total = 0;
         try {
 //      total = this.executorManager.getExecutableFlows(project.getId(), flowId, from,
 //              length, exFlows);
-            total = this.executorManagerAdapter.getNumberOfJobExecutions(project, jobId);
-            final List<ExecutableJobInfo> jobExecList = this.executorManagerAdapter.getExecutableJobs(project, jobId, from, length);
+            total = this.executorManagerAdapter.getNumberOfJobExecutions(project, jobId, nestedId);
+            final List<ExecutableJobInfo> jobExecList = this.executorManagerAdapter.getExecutableJobs(project, jobId, from, length, nestedId);
             if (null != jobExecList && !jobExecList.isEmpty()) {
                 jobInfoList.addAll(jobExecList);
 
@@ -5958,7 +6126,7 @@ public class ProjectManagerServlet extends AbstractLoginAzkabanServlet {
         final String jobId = getParam(req, "jobId");
         final int pageNum = getIntParam(req, "page", 1);
         final int pageSize = getIntParam(req, "size", 20);
-
+        String nestedId = getParam(req, "nestedId", "");
         final int skipPage = (pageNum - 1) * pageSize;
 
         int total = 0;
@@ -6014,9 +6182,9 @@ public class ProjectManagerServlet extends AbstractLoginAzkabanServlet {
                         .append(startEndTime).append(finishBeginTime).append(finishEndTime).append(historyQueryParam.getRunDateReq())
                         .append(historyQueryParam.getFlowType());
                 if (filterBuilder.toString().equals(EMPRY_ADVANCED_FILTER)) {
-                    total = this.executorManagerAdapter.getNumberOfJobExecutions(project, jobId);
+                    total = this.executorManagerAdapter.getNumberOfJobExecutions(project, jobId, nestedId);
 
-                    jobInfo = this.executorManagerAdapter.getExecutableJobs(project, jobId, skipPage, pageSize);
+                    jobInfo = this.executorManagerAdapter.getExecutableJobs(project, jobId, skipPage, pageSize, nestedId);
                 } else {
                     total = this.executorManagerAdapter.searchNumberOfJobExecutions(historyQueryParam);
                     jobInfo = this.executorManagerAdapter.searchJobExecutions(historyQueryParam, skipPage, pageSize);
@@ -6028,9 +6196,9 @@ public class ProjectManagerServlet extends AbstractLoginAzkabanServlet {
                 total = this.executorManagerAdapter.quickSearchNumberOfJobExecutions(project, jobId, searchTerm);
                 jobInfo = this.executorManagerAdapter.quickSearchJobExecutions(project, jobId, searchTerm, skipPage, pageSize);
             } else {
-                total = this.executorManagerAdapter.getNumberOfJobExecutions(project, jobId);
+                total = this.executorManagerAdapter.getNumberOfJobExecutions(project, jobId, nestedId);
 
-                jobInfo = this.executorManagerAdapter.getExecutableJobs(project, jobId, skipPage, pageSize);
+                jobInfo = this.executorManagerAdapter.getExecutableJobs(project, jobId, skipPage, pageSize, nestedId);
             }
 
 
@@ -6450,18 +6618,11 @@ public class ProjectManagerServlet extends AbstractLoginAzkabanServlet {
                         return;
                     }
                 }
-
-                List<String> allFieldList = Arrays
-                        .asList("busTypeFirst", "busTypeSecond", "busDesc", "subsystem", "busResLvl",
-                                "busPath", "devDept", "opsDept", "batchGroup", "busDomain", "planStartTime",
-                                "planFinishTime", "lastStartTime", "lastFinishTime", "alertLevel", "dcnNumber",
-                                "imsUpdater", "imsRemark", "batchGroupDesc", "busPathDesc",
-                                "busTypeFirstDesc", "busTypeSecondDesc", "subsystemDesc"
-                                , "devDeptDesc", "opsDeptDesc", "scanPartitionNum", "scanDataSize");
-
+                List<String> allFieldList = props.getStringList("wtss.all.business.field");
                 for (String field : allFieldList) {
                     valueMap.put(field, getParam(req, field, "").trim());
                 }
+                valueMap.put("busDomain",getParam(req, "busDomain", "").trim());
             }
 
 
@@ -6880,7 +7041,7 @@ public class ProjectManagerServlet extends AbstractLoginAzkabanServlet {
             } else {
                 resp.sendRedirect(req.getRequestURI() + "?project=" + project.getName());
             }
-        }finally {
+        } finally {
             IOUtils.closeQuietly(inputStream);
         }
 
@@ -6959,10 +7120,10 @@ public class ProjectManagerServlet extends AbstractLoginAzkabanServlet {
 
     }
 
-    private int checkBusinessInfoBeforeIntoDB(HttpServletRequest req, HttpServletResponse resp, Map<String, Object> ret, int fileError, Map<String, String> map, Project project, String channelType) throws IOException {
+    private int checkBusinessInfoBeforeIntoDB(HttpServletRequest req, HttpServletResponse resp, Map<String, Object> ret, int fileError, Map<String, String> map, Project project,String channelType) throws IOException {
         try {
-
-            String error = checkRequired(map);
+            Props props = getApplication().getServerProps();
+            String error = checkRequired(map,props);
             logger.error(error);
             if (project == null) {
                 setErrorMessageInCookie(resp, "项目名不能为空");
@@ -7034,13 +7195,8 @@ public class ProjectManagerServlet extends AbstractLoginAzkabanServlet {
         return fileError;
     }
 
-    private static String checkRequired(Map<String, String> map) {
-        List<String> requiredList = Arrays.asList("project", "busDomain",
-                "subsystem", "subsystemDesc", "busResLvl",
-                "planStartTime", "planFinishTime",
-                "lastStartTime", "lastFinishTime",
-                "devDept", "devDeptDesc", "opsDept",
-                "opsDeptDesc", "scanPartitionNum", "scanDataSize");
+    private static String checkRequired(Map<String, String> map,Props props) {
+        List<String> requiredList = props.getStringList("wtss.fileupload.required");;
 
         for (String key : requiredList) {
             if (StringUtils.isEmpty(map.get(key))) {
@@ -7065,7 +7221,7 @@ public class ProjectManagerServlet extends AbstractLoginAzkabanServlet {
                         "batchGroupDesc,关键批量分组名称（非必填）",
                         "busPath,关键路径(非必填)",
                         "busPathDesc,关键路径(非必填)",
-                        "busDomain,业务域（必填）",
+                        "busDomain,业务域（非必填）",
                         "subsystem,子系统（必填）",
                         "subsystemDesc,子系统（必填）",
                         "busResLvl,重要性等级（必填）",
@@ -7144,5 +7300,7 @@ public class ProjectManagerServlet extends AbstractLoginAzkabanServlet {
         }
         return null;
     }
+
+
 
 }

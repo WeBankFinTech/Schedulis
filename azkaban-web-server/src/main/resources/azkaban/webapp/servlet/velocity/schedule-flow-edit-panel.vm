@@ -211,6 +211,10 @@
                         </tbody>
                       </table>
                     </div>
+                    <p>$retryFailedWhitelist</p>
+                    <div id="job-schedule-failed-retry-whitelist-view" style="margin-bottom: 10px;">
+                      <select class="form-control" style="width: 100%;" id="job-schedule-failed-retry-whitelist-select"></select>
+                    </div>                    
                     <p>$skipFailed</p>
                     <p class="help-block">$skipActionTips</p>
                     <div id="schedule-job-skip-failed-view">

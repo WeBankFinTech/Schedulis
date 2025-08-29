@@ -2,19 +2,6 @@ package azkaban.utils;
 
 import com.alibaba.fastjson.JSONArray;
 import com.alibaba.fastjson.JSONObject;
-import java.io.IOException;
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
-import java.security.SecureRandom;
-import java.text.SimpleDateFormat;
-import java.util.ArrayList;
-import java.util.Calendar;
-import java.util.Date;
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
 import org.apache.http.HttpEntity;
 import org.apache.http.HttpStatus;
 import org.apache.http.StatusLine;
@@ -24,6 +11,13 @@ import org.apache.http.entity.StringEntity;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClients;
 import org.apache.http.util.EntityUtils;
+
+import java.io.IOException;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import java.security.SecureRandom;
+import java.text.SimpleDateFormat;
+import java.util.*;
 
 /**
  * Tools for ITSM
@@ -389,103 +383,8 @@ public class ItsmUtil {
         }
     }
 
-  /*public static void main(String[] args) throws Exception {
-
-    String appId = "302";
-    String appKey = "099ab2c5-789c-48be-bedb-ed3cbca16183";
-    String itsmUrl = "http://***REMOVED***:8080/proxy/toOA";
-    String requestUri = "/itsm/request/insertRequestAuth.any";
-    String getRequestUri = "/itsm/requestApi/getDetailById.any";
-    String userId = "lebronwang";
-    String itsmFormId = "10007599";
-    String requestHandler = "lebronwang";
-
-    Props props = new Props();
-    props.put("itsm.url", itsmUrl);
-    props.put("itsm.insertRequest.uri", requestUri);
-    props.put("itsm.appId", appId);
-    props.put("itsm.appKey", appKey);
-    props.put("itsm.userId", userId);
-    props.put("itsm.application.info.form.id", itsmFormId);
-    props.put("itsm.request.handler", requestHandler);
-    props.put("itsm.getRequest.uri", getRequestUri);
-    props.put("itsm.requst.eoaChainUsers", "huyangchen,chaogefeng,georgeqiao,haydenhan");
-
-    Map<String, String> formMap = new HashMap<>();
-    formMap.put("batchGroupDesc", "关键批量分组");
-    formMap.put("busPathDesc", "关键路径");
-    formMap.put("busDomain", "业务域");
-    formMap.put("subsystemDesc", "WTSS-BDPWFM");
-    formMap.put("busResLvl", "B");
-    formMap.put("planStartTime", "00:00");
-    formMap.put("planFinishTime", "00:00");
-    formMap.put("lastStartTime", "00:00");
-    formMap.put("lastFinishTime", "00:00");
-    formMap.put("busTypeFirstDesc", "业务/产品一级分类");
-    formMap.put("busTypeSecondDesc", "业务/产品二级分类");
-    formMap.put("devDeptDesc", "开发科室");
-    formMap.put("opsDeptDesc", "运维科室");
-    formMap.put("opsDeptDesc1", "运维科室");
-
-    Map<String, Object> ret = new HashMap<>();
-    Map<String, String> headers = genHeaders(appId, appKey, userId);
-    System.out.println(headers);
-
-    sendRequest2Itsm4ApplicationInfo(props, userId, "项目名", "工作流名", "任务名", formMap, ret);
-
-    System.out.println(ret);
-    if (ret.containsKey("itsmNo")) {
-      long itsmNo = (long) ret.get("itsmNo");
-
-      getRequestFormStatus(props, itsmNo, ret);
-    }
-    System.out.println(ret);
-  }*/
-
-    public static void main(String[] args) throws Exception {
-
-        // 接口鉴权参数
-        String itsmUrl = "http://***REMOVED***:8080/proxy/toOA";
-        String itsmGetRequestUri = "/itsm/requestApi/getDetailById.any";
-        String appId = "302";
-        String appKey = "099ab2c5-789c-48be-bedb-ed3cbca16183";
-        String itsmUserId = "lebronwang";
-
-        JSONObject reqBody = new JSONObject();
-        reqBody.put("id", 11688405);
-
-        String result = doPost(itsmUrl + itsmGetRequestUri, reqBody, appId, appKey, itsmUserId);
 
 
-        JSONObject jsonResult = JSONObject.parseObject(result);
 
-        int retCode = jsonResult.getIntValue("retCode");
-        System.out.println(jsonResult);
-        if (retCode == 0) {
-            int requestStatus = jsonResult.getJSONObject("data").getIntValue("requestStatus");
-            JSONArray jsonArray = jsonResult.getJSONObject("data").getJSONArray("requestFormCis").getJSONObject(0).getJSONArray("sheets").getJSONArray(0);
-            Long requestRatifyFinishTime = jsonResult.getJSONObject("data").getLongValue("requestRatifyFinishTime");
-            System.out.println(requestRatifyFinishTime);
-            for (int i = 0; i < jsonArray.size(); i++) {
-                JSONObject jsonObject = jsonArray.getJSONObject(i);
-                String name = jsonObject.getString("name");
-                String text = jsonObject.getString("text");
-                if(name.equals("projectName")){
-                    System.out.println(text);
-                }
-                if (name.equals("flowId")){
-                    System.out.println(text);
-                }
-                if (name.equals("jobId")){
-                    System.out.println(text);
-                }
-
-            }
-
-            System.out.println(requestStatus);
-        } else {
-
-        }
-    }
 
 }

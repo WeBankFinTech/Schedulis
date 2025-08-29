@@ -39,20 +39,20 @@
     // load cmdb data switch
     var isCmdbLoaded=false;
   </script>
-  <link href="/css/bootstrap-select.min.css?version=1.49.0" rel="stylesheet">
-  <script type="text/javascript" src="/js/azkaban/util/utils.js?version=1.49.0"></script>
-  <script type="text/javascript" src="/js/echarts/echarts.min.js?version=1.49.0"></script>
-  <script type="text/javascript" src="/js/raphael.min.js?version=1.49.0"></script>
-  <script type="text/javascript" src="/js/morris.min.js?version=1.49.0"></script>
-  <script type="text/javascript" src="/js/azkaban/i18n-config.js?version=1.49.0"></script>
-  <script type="text/javascript" src="/js/azkaban/view/job-edit.js?version=1.49.0"></script>
-
-  <script type="text/javascript" src="/js/azkaban/util/job-status.js?version=1.49.0"></script>
-  <script type="text/javascript" src="/js/azkaban/view/time-graph.js?version=1.49.0"></script>
-  <script type="text/javascript" src="/js/bootstrap-select.js?version=1.49.0"></script>
-  <script type="text/javascript" src="/js/moment-2.29.4.min.js?version=1.49.0"></script>
-  <script type="text/javascript" src="/js/bootstrap-datetimepicker.min.js?version=1.49.0"></script>
-
+  <link href="/css/bootstrap-select.min.css?version=0.11.0" rel="stylesheet">
+  <script type="text/javascript" src="/js/azkaban/util/utils.js?version=0.11.0"></script>
+  <script type="text/javascript" src="/js/echarts/echarts.min.js?version=0.11.0"></script>
+  <script type="text/javascript" src="/js/raphael.min.js?version=0.11.0"></script>
+  <script type="text/javascript" src="/js/morris.min.js?version=0.11.0"></script>
+  <script type="text/javascript" src="/js/azkaban/i18n-config.js?version=0.11.0"></script>
+  <script type="text/javascript" src="/js/azkaban/view/job-edit.js?version=0.11.0"></script>
+  
+  <script type="text/javascript" src="/js/azkaban/util/job-status.js?version=0.11.0"></script>
+  <script type="text/javascript" src="/js/azkaban/view/time-graph.js?version=0.11.0"></script>
+  <script type="text/javascript" src="/js/bootstrap-select.js?version=0.11.0"></script>
+  <script type="text/javascript" src="/js/moment-2.29.4.min.js?version=0.11.0"></script>
+  <script type="text/javascript" src="/js/bootstrap-datetimepicker.min.js?version=0.11.0"></script>
+  
 </head>
 <body>
 
@@ -100,7 +100,7 @@
     </div>
   </div>
 
-  <script type="text/javascript" src="/js/azkaban/view/hideHead.js?version=1.49.0"></script>
+  <script type="text/javascript" src="/js/azkaban/view/hideHead.js?version=0.11.0"></script>
 
   <div class="container-full">
 
@@ -168,7 +168,7 @@
                     <tbody id="execTableBody">
                     </tbody>
                   </table>
-
+                  
                 <table id="pageSelection">
                     #parse ("azkaban/webapp/servlet/velocity/commonPagination.vm")
                 </table>
@@ -380,7 +380,7 @@
                 </div>
               </div>
               <div class="form-group">
-                <label for="bus-domain-select" class="col-sm-4 control-label"><span class="required">*</span>$busDomain</label>
+                <label for="bus-domain-select" class="col-sm-4 control-label">$busDomain</label>
                 <div class="col-sm-7">
                   <select id="bus-domain-select"  class="form-control" style="width: 100%"></select>
                 </div>
@@ -497,7 +497,7 @@
                 <div class="col-sm-7">
                   <input id="scan-data-size" type="text" class="form-control" maxlength="500">
                 </div>
-              </div>
+              </div>              
 
               #*
               <div class="form-group">

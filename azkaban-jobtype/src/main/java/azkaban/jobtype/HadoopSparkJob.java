@@ -16,29 +16,28 @@
 
 package azkaban.jobtype;
 
-import static azkaban.security.commons.AbstractHadoopSecurityManager.ENABLE_PROXYING;
-import static azkaban.security.commons.AbstractHadoopSecurityManager.OBTAIN_BINARY_TOKEN;
-import static azkaban.security.commons.AbstractHadoopSecurityManager.USER_TO_PROXY;
-import static org.apache.hadoop.security.UserGroupInformation.HADOOP_TOKEN_FILE_LOCATION;
-
 import azkaban.flow.CommonJobProperties;
 import azkaban.jobExecutor.JavaProcessJob;
 import azkaban.security.commons.AbstractHadoopSecurityManager;
 import azkaban.utils.Props;
 import azkaban.utils.StringUtils;
+import org.apache.commons.lang.math.NumberUtils;
+import org.slf4j.Logger;
+
 import java.io.File;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map.Entry;
 import java.util.StringTokenizer;
-import org.apache.commons.lang.math.NumberUtils;
-import org.slf4j.Logger;
+
+import static azkaban.security.commons.AbstractHadoopSecurityManager.*;
+import static org.apache.hadoop.security.UserGroupInformation.HADOOP_TOKEN_FILE_LOCATION;
 
 /**
  * <pre>
  * The Azkaban adaptor for running a Spark Submit job.
- * Use this in conjunction with  {@link azkaban.jobtype.HadoopSecureSparkWrapper}
+ * Use this in conjunction with  {@link HadoopSecureSparkWrapper}
  *
  * This class is used by azkaban executor to build the classpath, main args, env and jvm props
  * for HadoopSecureSparkWrapper. Executor will then launch the job process and run
@@ -78,7 +77,7 @@ import org.slf4j.Logger;
  *
  * </pre>
  *
- * @see azkaban.jobtype.HadoopSecureSparkWrapper
+ * @see HadoopSecureSparkWrapper
  */
 public class HadoopSparkJob extends JavaProcessJob {
 

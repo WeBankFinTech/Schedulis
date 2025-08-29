@@ -20,17 +20,14 @@ import azkaban.metric.IMetric;
 import azkaban.metric.IMetricEmitter;
 import azkaban.metric.MetricException;
 import azkaban.utils.Props;
-import java.util.Date;
-import java.util.Iterator;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Map;
+import org.apache.commons.math3.stat.descriptive.DescriptiveStatistics;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.LinkedBlockingDeque;
 import java.util.concurrent.TimeUnit;
-import org.apache.commons.math3.stat.descriptive.DescriptiveStatistics;
-import org.slf4j.LoggerFactory;
-import org.slf4j.Logger;
 
 
 /**
@@ -87,7 +84,7 @@ public class InMemoryMetricEmitter implements IMetricEmitter {
   /**
    * Ingest metric in snapshot data structure while maintaining interval {@inheritDoc}
    *
-   * @see azkaban.metric.IMetricEmitter#reportMetric(azkaban.metric.IMetric)
+   * @see IMetricEmitter#reportMetric(IMetric)
    */
   @Override
   public void reportMetric(final IMetric<?> metric) throws MetricException {
@@ -234,7 +231,7 @@ public class InMemoryMetricEmitter implements IMetricEmitter {
   /**
    * Clear snapshot data structure {@inheritDoc}
    *
-   * @see azkaban.metric.IMetricEmitter#purgeAllData()
+   * @see IMetricEmitter#purgeAllData()
    */
   @Override
   public void purgeAllData() throws MetricException {

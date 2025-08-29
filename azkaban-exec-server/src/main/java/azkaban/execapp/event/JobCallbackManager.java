@@ -1,11 +1,5 @@
 package azkaban.execapp.event;
 
-import static azkaban.jobcallback.JobCallbackConstants.CONTEXT_JOB_TOKEN;
-import static azkaban.jobcallback.JobCallbackStatusEnum.COMPLETED;
-import static azkaban.jobcallback.JobCallbackStatusEnum.FAILURE;
-import static azkaban.jobcallback.JobCallbackStatusEnum.STARTED;
-import static azkaban.jobcallback.JobCallbackStatusEnum.SUCCESS;
-
 import azkaban.event.Event;
 import azkaban.event.EventData;
 import azkaban.event.EventListener;
@@ -17,6 +11,11 @@ import azkaban.jobcallback.JobCallbackStatusEnum;
 import azkaban.spi.EventType;
 import azkaban.utils.Props;
 import azkaban.utils.PropsUtils;
+import org.apache.http.client.methods.HttpRequestBase;
+import org.apache.http.message.BasicHeader;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.net.InetAddress;
 import java.net.URL;
 import java.text.SimpleDateFormat;
@@ -24,10 +23,9 @@ import java.util.Date;
 import java.util.List;
 import java.util.Map;
 import java.util.TimeZone;
-import org.apache.http.client.methods.HttpRequestBase;
-import org.apache.http.message.BasicHeader;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+
+import static azkaban.jobcallback.JobCallbackConstants.CONTEXT_JOB_TOKEN;
+import static azkaban.jobcallback.JobCallbackStatusEnum.*;
 
 /**
  * Responsible processing job callback properties on job status change events.
@@ -44,7 +42,7 @@ import org.slf4j.LoggerFactory;
  */
 public class JobCallbackManager implements EventListener {
 
-  private static final org.slf4j.Logger logger = LoggerFactory.getLogger(JobCallbackManager.class);
+  private static final Logger logger = LoggerFactory.getLogger(JobCallbackManager.class);
 
   private static final JobCallbackStatusEnum[] ON_COMPLETION_JOB_CALLBACK_STATUS =
       {SUCCESS, FAILURE, COMPLETED};

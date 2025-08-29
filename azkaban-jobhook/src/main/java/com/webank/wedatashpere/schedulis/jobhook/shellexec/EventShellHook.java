@@ -1,21 +1,20 @@
 package com.webank.wedatashpere.schedulis.jobhook.shellexec;
 
-import java.io.File;
-import java.util.Arrays;
-import java.util.Map;
-
-import azkaban.flow.CommonJobProperties;
-import org.apache.commons.lang3.StringUtils;
-import org.slf4j.Logger;
-
 import azkaban.executor.ExecutableNode;
 import azkaban.executor.ExecutorLoader;
+import azkaban.flow.CommonJobProperties;
 import azkaban.hookExecutor.ExecuteWithJobHook;
 import azkaban.hookExecutor.HookConstants;
 import azkaban.hookExecutor.HookContext;
 import azkaban.hookExecutor.HookContext.HookType;
 import azkaban.jobExecutor.ProcessJob;
 import azkaban.utils.Props;
+import org.apache.commons.lang3.StringUtils;
+import org.slf4j.Logger;
+
+import java.io.File;
+import java.util.Arrays;
+import java.util.Map;
 
 /**
  * A hook with pre/post cmd feature for specify nodes
@@ -28,7 +27,7 @@ public class EventShellHook implements ExecuteWithJobHook {
 
     private final Logger logger;
     protected volatile ExecutableNode node;
-    private final HookContext.HookType hooktype;
+    private final HookType hooktype;
     private final Props pluginJobProps;
     @SuppressWarnings("unused")
     private ExecutorLoader executorLoader;

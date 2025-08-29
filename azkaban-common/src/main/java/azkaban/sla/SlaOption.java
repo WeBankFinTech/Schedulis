@@ -19,34 +19,24 @@ package azkaban.sla;
 import azkaban.executor.ExecutableFlow;
 import azkaban.executor.ExecutableNode;
 import azkaban.utils.Utils;
-import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
-import java.io.ObjectInputStream;
-import java.io.ObjectOutputStream;
-import java.io.Serializable;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.stream.Collectors;
-
 import org.apache.commons.io.IOUtils;
 import org.joda.time.DateTime;
 import org.joda.time.format.DateTimeFormat;
 import org.joda.time.format.DateTimeFormatter;
 import org.slf4j.LoggerFactory;
 
+import java.io.*;
+import java.util.*;
+import java.util.stream.Collectors;
+
 public class SlaOption implements Serializable {
 
   private static final org.slf4j.Logger logger = LoggerFactory.getLogger(SlaOption.class);
 
   public final static List<String> JOB_ALTER_TYPES = Arrays.asList(SlaOption.TYPE_JOB_SUCCESS_EMAILS,
-          SlaOption.TYPE_JOB_FAILURE_EMAILS, SlaOption.TYPE_JOB_FINISH_EMAILS);
+      SlaOption.TYPE_JOB_FAILURE_EMAILS, SlaOption.TYPE_JOB_FINISH_EMAILS);
   public final static Set<String> JOB_LEVEL_SLAS = new HashSet<>(
-          Arrays.asList(SlaOption.TYPE_JOB_FINISH, SlaOption.TYPE_JOB_SUCCEED));
+      Arrays.asList(SlaOption.TYPE_JOB_FINISH, SlaOption.TYPE_JOB_SUCCEED));
 
   public static final String TYPE_FLOW_FINISH = "FlowFinish";
   public static final String TYPE_FLOW_SUCCEED = "FlowSucceed";
@@ -78,10 +68,12 @@ public class SlaOption implements Serializable {
   public static final String INFO_FLOW_NAME = "FlowName";
   public static final String INFO_JOB_NAME = "JobName";
   public static final String INFO_EMAIL_LIST = "EmailList";
-  //告警频率
+
+  public static  final String DUTY_GROUP_ID="DutyGroupId";
+ //告警频率
   public static final String ALARM_FREQUENCY = "AlarmFrequency";
 
-  public static final String ALARM_FREQUENCY_PAGE = "alarmFrequency";
+    public static final String ALARM_FREQUENCY_PAGE = "alarmFrequency";
   public static final String INFO_DEP_TYPE_INFORM = "depTypeInform";
   public static final String INFO_ALERT_LEVEL = "AlertLevel";
 
@@ -91,7 +83,7 @@ public class SlaOption implements Serializable {
   public static final String ACTION_ALERT = "SlaAlert";
   public static final String ACTION_KILL_JOB = "SlaKillJob";
   private static final DateTimeFormatter DATE_TIME_FORMAT = DateTimeFormat
-          .forPattern("YYYY-MM-dd HH:mm:ss");
+      .forPattern("YYYY-MM-dd HH:mm:ss");
 //      .forPattern("MM/dd, YYYY HH:mm");
 
 
@@ -122,16 +114,16 @@ public class SlaOption implements Serializable {
 
   public static List<SlaOption> getJobLevelSLAOptions(final ExecutableFlow flow) {
     return flow.getSlaOptions().stream()
-            .filter(slaOption -> JOB_LEVEL_SLAS.contains(slaOption.getType()))
-            .collect(Collectors.toList());
+        .filter(slaOption -> JOB_LEVEL_SLAS.contains(slaOption.getType()))
+        .collect(Collectors.toList());
   }
 
   public static List<SlaOption> getFlowLevelSLAOptions(final ExecutableFlow flow) {
     final Set<String> flowLevelSLAs = new HashSet<>(
-            Arrays.asList(SlaOption.TYPE_FLOW_FINISH, SlaOption.TYPE_FLOW_SUCCEED));
+        Arrays.asList(SlaOption.TYPE_FLOW_FINISH, SlaOption.TYPE_FLOW_SUCCEED));
     return flow.getSlaOptions().stream()
-            .filter(slaOption -> flowLevelSLAs.contains(slaOption.getType()))
-            .collect(Collectors.toList());
+        .filter(slaOption -> flowLevelSLAs.contains(slaOption.getType()))
+        .collect(Collectors.toList());
   }
 
   public static SlaOption fromObject(final Object object) {
@@ -157,70 +149,70 @@ public class SlaOption implements Serializable {
     final int execId = flow.getExecutionId();
     if (type.equals(SlaOption.TYPE_FLOW_FINISH)) {
       final String flowName =
-              (String) slaOption.getInfo().get(SlaOption.INFO_FLOW_NAME);
+          (String) slaOption.getInfo().get(SlaOption.INFO_FLOW_NAME);
       final String duration =
-              (String) slaOption.getInfo().get(SlaOption.INFO_DURATION);
+          (String) slaOption.getInfo().get(SlaOption.INFO_DURATION);
       final String basicinfo =
-              "SLA 告警: Your flow " + flowName + " failed to FINISH within "
-                      + duration + "#br";
+          "SLA 告警: Your flow " + flowName + " failed to FINISH within "
+              + duration + "#br";
       final String expected =
-              "详细信息 : #br"
-                      + "Flow " + flowName + "#br"
-                      + "执行ID: " + execId + "#br"
-                      + "预计超时时间: " + duration + "#br"
-                      + "开始时间: " + DATE_TIME_FORMAT.print(new DateTime(flow.getStartTime())) + "#br"
-                      + "结束时间: " + DATE_TIME_FORMAT.print(new DateTime(flow.getEndTime())) + "#br";
+          "详细信息 : #br"
+              + "Flow " + flowName + "#br"
+              + "执行ID: " + execId + "#br"
+              + "预计超时时间: " + duration + "#br"
+              + "开始时间: " + DATE_TIME_FORMAT.print(new DateTime(flow.getStartTime())) + "#br"
+              + "结束时间: " + DATE_TIME_FORMAT.print(new DateTime(flow.getEndTime())) + "#br";
       final String actual = "Flow 现在的状态是 " + flow.getStatus();
       return basicinfo + expected + actual;
     } else if (type.equals(SlaOption.TYPE_FLOW_SUCCEED)) {
       final String flowName =
-              (String) slaOption.getInfo().get(SlaOption.INFO_FLOW_NAME);
+          (String) slaOption.getInfo().get(SlaOption.INFO_FLOW_NAME);
       final String duration =
-              (String) slaOption.getInfo().get(SlaOption.INFO_DURATION);
+          (String) slaOption.getInfo().get(SlaOption.INFO_DURATION);
       final String basicinfo =
-              "SLA 告警: Your flow " + flowName + " failed to SUCCEED within "
-                      + duration + "#br";
+          "SLA 告警: Your flow " + flowName + " failed to SUCCEED within "
+              + duration + "#br";
       final String expected =
-              "详细信息 : #br"
-                      + "Flow " + flowName + "#br"
-                      + "执行ID: " + execId + "#br"
-                      + "预计超时时间: " + duration + "#br"
-                      + "开始时间: " + DATE_TIME_FORMAT.print(new DateTime(flow.getStartTime())) + "#br"
-                      + "结束时间: " + DATE_TIME_FORMAT.print(new DateTime(flow.getEndTime())) + "#br";
+          "详细信息 : #br"
+              + "Flow " + flowName + "#br"
+              + "执行ID: " + execId + "#br"
+              + "预计超时时间: " + duration + "#br"
+              + "开始时间: " + DATE_TIME_FORMAT.print(new DateTime(flow.getStartTime())) + "#br"
+              + "结束时间: " + DATE_TIME_FORMAT.print(new DateTime(flow.getEndTime())) + "#br";
       final String actual = "Flow 现在的状态是 " + flow.getStatus();
       return basicinfo + expected + actual;
     } else if (type.equals(SlaOption.TYPE_JOB_FINISH)) {
       final String jobName =
-              (String) slaOption.getInfo().get(SlaOption.INFO_JOB_NAME);
+          (String) slaOption.getInfo().get(SlaOption.INFO_JOB_NAME);
       final String duration =
-              (String) slaOption.getInfo().get(SlaOption.INFO_DURATION);
+          (String) slaOption.getInfo().get(SlaOption.INFO_DURATION);
       ExecutableNode job = flow.getExecutableNode(jobName);
       final String basicinfo =
-              "SLA 告警: Your job " + jobName + " failed to FINISH within "
-                      + duration + "#br";
+          "SLA 告警: Your job " + jobName + " failed to FINISH within "
+              + duration + "#br";
       final String expected =
-              "详细信息 : #br"
-                      + "Job " + jobName + "#br"
-                      + "预计超时时间: " + duration + "#br"
-                      + "开始时间: " + DATE_TIME_FORMAT.print(new DateTime(job.getStartTime())) + "#br"
-                      + "结束时间: " + DATE_TIME_FORMAT.print(new DateTime(job.getEndTime())) + "#br";
+          "详细信息 : #br"
+              + "Job " + jobName + "#br"
+              + "预计超时时间: " + duration + "#br"
+              + "开始时间: " + DATE_TIME_FORMAT.print(new DateTime(job.getStartTime())) + "#br"
+              + "结束时间: " + DATE_TIME_FORMAT.print(new DateTime(job.getEndTime())) + "#br";
       final String actual = "Job 现在的状态是 " + job.getStatus();
       return basicinfo + expected + actual;
     } else if (type.equals(SlaOption.TYPE_JOB_SUCCEED)) {
       final String jobName =
-              (String) slaOption.getInfo().get(SlaOption.INFO_JOB_NAME);
+          (String) slaOption.getInfo().get(SlaOption.INFO_JOB_NAME);
       final String duration =
-              (String) slaOption.getInfo().get(SlaOption.INFO_DURATION);
+          (String) slaOption.getInfo().get(SlaOption.INFO_DURATION);
       ExecutableNode job = flow.getExecutableNode(jobName);
       final String basicinfo =
-              "SLA 告警: Your job " + jobName + " failed to SUCCEED within "
-                      + duration + "#br";
+          "SLA 告警: Your job " + jobName + " failed to SUCCEED within "
+              + duration + "#br";
       final String expected =
-              "详细信息 : #br"
-                      + "Job " + jobName + "#br"
-                      + "预计超时时间: " + duration + "#br"
-                      + "开始时间: " + DATE_TIME_FORMAT.print(new DateTime(job.getStartTime())) + "#br"
-                      + "结束时间: " + DATE_TIME_FORMAT.print(new DateTime(job.getEndTime())) + "#br";
+          "详细信息 : #br"
+              + "Job " + jobName + "#br"
+              + "预计超时时间: " + duration + "#br"
+              + "开始时间: " + DATE_TIME_FORMAT.print(new DateTime(job.getStartTime())) + "#br"
+              + "结束时间: " + DATE_TIME_FORMAT.print(new DateTime(job.getEndTime())) + "#br";
       final String actual = "Job 现在的状态是 " + job.getStatus();
       return basicinfo + expected + actual;
     } else {
@@ -406,28 +398,28 @@ public class SlaOption implements Serializable {
     runStatus = "Finish".equals(runStatus) ? "Finish":runStatus;
     if("Flow".equals(taskType)){
       final String flowName =
-              (String) slaOption.getInfo().get(SlaOption.INFO_FLOW_NAME);
+          (String) slaOption.getInfo().get(SlaOption.INFO_FLOW_NAME);
       final String basicInfo =
-              "SLA 告警: Your flow " + flowName + " " + runStatus + " ! #br";
+          "SLA 告警: Your flow " + flowName + " " + runStatus + " ! #br";
       final String expected =
-              "详细信息: #br"
-                      + "Flow " + flowName + " in execution " + execId + " is expected to FINISH from "
-                      + DATE_TIME_FORMAT.print(new DateTime(flow.getStartTime())) + "#br"
-                      + "Flow 开始时间: " + DATE_TIME_FORMAT.print(new DateTime(flow.getStartTime())) + " 结束时间: " + DATE_TIME_FORMAT.print(new DateTime(flow.getEndTime())) + ".#br"
-                      + "Flow 执行耗时：" + Utils.formatDuration(flow.getStartTime(), flow.getEndTime()) + ".#br";
+          "详细信息: #br"
+              + "Flow " + flowName + " in execution " + execId + " is expected to FINISH from "
+              + DATE_TIME_FORMAT.print(new DateTime(flow.getStartTime())) + "#br"
+              + "Flow 开始时间: " + DATE_TIME_FORMAT.print(new DateTime(flow.getStartTime())) + " 结束时间: " + DATE_TIME_FORMAT.print(new DateTime(flow.getEndTime())) + ".#br"
+              + "Flow 执行耗时：" + Utils.formatDuration(flow.getStartTime(), flow.getEndTime()) + ".#br";
       final String actual = "Flow 现在的状态是: " + runStatus + " !";
       slaText = basicInfo + expected + actual;
     } else {
       final String jobName =
-              (String) slaOption.getInfo().get(SlaOption.INFO_JOB_NAME);
+          (String) slaOption.getInfo().get(SlaOption.INFO_JOB_NAME);
       ExecutableNode job = flow.getExecutableNode(jobName);
       final String basicInfo =
-              "SLA 告警: Your job " + jobName + " " + runStatus + " in execution " + execId + ".#br";
+          "SLA 告警: Your job " + jobName + " " + runStatus + " in execution " + execId + ".#br";
       final String expected =
-              "详细信息: #br"
-                      + "Job 开始时间: " + DATE_TIME_FORMAT.print(new DateTime(job.getStartTime())) + " 结束时间: " + DATE_TIME_FORMAT.print(new DateTime(job.getEndTime())) + ".#br"
-                      + "Job 执行耗时：" + Utils.formatDuration(job.getStartTime(), job.getEndTime()) + ".#br"
-                      + "Job 属于 Flow: " + flow.getId() + ".#br";
+          "详细信息: #br"
+              + "Job 开始时间: " + DATE_TIME_FORMAT.print(new DateTime(job.getStartTime())) + " 结束时间: " + DATE_TIME_FORMAT.print(new DateTime(job.getEndTime())) + ".#br"
+              + "Job 执行耗时：" + Utils.formatDuration(job.getStartTime(), job.getEndTime()) + ".#br"
+              + "Job 属于 Flow: " + flow.getId() + ".#br";
       final String actual = "Job 现在的状态是: " + runStatus + " !";
       slaText = basicInfo + expected + actual;
     }

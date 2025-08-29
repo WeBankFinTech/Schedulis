@@ -6,20 +6,6 @@ import azkaban.utils.Props;
 import azkaban.utils.RSAUtils;
 import azkaban.webank.entity.ExternalUser;
 import azkaban.webank.entity.WebankDepartment;
-
-import java.sql.Connection;
-import java.sql.DriverManager;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
-import java.sql.SQLException;
-import java.sql.Statement;
-import java.time.Instant;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.List;
-import java.util.ListIterator;
-import java.util.Map;
 import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.commons.collections4.MapUtils;
 import org.apache.commons.lang3.RandomStringUtils;
@@ -29,6 +15,10 @@ import org.json.JSONException;
 import org.json.JSONObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.sql.*;
+import java.time.Instant;
+import java.util.*;
 
 /**
  * Created by johnnwang on 7/5/18.
@@ -332,7 +322,7 @@ public class WebankUsersSync {
 
     try {
 
-      String wherehowsHost = this.prop.getString("wtss.db.jdbc.url");//"jdbc:mysql://***REMOVED***:8504/bdp_wemeta_01?charset=utf8&zeroDateTimeBehavior=convertToNull";
+      String wherehowsHost = this.prop.getString("wtss.db.jdbc.url");//"jdbc:mysql://:/?charset=utf8&zeroDateTimeBehavior=convertToNull";
       String wherehowsUserName = this.prop.getString("wtss.db.username");//"bdpwemeta";
 
       String wherehowsPassWord = null;

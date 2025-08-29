@@ -16,11 +16,6 @@
 
 package azkaban.security;
 
-import static azkaban.Constants.ConfigurationKeys.AZKABAN_SERVER_NATIVE_LIB_FOLDER;
-import static azkaban.Constants.JobProperties.EXTRA_HCAT_CLUSTERS;
-import static azkaban.Constants.JobProperties.EXTRA_HCAT_LOCATION;
-import static org.apache.hadoop.hive.metastore.api.hive_metastoreConstants.META_TABLE_STORAGE;
-
 import azkaban.Constants;
 import azkaban.Constants.JobProperties;
 import azkaban.security.commons.AbstractHadoopSecurityManager;
@@ -28,31 +23,12 @@ import azkaban.security.commons.HadoopSecurityManagerException;
 import azkaban.utils.ExecuteAsUser;
 import azkaban.utils.Props;
 import azkaban.utils.UndefinedPropertyException;
-import java.io.DataOutputStream;
-import java.io.File;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.lang.reflect.Constructor;
-import java.net.URL;
-import java.net.URLClassLoader;
-import java.security.PrivilegedAction;
-import java.security.PrivilegedExceptionAction;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.List;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentMap;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hive.conf.HiveConf;
-import org.apache.hadoop.hive.metastore.HiveMetaHook;
-import org.apache.hadoop.hive.metastore.HiveMetaHookLoader;
-import org.apache.hadoop.hive.metastore.HiveMetaStoreClient;
-import org.apache.hadoop.hive.metastore.IMetaStoreClient;
-import org.apache.hadoop.hive.metastore.RetryingMetaStoreClient;
+import org.apache.hadoop.hive.metastore.*;
 import org.apache.hadoop.hive.metastore.api.MetaException;
 import org.apache.hadoop.hive.metastore.api.Table;
 import org.apache.hadoop.hive.ql.metadata.HiveException;
@@ -81,6 +57,27 @@ import org.apache.hadoop.yarn.util.ConverterUtils;
 import org.apache.thrift.TException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.io.DataOutputStream;
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.lang.reflect.Constructor;
+import java.net.URL;
+import java.net.URLClassLoader;
+import java.security.PrivilegedAction;
+import java.security.PrivilegedExceptionAction;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
+
+import static azkaban.Constants.ConfigurationKeys.AZKABAN_SERVER_NATIVE_LIB_FOLDER;
+import static azkaban.Constants.JobProperties.EXTRA_HCAT_CLUSTERS;
+import static azkaban.Constants.JobProperties.EXTRA_HCAT_LOCATION;
+import static org.apache.hadoop.hive.metastore.api.hive_metastoreConstants.META_TABLE_STORAGE;
 
 public class HadoopSecurityManager_H_2_0 extends AbstractHadoopSecurityManager {
 
@@ -126,7 +123,7 @@ public class HadoopSecurityManager_H_2_0 extends AbstractHadoopSecurityManager {
   private static final String AZKABAN_PRINCIPAL = "proxy.user";
   private static final String OBTAIN_JOBHISTORYSERVER_TOKEN =
           "obtain.jobhistoryserver.token";
-  private final static org.slf4j.Logger logger = LoggerFactory.getLogger(HadoopSecurityManager_H_2_0.class);
+  private final static Logger logger = LoggerFactory.getLogger(HadoopSecurityManager_H_2_0.class);
   private static volatile AbstractHadoopSecurityManager hsmInstance = null;
   private static URLClassLoader ucl;
 

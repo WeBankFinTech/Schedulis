@@ -28,84 +28,81 @@ import azkaban.system.entity.WtssUser;
 import azkaban.utils.FileIOUtils.LogData;
 import azkaban.utils.Pair;
 import azkaban.utils.Props;
+
 import java.io.File;
 import java.sql.SQLException;
 import java.time.Duration;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-import java.util.Set;
+import java.util.*;
 
 public interface ExecutorLoader {
 
   void uploadExecutableFlow(ExecutableFlow flow)
-          throws ExecutorManagerException;
+      throws ExecutorManagerException;
 
   ExecutableFlow fetchExecutableFlow(int execId)
-          throws ExecutorManagerException;
+      throws ExecutorManagerException;
 
   List<ExecutableFlow> fetchExecutableFlowByRepeatId(int repeatId)
-          throws ExecutorManagerException;
+      throws ExecutorManagerException;
 
   List<ExecutableFlow> fetchRecentlyFinishedFlows(Duration maxAge)
-          throws ExecutorManagerException;
+      throws ExecutorManagerException;
 
   Map<Integer, Pair<ExecutionReference, ExecutableFlow>> fetchActiveFlows()
-          throws ExecutorManagerException;
+      throws ExecutorManagerException;
 
   Map<Integer, Pair<ExecutionReference, ExecutableFlow>> fetchUnfinishedFlows()
-          throws ExecutorManagerException;
+      throws ExecutorManagerException;
 
   List<ExecutableFlow> fetchAllUnfinishedFlows() throws ExecutorManagerException;
 
   Map<Integer, Pair<ExecutionReference, ExecutableFlow>> fetchUnfinishedFlowsMetadata()
-          throws ExecutorManagerException;
+      throws ExecutorManagerException;
 
   Pair<ExecutionReference, ExecutableFlow> fetchActiveFlowByExecId(int execId)
-          throws ExecutorManagerException;
+      throws ExecutorManagerException;
 
   List<ExecutableFlow> fetchFlowHistory(int skip, int num)
-          throws ExecutorManagerException;
+      throws ExecutorManagerException;
 
   List<ExecutableFlow> fetchMaintainedFlowHistory(String userType, String username, List<Integer> projectIds, int skip, int size)
           throws ExecutorManagerException;
 
   List<ExecutableFlow> fetchFlowHistory(int projectId, String flowId,
-                                        int skip, int num) throws ExecutorManagerException;
+      int skip, int num) throws ExecutorManagerException;
 
   List<ExecutableFlow> fetchFlowHistory(int projectId, String flowId)
-          throws ExecutorManagerException;
+      throws ExecutorManagerException;
 
   List<ExecutableFlow> fetchFlowHistory(int projectId, String flowId,
-                                        int skip, int num, Status status) throws ExecutorManagerException;
+      int skip, int num, Status status) throws ExecutorManagerException;
 
   List<ExecutableFlow> fetchFlowHistory(String projContain, String flowContains,
-                                        String execIdContain, String userNameContains, String status, long startData,
-                                        long endData, String runDate, int skip, int num, int flowType)
-          throws ExecutorManagerException;
+      String execIdContain, String userNameContains, String status, long startData,
+      long endData, String runDate, int skip, int num, int flowType)
+      throws ExecutorManagerException;
 
   List<ExecutableFlow> fetchFlowHistory(HistoryQueryParam param, int skip, int num)
           throws ExecutorManagerException;
 
   List<ExecutableFlow> fetchMaintainedFlowHistory(String projContain, String flowContains,
-                                                  String execIdContain, String userNameContains, String status, long startData,
-                                                  long endData, String runDate, int skip, int num, int flowType, String username,
-                                                  List<Integer> projectIds) throws ExecutorManagerException;
+      String execIdContain, String userNameContains, String status, long startData,
+      long endData, String runDate, int skip, int num, int flowType, String username,
+      List<Integer> projectIds) throws ExecutorManagerException;
 
   List<ExecutableFlow> fetchMaintainedFlowHistory(HistoryQueryParam param, int skip, int size, List<Integer> projectIds) throws ExecutorManagerException;
 
 
   List<ExecutableFlow> fetchFlowHistoryQuickSearch(String searchContains, String userNameContains,
-                                                   int skip, int num)
-          throws ExecutorManagerException;
+      int skip, int num)
+      throws ExecutorManagerException;
 
   List<ExecutableFlow> fetchFlowHistoryQuickSearch(String searchContains, String username, int skip,
-                                                   int num,
-                                                   List<Integer> projectIds) throws ExecutorManagerException;
+      int num,
+      List<Integer> projectIds) throws ExecutorManagerException;
 
   List<ExecutableFlow> fetchFlowAllHistory(int projectId, String flowId, String user)
-          throws ExecutorManagerException;
+      throws ExecutorManagerException;
 
   List<ExecutableFlow> fetchAllExecutableFlow() throws SQLException;
 
@@ -147,7 +144,7 @@ public interface ExecutorLoader {
    * @return Executor
    */
   Executor fetchExecutor(String host, int port)
-          throws ExecutorManagerException;
+      throws ExecutorManagerException;
 
   /**
    * <pre>
@@ -173,7 +170,7 @@ public interface ExecutorLoader {
    * @return Executor
    */
   Executor addExecutor(String host, int port)
-          throws ExecutorManagerException;
+      throws ExecutorManagerException;
 
   /**
    * <pre>
@@ -206,7 +203,7 @@ public interface ExecutorLoader {
    * @return isSuccess
    */
   void postExecutorEvent(Executor executor, EventType type, String user,
-                         String message) throws ExecutorManagerException;
+      String message) throws ExecutorManagerException;
 
   /**
    * <pre>
@@ -220,13 +217,13 @@ public interface ExecutorLoader {
    * @return List<ExecutorLogEvent>
    */
   List<ExecutorLogEvent> getExecutorEvents(Executor executor, int num,
-                                           int offset) throws ExecutorManagerException;
+      int offset) throws ExecutorManagerException;
 
   void addActiveExecutableReference(ExecutionReference ref)
-          throws ExecutorManagerException;
+      throws ExecutorManagerException;
 
   void removeActiveExecutableReference(int execId)
-          throws ExecutorManagerException;
+      throws ExecutorManagerException;
 
 
   /**
@@ -247,7 +244,7 @@ public interface ExecutorLoader {
    * </pre>
    */
   void assignExecutor(int executorId, int execId)
-          throws ExecutorManagerException;
+      throws ExecutorManagerException;
 
   /**
    * <pre>
@@ -260,7 +257,7 @@ public interface ExecutorLoader {
    * @return fetched Executor
    */
   Executor fetchExecutorByExecutionId(int executionId)
-          throws ExecutorManagerException;
+      throws ExecutorManagerException;
 
   /**
    * <pre>
@@ -273,13 +270,13 @@ public interface ExecutorLoader {
    * @return List of queued flows and corresponding execution reference
    */
   List<Pair<ExecutionReference, ExecutableFlow>> fetchQueuedFlows()
-          throws ExecutorManagerException;
+      throws ExecutorManagerException;
 
   boolean updateExecutableReference(int execId, long updateTime)
-          throws ExecutorManagerException;
+      throws ExecutorManagerException;
 
   LogData fetchLogs(int execId, String name, int attempt, int startByte,
-                    int endByte) throws ExecutorManagerException;
+      int endByte) throws ExecutorManagerException;
 
   Long getJobLogOffset(int execId, String jobName, int attempt, Long length) throws ExecutorManagerException;
 
@@ -296,100 +293,100 @@ public interface ExecutorLoader {
   int getLogEncType(int execId, String name, int attempt) throws ExecutorManagerException;
 
   List<Object> fetchAttachments(int execId, String name, int attempt)
-          throws ExecutorManagerException;
+      throws ExecutorManagerException;
 
   void uploadLogFile(int execId, String name, int attempt, File... files)
-          throws ExecutorManagerException;
+      throws ExecutorManagerException;
 
   void uploadLogPath(int execId, String name, int attempt, String hdfsPath)
-          throws ExecutorManagerException;
+      throws ExecutorManagerException;
 
   void uploadAttachmentFile(ExecutableNode node, File file)
-          throws ExecutorManagerException;
+      throws ExecutorManagerException;
 
   void updateExecutableFlow(ExecutableFlow flow)
-          throws ExecutorManagerException;
+      throws ExecutorManagerException;
 
   int updateExecutableFlowRunDate(ExecutableFlow flow) throws SQLException;
 
   void uploadExecutableNode(ExecutableNode node, Props inputParams)
-          throws ExecutorManagerException;
+      throws ExecutorManagerException;
 
   List<ExecutableJobInfo> fetchJobInfoAttempts(int execId, String jobId)
-          throws ExecutorManagerException;
+      throws ExecutorManagerException;
 
   ExecutableJobInfo fetchJobInfo(int execId, String jobId, int attempt)
-          throws ExecutorManagerException;
+      throws ExecutorManagerException;
 
   List<ExecutableJobInfo> fetchJobHistory(int projectId, String jobId,
-                                          int skip, int size) throws ExecutorManagerException;
+      int skip, int size,String nestedId) throws ExecutorManagerException;
 
   List<ExecutableJobInfo> fetchDiagnosisJob(long endTime) throws ExecutorManagerException;
 
   List<ExecutableJobInfo> fetchQuickSearchJobExecutions(int projectId, String jobId,
-                                                        String searchTerm, int skip, int size) throws ExecutorManagerException;
+      String searchTerm, int skip, int size) throws ExecutorManagerException;
 
   List<ExecutableJobInfo> searchJobExecutions(HistoryQueryParam historyQueryParam, int skip, int size)
-          throws ExecutorManagerException;
+      throws ExecutorManagerException;
 
   List<ExecutableJobInfo> fetchJobAllHistory(int projectId, String jobId)
-          throws ExecutorManagerException;
+      throws ExecutorManagerException;
 
   List<ExecutableJobInfo> fetchExecutableJobInfo(final long startTime)
           throws ExecutorManagerException;
 
   void updateExecutableNode(ExecutableNode node)
-          throws ExecutorManagerException;
+      throws ExecutorManagerException;
 
   void updateExecutableNodeStatus(ExecutableNode node)
           throws ExecutorManagerException;
 
   int fetchNumExecutableFlows(int projectId, String flowId)
-          throws ExecutorManagerException;
+      throws ExecutorManagerException;
 
   int fetchNumExecutableFlows() throws ExecutorManagerException;
 
-  int fetchNumExecutableNodes(int projectId, String jobId)
-          throws ExecutorManagerException;
+  int fetchNumExecutableNodes(int projectId, String jobId,String nestedId)
+      throws ExecutorManagerException;
 
   int quickSearchNumberOfJobExecutions(int projectId, String jobId, String searchTerm)
-          throws ExecutorManagerException;
+      throws ExecutorManagerException;
 
   int searchNumberOfJobExecutions(HistoryQueryParam historyQueryParam)
           throws ExecutorManagerException;
 
   Props fetchExecutionJobInputProps(int execId, String jobId)
-          throws ExecutorManagerException;
+      throws ExecutorManagerException;
 
   Props fetchExecutionJobOutputProps(int execId, String jobId)
-          throws ExecutorManagerException;
+      throws ExecutorManagerException;
 
   Pair<Props, Props> fetchExecutionJobProps(int execId, String jobId)
-          throws ExecutorManagerException;
+      throws ExecutorManagerException;
 
   int removeExecutionLogsByTime(long millis)
-          throws ExecutorManagerException;
+      throws ExecutorManagerException;
 
+  
 
-
-
+  
   void unsetExecutorIdForExecution(final int executionId) throws ExecutorManagerException;
-
+ 
   int selectAndUpdateExecution(final int executorId, boolean isActive)
-          throws ExecutorManagerException;
-
+      throws ExecutorManagerException;
+ 
   ExecutableFlow getProjectLastExecutableFlow(int projectId, String flowId) throws ExecutorManagerException;
 
   LogData fetchAllLogs(int execId, String name, int attempt) throws ExecutorManagerException;
-
+  
   List<ExecutableFlow> fetchUserFlowHistory(int skip, int num, String user)
-          throws ExecutorManagerException;
+      throws ExecutorManagerException;
 
   List<ExecutableFlow> fetchUserFlowHistoryByAdvanceFilter(String projContain,
-                                                           String flowContains, String execIdContain, String userNameContains, String status,
-                                                           long startData,
-                                                           long endData, String runDate, int skip, int num, int flowType)
-          throws ExecutorManagerException;
+      String flowContains, String execIdContain, String userNameContains, String status,
+      long startData,
+      long endData, String runDate, int skip, int num, int flowType)
+      throws ExecutorManagerException;
 
   List<ExecutableFlow> fetchUserFlowHistoryByAdvanceFilter(String projContain,
                                                            String flowContains, String execIdContain, String userNameContains, String status,
@@ -418,7 +415,7 @@ public interface ExecutorLoader {
   ExecutionRecover getHistoryRecoverFlow(final Integer recoverId) throws ExecutorManagerException;
 
   ExecutionRecover getHistoryRecoverFlowByPidAndFid(final String projectId, final String flowId)
-          throws ExecutorManagerException;
+      throws ExecutorManagerException;
 
   List<ExecutionRecover> listHistoryRecoverRunnning(final Integer loadSize) throws ExecutorManagerException;
 
@@ -453,7 +450,7 @@ public interface ExecutorLoader {
    * @throws ExecutorManagerException
    */
   Executor addExecutorFixed(int id, String host, int port)
-          throws ExecutorManagerException;
+      throws ExecutorManagerException;
 
   /**
    * 获取所有的日志过滤条件
@@ -498,11 +495,11 @@ public interface ExecutorLoader {
    * @throws ExecutorManagerException
    */
   List<ExecutableFlow> fetchUserFlowHistoryByProjectIdAndFlowId(int projectId, String flowId,
-                                                                int skip, int num, String userName) throws ExecutorManagerException;
+      int skip, int num, String userName) throws ExecutorManagerException;
 
 
   int fetchNumUserExecutableFlowsByProjectIdAndFlowId(int projectId, String flowId, String userName)
-          throws ExecutorManagerException;
+      throws ExecutorManagerException;
 
   /**
    * 获取用户历史重跑的总数
@@ -534,13 +531,13 @@ public interface ExecutorLoader {
    * @throws ExecutorManagerException
    */
   List<ExecutableFlow> fetchUserFlowHistory(String loginUser, String projContain,
-                                            String flowContains, String execIdContain, String userNameContains, String status,
-                                            long startData,
-                                            long endData, String runDate, int skip, int num, int flowType)
-          throws ExecutorManagerException;
+      String flowContains, String execIdContain, String userNameContains, String status,
+      long startData,
+      long endData, String runDate, int skip, int num, int flowType)
+      throws ExecutorManagerException;
 
   List<ExecutableFlow> fetchUserFlowHistory(String loginUser, HistoryQueryParam param, int skip,
-                                            int size) throws ExecutorManagerException;
+      int size) throws ExecutorManagerException;
 
   /**
    *
@@ -549,7 +546,7 @@ public interface ExecutorLoader {
    * @throws ExecutorManagerException
    */
   List<ExecutableFlow> getTodayExecutableFlowData(final String userName)
-          throws ExecutorManagerException;
+      throws ExecutorManagerException;
 
   /**
    *
@@ -569,7 +566,7 @@ public interface ExecutorLoader {
 
 
   List<ExecutableFlow> getRealTimeExecFlowData(final String userName)
-          throws ExecutorManagerException;
+      throws ExecutorManagerException;
 
   /**
    *
@@ -663,7 +660,7 @@ public interface ExecutorLoader {
   String getEventType(String topic, String msgName);
 
   void addHoldBatchOpr(String id, int oprType, int oprLevel, String user, long createTime, String oprData)
-          throws ExecutorManagerException;
+      throws ExecutorManagerException;
 
   void addHoldBatchAlert(String batchId, ExecutableFlow executableFlow, int resumeStatus) throws ExecutorManagerException;
 
@@ -674,46 +671,46 @@ public interface ExecutorLoader {
   void updateHoldBatchAlertStatus(HoldBatchAlert holdBatchAlert) throws ExecutorManagerException;
 
   List<Pair<ExecutionReference, ExecutableFlow>> fetchFlowByStatus(Status status)
-          throws ExecutorManagerException;
+      throws ExecutorManagerException;
 
   void linkJobHook(String jobCode, String prefixRules, String suffixRules, String username)
-          throws SQLException;
+      throws SQLException;
 
   JobHook getJobHook(String jobCode);
 
   HoldBatchAlert queryBatchExecutableFlows(long id)
-          throws ExecutorManagerException;
+      throws ExecutorManagerException;
 
   HoldBatchAlert querySubmittedExecutableFlows(long id)
-          throws ExecutorManagerException;
+      throws ExecutorManagerException;
 
   void updateHoldBatchResumeStatus(String projectName, String flowName)
-          throws ExecutorManagerException;
+      throws ExecutorManagerException;
 
   void addHoldBatchResume(String batchId, String oprData, String user)
-          throws ExecutorManagerException;
+      throws ExecutorManagerException;
 
   void updateHoldBatchStatus(String batchId, int status)
-          throws ExecutorManagerException;
+      throws ExecutorManagerException;
 
   String getLocalHoldBatchResume(String batchId) throws ExecutorManagerException;
 
   void addHoldBatchFrequent(String batchId, ExecutableFlow executableFlow) throws ExecutorManagerException;
 
   List<HoldBatchAlert> queryExecByBatch(String batchId)
-          throws ExecutorManagerException;
+      throws ExecutorManagerException;
 
   List<HoldBatchAlert> queryFrequentByBatch(String batchId)
-          throws ExecutorManagerException;
+      throws ExecutorManagerException;
 
   void updateHoldBatchFrequentStatus(HoldBatchAlert holdBatchAlert)
-          throws ExecutorManagerException;
+      throws ExecutorManagerException;
 
   List<HoldBatchAlert> queryExecingByBatch(String batchId)
-          throws ExecutorManagerException;
+      throws ExecutorManagerException;
 
   void updateHoldBatchResumeStatus(HoldBatchAlert holdBatchAlert)
-          throws ExecutorManagerException;
+      throws ExecutorManagerException;
 
   void updateHoldBatchExpired(String batchId) throws ExecutorManagerException;
 

@@ -48,9 +48,9 @@ import java.util.regex.Pattern;
  * </pre>
  * 
  * 
- * @see azkaban.jobtype.HadoopSparkJob
- * @see azkaban.jobtype.HadoopHiveJob
- * @see azkaban.jobtype.HadoopJavaJob
+ * @see HadoopSparkJob
+ * @see HadoopHiveJob
+ * @see HadoopJavaJob
  */
 
 public class HadoopJobUtils {

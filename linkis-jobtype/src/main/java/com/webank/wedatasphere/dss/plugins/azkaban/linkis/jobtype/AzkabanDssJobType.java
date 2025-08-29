@@ -31,57 +31,46 @@ import com.webank.wedatasphere.dss.plugins.azkaban.linkis.jobtype.conf.LinkisJob
 import com.webank.wedatasphere.dss.plugins.azkaban.linkis.jobtype.job.AzkanbanBuilder;
 import com.webank.wedatasphere.dss.plugins.azkaban.linkis.jobtype.job.JobBuilder;
 import com.webank.wedatasphere.dss.plugins.azkaban.linkis.jobtype.log.AzkabanJobLog;
+import org.apache.commons.lang.StringUtils;
+import org.apache.linkis.manager.label.conf.LabelCommonConfig;
+import org.apache.linkis.protocol.utils.TaskUtils;
+import org.slf4j.Logger;
+
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
-import org.apache.commons.lang.StringUtils;
-import org.apache.linkis.protocol.utils.TaskUtils;
-import org.slf4j.Logger;
 
 
 public class AzkabanDssJobType extends AbstractJob {
-
-
 
     private static final String SENSITIVE_JOB_PROP_NAME_SUFFIX = "_X";
     private static final String SENSITIVE_JOB_PROP_VALUE_PLACEHOLDER = "[MASKED]";
     private static final String JOB_DUMP_PROPERTIES_IN_LOG = "job.dump.properties";
 
-
-
     private final Logger log;
 
     protected volatile Props jobProps;
-
     protected volatile Props sysProps;
-
     protected volatile Map<String, String> jobPropsMap;
 
     private final String type;
-
     private Job job;
 
     private boolean isCanceled = false;
 
-
-
-
     public AzkabanDssJobType(String jobId, Props sysProps, Props jobProps, Logger log) {
-
 
         super(jobId, log);
 
         this.jobProps = jobProps;
-
         this.sysProps = sysProps;
-
         this.jobPropsMap = this.jobProps.getMapByPrefix("");
 
         this.log = log;
         this.type = jobProps.getString(JOB_TYPE, LinkisJobExecutionConfiguration.JOB_DEFAULT_TYPE.getValue(this.jobPropsMap));
-        if(!LinkisJobExecutionConfiguration.JOB_DEFAULT_TYPE.getValue(this.jobPropsMap).equalsIgnoreCase(this.type) ){
+        if (!LinkisJobExecutionConfiguration.JOB_DEFAULT_TYPE.getValue(this.jobPropsMap).equalsIgnoreCase(this.type)) {
             throw new RuntimeException("This job(" + this.type + " )is not linkis type");
         }
     }
@@ -113,7 +102,7 @@ public class AzkabanDssJobType extends AbstractJob {
         }
         this.job = JobBuilder.getAzkanbanBuilder().setJobProps(this.jobPropsMap).build();
         this.job.setLogObj(new AzkabanJobLog(this));
-        if(JobTypeEnum.EmptyJob == ((LinkisJob)this.job).getJobType()){
+        if (JobTypeEnum.EmptyJob == ((LinkisJob) this.job).getJobType()) {
             warn("This node is empty type");
             return;
         }
@@ -126,6 +115,8 @@ public class AzkabanDssJobType extends AbstractJob {
 
         LinkisNodeExecution execution = getLinkisNodeExecution();
         execution.runJob(this.job);
+        info("job labels are"+ TaskUtils.getLabelsMap(this.job.getParams()));
+        info("spark version properties:"+ LabelCommonConfig.SPARK_ENGINE_VERSION.getValue());
 
         try {
             execution.waitForComplete(this.job);
@@ -138,14 +129,14 @@ public class AzkabanDssJobType extends AbstractJob {
             if (endLog != null) {
                 info(endLog);
             }
-        } catch (Throwable e){
+        } catch (Throwable e) {
             info("Failed to get log", e);
         }
 
         LinkisExecutionListener listener = (LinkisExecutionListener) execution;
         listener.onStatusChanged(null, execution.getState(this.job), this.job);
-        int resultSize =  0;
-        try{
+        int resultSize = 0;
+        try {
             resultSize = execution.getResultSize(this.job);
             for (int i = 0; i < resultSize; i++) {
                 String result = execution.getResult(this.job, i, LinkisJobExecutionConfiguration.RESULT_PRINT_SIZE.getValue(this.jobPropsMap));
@@ -154,7 +145,7 @@ public class AzkabanDssJobType extends AbstractJob {
                 }
                 info("The content of the " + (i + 1) + "th resultset is :" + result);
             }
-        }catch(final Throwable t){
+        } catch (final Throwable t) {
             error("failed to get result，maybe resource is empty");
         }
 
@@ -203,7 +194,7 @@ public class AzkabanDssJobType extends AbstractJob {
         }
     }
 
-    private String getRunDate(){
+    private String getRunDate() {
         this.info("begin to get run date");
         if (this.jobProps != null &&
                 this.jobProps.getBoolean(JOB_DUMP_PROPERTIES_IN_LOG, true)) {
@@ -213,7 +204,7 @@ public class AzkabanDssJobType extends AbstractJob {
                     final String value = key.endsWith(SENSITIVE_JOB_PROP_NAME_SUFFIX) ?
                             SENSITIVE_JOB_PROP_VALUE_PLACEHOLDER :
                             entry.getValue();
-                    if ("azkaban.flow.start.timestamp".equals(key)){
+                    if ("azkaban.flow.start.timestamp".equals(key)) {
                         this.info("run time is " + value);
                         String runDateNow = value.substring(0, 10).replaceAll("-", "");
                         this.info("run date now is " + runDateNow);
@@ -252,7 +243,7 @@ public class AzkabanDssJobType extends AbstractJob {
                         this.info("run today h is " + runTodayh);
                         //for std
 //                        SimpleDateFormat simpleDateFormat = new SimpleDateFormat("yyyy-MM-dd HH");
-                        if(!stdFormat){
+                        if (!stdFormat) {
                             return runTodayh;
                         }
                     }

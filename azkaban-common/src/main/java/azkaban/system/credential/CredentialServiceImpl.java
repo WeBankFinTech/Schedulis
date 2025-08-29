@@ -1,13 +1,14 @@
 package azkaban.system.credential;
 
 import azkaban.system.dto.CredentialDto;
-import java.sql.SQLException;
-import java.util.List;
-import javax.inject.Inject;
-import javax.inject.Singleton;
 import org.apache.commons.collections.CollectionUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import javax.inject.Inject;
+import javax.inject.Singleton;
+import java.sql.SQLException;
+import java.util.List;
 
 /**
  * @author lebronwang
@@ -48,5 +49,15 @@ public class CredentialServiceImpl implements CredentialService {
     } else {
       return null;
     }
+  }
+
+  @Override
+  public void updateCredential(CredentialDto credentialDto) throws SQLException {
+    this.credentialDao.updateCredential(credentialDto);
+  }
+
+  @Override
+  public void addCredential(CredentialDto addCredentialDto)throws SQLException {
+    this.credentialDao.addCredential(addCredentialDto);
   }
 }

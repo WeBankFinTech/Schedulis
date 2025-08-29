@@ -16,11 +16,7 @@
 
 package azkaban.webapp.servlet;
 
-import azkaban.executor.CfgWebankOrganization;
-import azkaban.executor.ExecutableFlow;
-import azkaban.executor.ExecutorManagerAdapter;
-import azkaban.executor.ExecutorManagerException;
-import azkaban.executor.HistoryQueryParam;
+import azkaban.executor.*;
 import azkaban.i18n.utils.LoadJsonUtils;
 import azkaban.jobExecutor.utils.SystemBuiltInParamReplacer;
 import azkaban.project.Project;
@@ -32,21 +28,6 @@ import azkaban.user.User;
 import azkaban.utils.Utils;
 import azkaban.utils.WebUtils;
 import azkaban.webapp.AzkabanWebServer;
-import java.io.IOException;
-import java.sql.SQLException;
-import java.util.ArrayList;
-import java.util.Date;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Locale;
-import java.util.Map;
-import java.util.Set;
-import java.util.stream.Collectors;
-import javax.servlet.ServletConfig;
-import javax.servlet.ServletException;
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang.StringEscapeUtils;
 import org.apache.commons.lang.StringUtils;
@@ -57,6 +38,15 @@ import org.joda.time.format.DateTimeFormat;
 import org.joda.time.format.DateTimeFormatter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import javax.servlet.ServletConfig;
+import javax.servlet.ServletException;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+import java.io.IOException;
+import java.sql.SQLException;
+import java.util.*;
+import java.util.stream.Collectors;
 
 public class HistoryServlet extends AbstractLoginAzkabanServlet {
 
@@ -81,7 +71,7 @@ public class HistoryServlet extends AbstractLoginAzkabanServlet {
 
   @Override
   protected void handleGet(final HttpServletRequest req, final HttpServletResponse resp,
-                           final Session session) throws ServletException, IOException {
+      final Session session) throws ServletException, IOException {
 
     if (hasParam(req, "ajax")) {
       handleAJAXAction(req, resp, session);
@@ -95,8 +85,8 @@ public class HistoryServlet extends AbstractLoginAzkabanServlet {
   }
 
   private void handleAJAXAction(final HttpServletRequest req,
-                                final HttpServletResponse resp, final Session session) throws ServletException,
-          IOException {
+      final HttpServletResponse resp, final Session session) throws ServletException,
+      IOException {
     final HashMap<String, Object> ret = new HashMap<>();
     final String ajaxName = getParam(req, "ajax");
 
@@ -118,11 +108,11 @@ public class HistoryServlet extends AbstractLoginAzkabanServlet {
 
   @Override
   protected void handlePost(final HttpServletRequest req, final HttpServletResponse resp,
-                            final Session session) throws ServletException, IOException {
+      final Session session) throws ServletException, IOException {
   }
 
   private void updateHistoryRunDate(HttpServletRequest req, HttpServletResponse resp,
-                                    Session session, HashMap<String, Object> ret) {
+      Session session, HashMap<String, Object> ret) {
 
     List<ExecutableFlow> flowList = null;
     try {
@@ -138,8 +128,8 @@ public class HistoryServlet extends AbstractLoginAzkabanServlet {
           result += this.executorManagerAdapter.updateExecutableFlow(flow);
         } catch (SQLException e) {
           ret.put("warning flow[execId: " + flow.getExecutionId() + "]",
-                  "Flow[execId: " + flow.getExecutionId() + "] update run date failed: "
-                          + e.getMessage());
+              "Flow[execId: " + flow.getExecutionId() + "] update run date failed: "
+                  + e.getMessage());
         }
       }
     }
@@ -148,31 +138,37 @@ public class HistoryServlet extends AbstractLoginAzkabanServlet {
   }
 
   private void fetchHistoryData(final HttpServletRequest req,
-                                final HttpServletResponse resp, final HashMap<String, Object> ret)
-          throws ServletException {
+      final HttpServletResponse resp, final HashMap<String, Object> ret)
+      throws ServletException {
   }
 
   private void handleHistoryPage(final HttpServletRequest req, final HttpServletResponse resp,
-                                 final Session session) throws ServletException {
+      final Session session) throws ServletException {
 
     final Page page = newPage(req, resp, session, "azkaban/webapp/servlet/velocity/historypage.vm");
     String languageType = LoadJsonUtils.getLanguageType();
     Map<String, String> historypageMap;
     Map<String, String> subPageMap1;
+    Map<String, String> subPageMap2;
     if ("zh_CN".equalsIgnoreCase(languageType)) {
       // 添加国际化标签
       historypageMap = LoadJsonUtils.transJson("/conf/azkaban-web-server-zh_CN.json",
-              "azkaban.webapp.servlet.velocity.historypage.vm");
+          "azkaban.webapp.servlet.velocity.historypage.vm");
       subPageMap1 = LoadJsonUtils.transJson("/conf/azkaban-web-server-zh_CN.json",
-              "azkaban.webapp.servlet.velocity.nav.vm");
+          "azkaban.webapp.servlet.velocity.nav.vm");
+      subPageMap2 = LoadJsonUtils.transJson("/conf/azkaban-web-server-zh_CN.json",
+          "azkaban.webapp.servlet.velocity.flow-schedule-ecution-panel.vm");
     } else {
       historypageMap = LoadJsonUtils.transJson("/conf/azkaban-web-server-en_US.json",
-              "azkaban.webapp.servlet.velocity.historypage.vm");
+          "azkaban.webapp.servlet.velocity.historypage.vm");
       subPageMap1 = LoadJsonUtils.transJson("/conf/azkaban-web-server-en_US.json",
-              "azkaban.webapp.servlet.velocity.nav.vm");
+          "azkaban.webapp.servlet.velocity.nav.vm");
+      subPageMap2 = LoadJsonUtils.transJson("/conf/azkaban-web-server-en_US.json",
+          "azkaban.webapp.servlet.velocity.flow-schedule-ecution-panel.vm");          
     }
     historypageMap.forEach(page::add);
     subPageMap1.forEach(page::add);
+    subPageMap2.forEach(page::add);
 
     int pageNum = getIntParam(req, "page", 1);
     final int pageSize = getIntParam(req, "size", getDisplayExecutionPageSize());
@@ -209,7 +205,7 @@ public class HistoryServlet extends AbstractLoginAzkabanServlet {
       page.add("previous", new PageSelection(1, pageSize, true, false));
     } else {
       page.add("previous", new PageSelection(pageNum - 1, pageSize, false,
-              false));
+          false));
     }
     page.add("next", new PageSelection(pageNum + 1, pageSize, false, false));
     // Now for the 5 other values.
@@ -219,30 +215,30 @@ public class HistoryServlet extends AbstractLoginAzkabanServlet {
     }
 
     page.add("page1", new PageSelection(pageStartValue, pageSize, false,
-            pageStartValue == pageNum));
+        pageStartValue == pageNum));
     pageStartValue++;
     page.add("page2", new PageSelection(pageStartValue, pageSize, false,
-            pageStartValue == pageNum));
+        pageStartValue == pageNum));
     pageStartValue++;
     page.add("page3", new PageSelection(pageStartValue, pageSize, false,
-            pageStartValue == pageNum));
+        pageStartValue == pageNum));
     pageStartValue++;
     page.add("page4", new PageSelection(pageStartValue, pageSize, false,
-            pageStartValue == pageNum));
+        pageStartValue == pageNum));
     pageStartValue++;
     page.add("page5", new PageSelection(pageStartValue, pageSize, false,
-            pageStartValue == pageNum));
+        pageStartValue == pageNum));
     pageStartValue++;
     page.add("currentlangType", languageType);
     page.render();
   }
 
   private void handleHistoryTimelinePage(final HttpServletRequest req,
-                                         final HttpServletResponse resp, final Session session) {
+      final HttpServletResponse resp, final Session session) {
   }
 
   private void handleHistoryDayPage(final HttpServletRequest req,
-                                    final HttpServletResponse resp, final Session session) {
+      final HttpServletResponse resp, final Session session) {
   }
 
   public static class PageSelection {
@@ -253,7 +249,7 @@ public class HistoryServlet extends AbstractLoginAzkabanServlet {
     private boolean selected;
 
     public PageSelection(final int page, final int size, final boolean disabled,
-                         final boolean selected) {
+        final boolean selected) {
       this.page = page;
       this.size = size;
       this.disabled = disabled;
@@ -282,14 +278,14 @@ public class HistoryServlet extends AbstractLoginAzkabanServlet {
   }
   //返回当前用户的角色列表
   private void ajaxGetUserRole(final HttpServletRequest req,
-                               final HttpServletResponse resp, final Session session, final HashMap<String, Object> ret) {
+      final HttpServletResponse resp, final Session session, final HashMap<String, Object> ret) {
     final String[] userRoles = session.getUser().getRoles().toArray(new String[0]);
     ret.put("userRoles", userRoles);
   }
 
   //返回部门
   private void ajaxGetDepartment(final HttpServletRequest req,
-                                 final HttpServletResponse resp, final HashMap<String, Object> ret) throws ServletException {
+                                     final HttpServletResponse resp, final HashMap<String, Object> ret) throws ServletException {
     List<CfgWebankOrganization> department = null;
     try {
       department = executorManagerAdapter.getAllDepartment();
@@ -316,8 +312,8 @@ public class HistoryServlet extends AbstractLoginAzkabanServlet {
    * @throws ServletException
    */
   private void handleHistoryPage(final HttpServletRequest req,
-                                 final HttpServletResponse resp, final Session session, final HashMap<String, Object> ret)
-          throws ServletException {
+      final HttpServletResponse resp, final Session session, final HashMap<String, Object> ret)
+      throws ServletException {
 
     int pageNum = getIntParam(req, "page", 1);
     final int pageSize = getIntParam(req, "size", 20);
@@ -367,23 +363,23 @@ public class HistoryServlet extends AbstractLoginAzkabanServlet {
       String finishBeginTime = StringEscapeUtils.escapeHtml(getParam(req, "finishBeginTime", ""));
       String finishEndTime = StringEscapeUtils.escapeHtml(getParam(req, "finishEndTime", ""));
       DateTimeFormatter dateTimeFormatter = DateTimeFormat.forPattern(FILTER_BY_DATE_PATTERN)
-              .withLocale(Locale.ENGLISH);
+          .withLocale(Locale.ENGLISH);
       historyQueryParam.setStartBeginTime("".equals(startBeginTime) ? -1
-              : dateTimeFormatter.parseDateTime(startBeginTime).getMillis());
+          : dateTimeFormatter.parseDateTime(startBeginTime).getMillis());
       historyQueryParam.setStartEndTime(
-              "".equals(startEndTime) ? -1 : dateTimeFormatter.parseDateTime(startEndTime).getMillis());
+          "".equals(startEndTime) ? -1 : dateTimeFormatter.parseDateTime(startEndTime).getMillis());
       historyQueryParam.setFinishBeginTime("".equals(finishBeginTime) ? -1
-              : dateTimeFormatter.parseDateTime(finishBeginTime).getMillis());
+          : dateTimeFormatter.parseDateTime(finishBeginTime).getMillis());
       historyQueryParam.setFinishEndTime("".equals(finishEndTime) ? -1
-              : dateTimeFormatter.parseDateTime(finishEndTime).getMillis());
+          : dateTimeFormatter.parseDateTime(finishEndTime).getMillis());
 
       //外部调用接口兼容旧参数
       String beginTime = StringEscapeUtils.escapeHtml(getParam(req, "begin", ""));
       String endTime = StringEscapeUtils.escapeHtml(getParam(req, "end", ""));
       historyQueryParam.setBeginTime(
-              "".equals(beginTime) ? -1 : dateTimeFormatter.parseDateTime(beginTime).getMillis());
+          "".equals(beginTime) ? -1 : dateTimeFormatter.parseDateTime(beginTime).getMillis());
       historyQueryParam.setEndTime(
-              "".equals(endTime) ? -1 : dateTimeFormatter.parseDateTime(endTime).getMillis());
+          "".equals(endTime) ? -1 : dateTimeFormatter.parseDateTime(endTime).getMillis());
 
       historyQueryParam.setSubsystem(getParam(req, "subsystem", ""));
       historyQueryParam.setBusPath(getParam(req, "busPath", ""));
@@ -396,12 +392,12 @@ public class HistoryServlet extends AbstractLoginAzkabanServlet {
 
       StringBuilder filterBuilder = new StringBuilder();
       filterBuilder.append(historyQueryParam.getProjContain())
-              .append(historyQueryParam.getExecIdContain()).append(historyQueryParam.getFlowContain())
-              .append(historyQueryParam.getUserContain()).append(statusArray[0]).append(startBeginTime)
-              .append(startEndTime).append(finishBeginTime).append(finishEndTime).append(beginTime).append(endTime)
-              .append(historyQueryParam.getSubsystem()).append(historyQueryParam.getBusPath())
-              .append(historyQueryParam.getDepartmentId()).append(historyQueryParam.getRunDateReq())
-              .append(historyQueryParam.getFlowType()).append(historyQueryParam.getComment());
+          .append(historyQueryParam.getExecIdContain()).append(historyQueryParam.getFlowContain())
+          .append(historyQueryParam.getUserContain()).append(statusArray[0]).append(startBeginTime)
+          .append(startEndTime).append(finishBeginTime).append(finishEndTime).append(beginTime).append(endTime)
+          .append(historyQueryParam.getSubsystem()).append(historyQueryParam.getBusPath())
+          .append(historyQueryParam.getDepartmentId()).append(historyQueryParam.getRunDateReq())
+          .append(historyQueryParam.getFlowType()).append(historyQueryParam.getComment());
       try {
         // 高级过滤中如果status含有All Status, flowType为所有类型, 其他为空,过滤拼接为 0-1
         // 注意:StringBuilder如果直接调用equals比较,结果为false; 如果调用toString之后再调用equals, 结果为true, 所以此处toString不能省略
@@ -415,28 +411,28 @@ public class HistoryServlet extends AbstractLoginAzkabanServlet {
           List<ExecutableFlow> tempExecutableFlows;
           if (userRoleSet.contains("admin")) {
             tempExecutableFlows = this.executorManagerAdapter
-                    .getExecutableFlows(historyQueryParam, pageNum * pageSize, pageSize);
+                .getExecutableFlows(historyQueryParam, pageNum * pageSize, pageSize);
             total = this.executorManagerAdapter.getExecHistoryTotal(historyQueryParam);
 
           } else if (systemManager.isDepartmentMaintainer(user)) {
             //运维管理员可以其运维部门下所有的工作流
             List<Integer> projectIds = projectManager.getUserAllProjects(user, null, true).stream()
-                    .map(Project::getId)
-                    .collect(Collectors.toList());
+                .map(Project::getId)
+                .collect(Collectors.toList());
             tempExecutableFlows =
-                    this.executorManagerAdapter
-                            .getMaintainedExecutableFlows(historyQueryParam, pageNum * pageSize, pageSize,
-                                    projectIds);
+                this.executorManagerAdapter
+                    .getMaintainedExecutableFlows(historyQueryParam, pageNum * pageSize, pageSize,
+                        projectIds);
 
             total = this.executorManagerAdapter.getExecHistoryTotal(historyQueryParam, projectIds);
 
           } else {
             tempExecutableFlows = this.executorManagerAdapter
-                    .getUserExecutableFlows(user.getUserId(), historyQueryParam, pageNum * pageSize,
-                            pageSize);
+                .getUserExecutableFlows(user.getUserId(), historyQueryParam, pageNum * pageSize,
+                    pageSize);
 
             total = this.executorManagerAdapter
-                    .getUserExecHistoryTotal(historyQueryParam, user.getUserId());
+                .getUserExecHistoryTotal(historyQueryParam, user.getUserId());
 
           }
           if (CollectionUtils.isNotEmpty(tempExecutableFlows)) {
@@ -449,33 +445,33 @@ public class HistoryServlet extends AbstractLoginAzkabanServlet {
         //page.add("error", e.getMessage());
       }
     } else if (hasParam(req, "search") && StringUtils
-            .isNotBlank(getParam(req, "searchterm").trim())) {
+        .isNotBlank(getParam(req, "searchterm").trim())) {
       // 过滤空的搜索条件,如果不填搜索条件,则默认为不设置条件搜索
       final String searchTerm = getParam(req, "searchterm").trim();
       try {
         //添加权限判断 admin 用户能查看所有flow历史 user用户只能查看自己的flow历史
         if (userRoleSet.contains("admin")) {
           history = this.executorManagerAdapter
-                  .getExecutableFlowsQuickSearch(searchTerm, pageNum * pageSize, pageSize);
+              .getExecutableFlowsQuickSearch(searchTerm, pageNum * pageSize, pageSize);
           Map<String, String> userMap = new HashMap<>();
           userMap.put("flowContains", searchTerm);
           total = this.executorManagerAdapter.getExecHistoryQuickSerachTotal(userMap);
         } else if (systemManager.isDepartmentMaintainer(user)) {
           List<Integer> projectIds = projectManager.getUserAllProjects(user, null, true).stream()
-                  .map(Project::getId)
-                  .collect(Collectors.toList());
+              .map(Project::getId)
+              .collect(Collectors.toList());
           history =
-                  this.executorManagerAdapter
-                          .getMaintainedFlowsQuickSearch(searchTerm, pageNum * pageSize, pageSize,
-                                  user.getUserId(), projectIds);
+              this.executorManagerAdapter
+                  .getMaintainedFlowsQuickSearch(searchTerm, pageNum * pageSize, pageSize,
+                      user.getUserId(), projectIds);
           Map<String, String> userMap = new HashMap<>();
           userMap.put("flowContains", searchTerm);
           total = this.executorManagerAdapter
-                  .getMaintainedFlowsQuickSearchTotal(user.getUserId(), userMap, projectIds);
+              .getMaintainedFlowsQuickSearchTotal(user.getUserId(), userMap, projectIds);
         } else {
           history = this.executorManagerAdapter
-                  .getUserExecutableFlowsQuickSearch(searchTerm, user.getUserId(),
-                          pageNum * pageSize, pageSize);
+              .getUserExecutableFlowsQuickSearch(searchTerm, user.getUserId(),
+                  pageNum * pageSize, pageSize);
           Map<String, String> userMap = new HashMap<>();
           userMap.put("userName", user.getUserId());
           userMap.put("flowContains", searchTerm);
@@ -509,7 +505,7 @@ public class HistoryServlet extends AbstractLoginAzkabanServlet {
         logger.error("put rundate failed", e);
       }
       historyInfo.put("difftime",
-              Utils.formatDuration(executableFlow.getStartTime(), executableFlow.getEndTime()));
+          Utils.formatDuration(executableFlow.getStartTime(), executableFlow.getEndTime()));
       historyInfo.put("status", executableFlow.getStatus());
       historyInfo.put("flowType", executableFlow.getFlowType());
 //      historyInfo.put("execTime", WebUtils.formatDurationTime(executableFlow.getStartTime(), executableFlow.getEndTime()) + "");
@@ -624,7 +620,7 @@ public class HistoryServlet extends AbstractLoginAzkabanServlet {
           executableFlow.setUpdateTime(date.getTime());
         } else {
           String runDatestr = executableFlow.getExecutionOptions().getFlowParameters()
-                  .get("run_date");
+              .get("run_date");
           Object runDateOther = executableFlow.getOtherOption().get("run_date");
           if (runDatestr != null && !"".equals(runDatestr) && !runDatestr.isEmpty()) {
             try {
@@ -636,7 +632,7 @@ public class HistoryServlet extends AbstractLoginAzkabanServlet {
               executableFlow.getOtherOption().put("run_date", runDatestr);
             }
           } else if (runDateOther != null && !"".equals(runDateOther.toString()) && !runDateOther
-                  .toString().isEmpty()) {
+              .toString().isEmpty()) {
             String runDateTime = (String) runDateOther;
             runDateTime = runDateTime.replaceAll("\'", "").replaceAll("\"", "");
             if (SystemBuiltInParamReplacer.dateFormatCheck(runDateTime)) {
@@ -645,15 +641,15 @@ public class HistoryServlet extends AbstractLoginAzkabanServlet {
             } else {
               if (-1 != executableFlow.getStartTime()) {
                 LocalDateTime localDateTime = new LocalDateTime(
-                        new Date(executableFlow.getStartTime())).minusDays(1);
+                    new Date(executableFlow.getStartTime())).minusDays(1);
                 Date date = localDateTime.toDate();
                 executableFlow.setUpdateTime(date.getTime());
               }
             }
           } else if (executableFlow.getLastParameterTime() != -1) {
             executableFlow.setUpdateTime(
-                    new LocalDate(executableFlow.getLastParameterTime()).minusDays(1).toDate()
-                            .getTime());
+                new LocalDate(executableFlow.getLastParameterTime()).minusDays(1).toDate()
+                    .getTime());
           } else {
             Long runDate = executableFlow.getSubmitTime();
             if (-1 != runDate) {
@@ -666,9 +662,9 @@ public class HistoryServlet extends AbstractLoginAzkabanServlet {
 
         WebUtils webUtils = new WebUtils();
         executableFlow.setRunDate(
-                executableFlow.getUpdateTime() == 0 ? executableFlow.getOtherOption().get("run_date")
-                        .toString().replaceAll("[\"'./-]", "")
-                        : webUtils.formatRunDate(executableFlow.getUpdateTime()));
+            executableFlow.getUpdateTime() == 0 ? executableFlow.getOtherOption().get("run_date")
+                .toString().replaceAll("[\"'./-]", "")
+                : webUtils.formatRunDate(executableFlow.getUpdateTime()));
       });
     }
   }

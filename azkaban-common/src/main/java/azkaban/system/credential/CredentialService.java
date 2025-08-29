@@ -1,6 +1,7 @@
 package azkaban.system.credential;
 
 import azkaban.system.dto.CredentialDto;
+
 import java.sql.SQLException;
 
 /**
@@ -28,4 +29,7 @@ public interface CredentialService {
   CredentialDto getCredentialByAppId(String appId)
       throws SQLException;
 
+  void updateCredential(CredentialDto credentialDto)throws SQLException;
+
+  void addCredential(CredentialDto addCredentialDto) throws SQLException;
 }

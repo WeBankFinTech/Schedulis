@@ -34,10 +34,10 @@
       jobTable.tablesorter();
     });
   </script>
-  <script type="text/javascript" src="/js/azkaban/i18n-config.js?version=1.49.0"></script>
-  <script type="text/javascript" src="/js/azkaban/util/ajax.js?version=1.49.0"></script>
-  <script type="text/javascript" src="/js/azkaban/view/executions.js?version=1.49.0"></script>
-  <script type="text/javascript" src="/js/jquery/jquery.tablesorter.js?version=1.49.0"></script>
+  <script type="text/javascript" src="/js/azkaban/i18n-config.js?version=0.11.0"></script>
+  <script type="text/javascript" src="/js/azkaban/util/ajax.js?version=0.11.0"></script>
+  <script type="text/javascript" src="/js/azkaban/view/executions.js?version=0.11.0"></script>
+  <script type="text/javascript" src="/js/jquery/jquery.tablesorter.js?version=0.11.0"></script>
   
   <script>
     $(function () {
@@ -135,7 +135,7 @@
             #foreach ($trigger in $runningTriggers)
             <tr class="parent" id=${trigger.getId()}>
               <td class="tb-name">
-                $velocityCount
+                ${foreach.count}
               </td>
               <td>
                 #if (${trigger.getId()})
@@ -284,7 +284,7 @@
             #foreach ($trigger in $recentTriggers)
             <tr class="parent" id=${trigger.getId()}>
               <td class="tb-name">
-                $velocityCount
+                ${foreach.count}
               </td>
               <td>
                 #if (${trigger.getId()})

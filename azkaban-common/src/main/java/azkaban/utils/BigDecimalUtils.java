@@ -28,13 +28,6 @@ public class BigDecimalUtils {
         return new BigDecimal(arg1).divide(new BigDecimal(arg2),scale,BigDecimal.ROUND_HALF_UP).multiply(new BigDecimal(100));
     }
 
-//    public static BigDecimal divHalfDown(String arg1,String arg2,Integer scale){
-//
-//        return new BigDecimal(arg1).divide(new BigDecimal(arg2),scale,BigDecimal.ROUND_HALF_DOWN);
-//    }
-//    public static void main(String[] args) {
-//        add("1","1.02");
-//        System.out.println( divHalfDown("1","1.02321",4));
-//    }
+
 
 }

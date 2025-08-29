@@ -16,19 +16,20 @@
 
 package azkaban.trigger;
 
-import static java.util.Objects.requireNonNull;
-
 import azkaban.flow.NoSuchResourceException;
 import azkaban.scheduler.MissedScheduleManager;
 import azkaban.trigger.builtin.ExecuteFlowAction;
 import azkaban.utils.JSONUtils;
+import org.joda.time.DateTime;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import org.joda.time.DateTime;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+
+import static java.util.Objects.requireNonNull;
 
 
 public class Trigger {
@@ -212,7 +213,7 @@ public class Trigger {
       long lastModifyConfiguration = (long) jsonObj.getOrDefault("lastModifyConfiguration", lastModifyTime);
       boolean alertOnceOnMiss = (boolean) jsonObj.getOrDefault("alertOnceOnMiss", true);
 
-      trigger = new Trigger.TriggerBuilder(submitUser,
+      trigger = new TriggerBuilder(submitUser,
               source,
               triggerCond,
               expireCond,

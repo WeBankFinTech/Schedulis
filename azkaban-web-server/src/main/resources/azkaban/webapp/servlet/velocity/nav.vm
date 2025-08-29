@@ -79,7 +79,7 @@
     setTimeout(function () {
         if (sessionStorage.getItem('pagePathName') === '/schedule') {
             $('.alert-dismissable').hide();
-            $('.alert-success-prompt').hide();
+            $('.alert-success-prompt').hide();  
         }
     },200)
     if ($("#banner").data("id").indexOf('$') == -1 && $('#banner').is(':empty') == false) {
@@ -156,7 +156,7 @@
                                                name="executor"
                                                onClick="navMenuClick('$!context/executor')">
             <a href="javascript:void(0);"  style="font-size: 16px;font-weight: bold">$running</a></li>
-          <li#if($current_page == 'history') class="active"#end
+          <li#if($current_page == 'history') class="active"#end 
                                              name="history"
                                              onClick="navMenuClick('$!context/history')"><a
                   href="javascript:void(0);" style="font-size: 16px;font-weight: bold">$exechistoryTag</a></li>
@@ -222,7 +222,7 @@
     </div><!--/.nav-collapse -->
   </div>
 </div>
-<script type="text/javascript" src="/js/azkaban/view/waterMark.js?version=1.49.0"></script>
+<script type="text/javascript" src="/js/azkaban/view/waterMark.js?version=0.11.0"></script>
 <script type="text/javascript">
   //window.wtssUserId="${user_id}"
   Watermark.Init('waterMark', "${user_id}")

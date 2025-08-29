@@ -23,8 +23,8 @@
   #parse ("azkaban/webapp/servlet/velocity/style.vm")
   #parse ("azkaban/webapp/servlet/velocity/javascript.vm")
   #parse ("azkaban/webapp/servlet/velocity/svgflowincludes.vm")
-  <link rel="stylesheet" type="text/css" href="/css/bootstrap-datetimepicker.css?version=1.49.0"/>
-
+  <link rel="stylesheet" type="text/css" href="/css/bootstrap-datetimepicker.css?version=0.11.0"/>
+  
   <script type="text/javascript">
     var currentTime = ${currentTime};
     var timezone = "${timezone}";
@@ -44,28 +44,28 @@
     // load cmdb data switch
     var isCmdbLoaded=false;
   </script>
-   <script type="text/javascript" src="/js/azkaban/util/utils.js?version=1.49.0"></script>
-  <link href="/css/bootstrap-select.min.css?version=1.49.0" rel="stylesheet">
-  <script type="text/javascript" src="/js/moment-2.29.4.min.js?version=1.49.0"></script>
-  <script type="text/javascript" src="/js/bootstrap-datetimepicker.min.js?version=1.49.0"></script>
-  <script type="text/javascript" src="/js/azkaban/i18n-config.js?version=1.49.0"></script>
-  <script type="text/javascript" src="/js/azkaban/view/table-sort.js?version=1.49.0"></script>
-  <script type="text/javascript" src="/js/azkaban/view/execute-job-list.js?version=1.49.0"></script>
-  <script type="text/javascript" src="/js/azkaban/view/schedule-sla.js?version=1.49.0"></script>
-  <script type="text/javascript" src="/js/azkaban/view/scheduled.js?version=1.49.0"></script>
-  <script type="text/javascript" src="/js/azkaban/util/schedule.js?version=1.49.0"></script>
-  <script type="text/javascript" src="/js/jquery/jquery.tablesorter.js?version=1.49.0"></script>
-  <script type="text/javascript" src="/js/azkaban/view/schedule-edit-panel.js?version=1.49.0"></script>
-  <script type="text/javascript" src="/js/azkaban/view/schedule-flow-edit-dialog.js?version=1.49.0"></script>
-  <script type="text/javascript" src="/js/azkaban/view/flow-event-schedule-dialog.js?version=1.49.0"></script>
-  <script type="text/javascript" src="/js/azkaban/view/cycle-execution.js?version=1.49.0"></script>
-  <script type="text/javascript" src="/js/azkaban/view/history-recover.js?version=1.49.0"></script>
-  <script type="text/javascript" src="/js/azkaban/view/flow-execute-dialog.js?version=1.49.0"></script>
-  <script type="text/javascript" src="/js/azkaban/view/schedule-context-menu.js?version=1.49.0"></script>
-  <script type="text/javascript" src="/js/azkaban/view/schedule-page.js?version=1.49.0"></script>
-  <script src="/js/select2/select2.js?version=1.49.0"></script>
-  <script src="/js/select2/i18n/zh-CN.js?version=1.49.0"></script>
-  <script type="text/javascript" src="/js/bootstrap-select.js?version=1.49.0"></script>
+   <script type="text/javascript" src="/js/azkaban/util/utils.js?version=0.11.0"></script>
+  <link href="/css/bootstrap-select.min.css?version=0.11.0" rel="stylesheet">
+  <script type="text/javascript" src="/js/moment-2.29.4.min.js?version=0.11.0"></script>
+  <script type="text/javascript" src="/js/bootstrap-datetimepicker.min.js?version=0.11.0"></script>
+  <script type="text/javascript" src="/js/azkaban/i18n-config.js?version=0.11.0"></script>
+  <script type="text/javascript" src="/js/azkaban/view/table-sort.js?version=0.11.0"></script>
+  <script type="text/javascript" src="/js/azkaban/view/execute-job-list.js?version=0.11.0"></script>
+  <script type="text/javascript" src="/js/azkaban/view/schedule-sla.js?version=0.11.0"></script>
+  <script type="text/javascript" src="/js/azkaban/view/scheduled.js?version=0.11.0"></script>
+  <script type="text/javascript" src="/js/azkaban/util/schedule.js?version=0.11.0"></script>
+  <script type="text/javascript" src="/js/jquery/jquery.tablesorter.js?version=0.11.0"></script>
+  <script type="text/javascript" src="/js/azkaban/view/schedule-edit-panel.js?version=0.11.0"></script>
+  <script type="text/javascript" src="/js/azkaban/view/schedule-flow-edit-dialog.js?version=0.11.0"></script>
+  <script type="text/javascript" src="/js/azkaban/view/flow-event-schedule-dialog.js?version=0.11.0"></script>
+  <script type="text/javascript" src="/js/azkaban/view/cycle-execution.js?version=0.11.0"></script>
+  <script type="text/javascript" src="/js/azkaban/view/history-recover.js?version=0.11.0"></script>
+  <script type="text/javascript" src="/js/azkaban/view/flow-execute-dialog.js?version=0.11.0"></script>
+  <script type="text/javascript" src="/js/azkaban/view/schedule-context-menu.js?version=0.11.0"></script>
+  <script type="text/javascript" src="/js/azkaban/view/schedule-page.js?version=0.11.0"></script>
+  <script src="/js/select2/select2.js?version=0.11.0"></script>
+  <script src="/js/select2/i18n/zh-CN.js?version=0.11.0"></script>
+  <script type="text/javascript" src="/js/bootstrap-select.js?version=0.11.0"></script>
   <style type="text/css">
       .select2-container .select2-selection--single .select2-selection__rendered {
         display: block;
@@ -94,7 +94,7 @@
     <div class="container-full">
 
      #parse ("azkaban/webapp/servlet/velocity/alerts.vm")
-
+     
       <div class="row">
         <div class="header-title">
           <h1><a href="/schedule">$schFlowList</a></h1>
@@ -150,7 +150,7 @@
     </div>
   </div>
 
-  <script type="text/javascript" src="/js/azkaban/view/hideHead.js?version=1.49.0"></script>
+  <script type="text/javascript" src="/js/azkaban/view/hideHead.js?version=0.11.0"></script>
 
 
   ## Page content.
@@ -289,7 +289,7 @@
         </div>
       </div>
     </div>
-
+    
   ## Set SLA modal.
 
     #parse ("azkaban/webapp/servlet/velocity/slapanel.vm")

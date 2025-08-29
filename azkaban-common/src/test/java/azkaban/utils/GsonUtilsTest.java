@@ -1,9 +1,7 @@
 package azkaban.utils;
 
 import azkaban.user.User;
-import com.google.gson.Gson;
 import com.google.gson.JsonElement;
-import com.google.gson.JsonParser;
 import com.google.gson.reflect.TypeToken;
 import org.junit.Assert;
 import org.junit.Test;
@@ -16,9 +14,9 @@ public class GsonUtilsTest {
   private static String jsonArrayStr = "[\"jobA\",\"jobB\",\"jobC\"]";
   private static String aaa = "{\"a\":[\"jobA\",\"jobB\",\"jobC\",{\"c\":[\"jobA\",\"jobB\",\"jobC\"]}]}";
 
-  private static String jsonStr = "{\"userid\":\"10086\", \"email\":\"***REMOVED***\"}";
+  private static String jsonStr = "{\"userid\":\"10086\", \"email\":\"\"}";
 
-  private static String jsonStr2 = "{\"userid\":\"10086\", \"email\":\"***REMOVED***\", \"abc\":{\"userid\":\"10086\", \"email\":\"***REMOVED***\"}}";
+  private static String jsonStr2 = "{\"userid\":\"10086\", \"email\":\"\", \"abc\":{\"userid\":\"10086\", \"email\":\"\"}}";
 
   private static String illegalJsonStr = "\"name\":\"test\",\"age\":10";
 

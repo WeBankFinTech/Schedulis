@@ -16,10 +16,6 @@
 
 package azkaban.execapp;
 
-import static azkaban.Constants.DEFAULT_FLOW_PAUSED_MAX_TIME;
-import static azkaban.Constants.FLOW_PAUSED_MAX_TIME_MS;
-import static java.util.Objects.requireNonNull;
-
 import azkaban.Constants;
 import azkaban.Constants.ConfigurationKeys;
 import azkaban.ServiceProvider;
@@ -33,15 +29,8 @@ import azkaban.execapp.event.AbstractFlowWatcher;
 import azkaban.execapp.event.LocalFlowWatcher;
 import azkaban.execapp.event.RemoteFlowWatcher;
 import azkaban.execapp.metric.NumFailedFlowMetric;
-import azkaban.executor.AlerterHolder;
-import azkaban.executor.ExecutableFlow;
-import azkaban.executor.ExecutionControllerUtils;
-import azkaban.executor.ExecutionCycleDao;
-import azkaban.executor.ExecutionOptions;
 import azkaban.executor.Executor;
-import azkaban.executor.ExecutorLoader;
-import azkaban.executor.ExecutorManagerException;
-import azkaban.executor.Status;
+import azkaban.executor.*;
 import azkaban.jobhook.JobHookManager;
 import azkaban.jobtype.JobTypeManager;
 import azkaban.jobtype.JobTypeManagerException;
@@ -55,45 +44,12 @@ import azkaban.sla.SlaOption;
 import azkaban.spi.AzkabanEventReporter;
 import azkaban.spi.EventType;
 import azkaban.storage.StorageManager;
-import azkaban.utils.FileIOUtils;
+import azkaban.utils.*;
 import azkaban.utils.FileIOUtils.JobMetaData;
 import azkaban.utils.FileIOUtils.LogData;
-import azkaban.utils.JSONUtils;
-import azkaban.utils.Pair;
-import azkaban.utils.Props;
-import azkaban.utils.ThreadPoolExecutingListener;
-import azkaban.utils.TrackingThreadPool;
-import azkaban.utils.UndefinedPropertyException;
 import com.codahale.metrics.Timer;
 import com.google.common.base.Preconditions;
 import com.google.gson.JsonObject;
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.lang.Thread.State;
-import java.time.Duration;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
-import java.util.concurrent.LinkedBlockingQueue;
-import java.util.concurrent.RejectedExecutionException;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.stream.Collectors;
-import java.util.zip.ZipEntry;
-import java.util.zip.ZipOutputStream;
-import javax.annotation.Nullable;
-import javax.inject.Inject;
-import javax.inject.Singleton;
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.FilenameUtils;
@@ -102,6 +58,26 @@ import org.apache.commons.lang.ArrayUtils;
 import org.apache.commons.lang.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import javax.annotation.Nullable;
+import javax.inject.Inject;
+import javax.inject.Singleton;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.lang.Thread.State;
+import java.time.Duration;
+import java.util.*;
+import java.util.concurrent.*;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.Collectors;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipOutputStream;
+
+import static azkaban.Constants.DEFAULT_FLOW_PAUSED_MAX_TIME;
+import static azkaban.Constants.FLOW_PAUSED_MAX_TIME_MS;
+import static java.util.Objects.requireNonNull;
 
 /**
  * Execution manager for the server side execution.
@@ -1219,7 +1195,7 @@ public class FlowRunnerManager implements EventListener,
     // Every 5 mins kill flows running longer than allowed max running time
     private static final long LONG_RUNNING_FLOW_KILLING_INTERVAL_MS = 5 * 60 * 1000;
     private final long flowMaxRunningTimeInMins = FlowRunnerManager.this.azkabanProps.getInt(
-            Constants.ConfigurationKeys.AZKABAN_MAX_FLOW_RUNNING_MINS, -1);
+            ConfigurationKeys.AZKABAN_MAX_FLOW_RUNNING_MINS, -1);
     private boolean shutdown = false;
     private long lastExecutionDirCleanTime = -1;
     private long lastRecentlyFinishedCleanTime = -1;

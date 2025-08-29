@@ -45,7 +45,9 @@ public class Constants {
   public static final String JOB_FILENAME_CHECK = "job.filename.check";
 
   public static final Object HISTORY_RERUN_LOCK = new Object();
+
   public static final String USER_DEFINED_PARAM = "userDefined";
+
   public static final String FLOW_PAUSED_MAX_TIME_MS = "flow.paused.max.time.ms";
 
   public static final long DEFAULT_FLOW_PAUSED_MAX_TIME = 1 * 60 * 60 * 1000L;
@@ -248,14 +250,14 @@ public class Constants {
 
     // Event reporting properties
     public static final String AZKABAN_EVENT_REPORTING_CLASS_PARAM =
-        "azkaban.event.reporting.class";
+            "azkaban.event.reporting.class";
     public static final String AZKABAN_EVENT_REPORTING_ENABLED = "azkaban.event.reporting.enabled";
     public static final String AZKABAN_EVENT_REPORTING_KAFKA_BROKERS =
-        "azkaban.event.reporting.kafka.brokers";
+            "azkaban.event.reporting.kafka.brokers";
     public static final String AZKABAN_EVENT_REPORTING_KAFKA_TOPIC =
-        "azkaban.event.reporting.kafka.topic";
+            "azkaban.event.reporting.kafka.topic";
     public static final String AZKABAN_EVENT_REPORTING_KAFKA_SCHEMA_REGISTRY_URL =
-        "azkaban.event.reporting.kafka.schema.registry.url";
+            "azkaban.event.reporting.kafka.schema.registry.url";
 
     /*
      * The max number of artifacts retained per project.
@@ -286,15 +288,15 @@ public class Constants {
     public static final String MAX_CONCURRENT_RUNS_ONEFLOW = "azkaban.max.concurrent.runs.oneflow";
     public static final String WEBSERVER_QUEUE_SIZE = "azkaban.webserver.queue.size";
     public static final String ACTIVE_EXECUTOR_REFRESH_IN_MS =
-        "azkaban.activeexecutor.refresh.milisecinterval";
+            "azkaban.activeexecutor.refresh.milisecinterval";
     public static final String ACTIVE_EXECUTOR_REFRESH_IN_NUM_FLOW =
-        "azkaban.activeexecutor.refresh.flowinterval";
+            "azkaban.activeexecutor.refresh.flowinterval";
     public static final String EXECUTORINFO_REFRESH_MAX_THREADS =
-        "azkaban.executorinfo.refresh.maxThreads";
+            "azkaban.executorinfo.refresh.maxThreads";
     public static final String MAX_DISPATCHING_ERRORS_PERMITTED = "azkaban.maxDispatchingErrors";
     public static final String EXECUTOR_SELECTOR_FILTERS = "azkaban.executorselector.filters";
     public static final String EXECUTOR_SELECTOR_COMPARATOR_PREFIX =
-        "azkaban.executorselector.comparator.";
+            "azkaban.executorselector.comparator.";
     public static final String QUEUEPROCESSING_ENABLED = "azkaban.queueprocessing.enabled";
 
     public static final String QUEUEPROCESSING_ASYNC_ENABLED = "azkaban.queueprocessing.async.enabled";
@@ -431,6 +433,12 @@ public class Constants {
     public static final String WTSS_JOB_LOG_AUTO_DIAGNOSIS_THREAD_INTERVAL = "wtss.job.log.auto.diagnosis.thread.interval";
 
     public static final String WTSS_JOB_LOG_AUTO_DIAGNOSIS_TIME_INTERVAL = "wtss.job.log.auto.diagnosis.time.interval";
+
+    public static final String WTSS_PROJECT_FILE_NEWLINE_CHECK = "wtss.project.file.newline.check";
+
+    public static final String WTSS_PROJECTDIFF_MAX_FILES = "projectdiff.max.files";
+
+    public static final String WTSS_PROJECTDIFF_MAX_SIZE_MB = "projectdiff.max.size.mb";
   }
 
   public static class FlowProperties {
@@ -524,6 +532,8 @@ public class Constants {
     // Flow trigger dependency run time props
     public static final String START_TIME = "startTime";
     public static final String TRIGGER_INSTANCE_ID = "triggerInstanceId";
+
+    public static final String AUTO_DISABLED_JOBS = "autoDisabledJobs";
   }
 
   /**
@@ -542,6 +552,8 @@ public class Constants {
 
   public static final Long DEFAULT_LAST_SEND_ALERT_TIME = 0L;
 
+  public static final String ENABLE_FLAG="enableFlag";
 
+  public static final String DISABLED_FLAG="disabledFlag";
 
 }

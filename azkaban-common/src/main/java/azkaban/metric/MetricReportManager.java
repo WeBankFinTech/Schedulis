@@ -16,8 +16,8 @@
 
 package azkaban.metric;
 
-import org.slf4j.LoggerFactory;
 import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
 import java.util.LinkedList;
@@ -217,7 +217,7 @@ public class MetricReportManager {
   /**
    * Shutdown execution service {@inheritDoc}
    *
-   * @see java.lang.Object#finalize()
+   * @see Object#finalize()
    */
   @Override
   protected void finalize() {

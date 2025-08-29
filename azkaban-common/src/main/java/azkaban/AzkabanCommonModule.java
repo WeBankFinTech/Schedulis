@@ -19,14 +19,11 @@ package azkaban;
 import azkaban.db.AbstractAzkabanDataSource;
 import azkaban.db.H2FileDataSource;
 import azkaban.db.MySQLDataSource;
+import azkaban.duty.dao.DutyDao;
+import azkaban.duty.dao.impl.DutyDaoImpl;
 import azkaban.exceptional.user.dao.ExceptionalUserLoader;
 import azkaban.exceptional.user.impl.ExceptionalUserLoaderImpl;
-import azkaban.executor.ExecutionLogsAdapter;
-import azkaban.executor.ExecutionLogsDao;
-import azkaban.executor.ExecutorLoader;
-import azkaban.executor.ExecutorQueueLoader;
-import azkaban.executor.JdbcExecutorLoader;
-import azkaban.executor.JdbcExecutorQueueLoader;
+import azkaban.executor.*;
 import azkaban.jobid.relation.JobIdRelationDao;
 import azkaban.jobid.relation.JobIdRelationDaoImpl;
 import azkaban.jobid.relation.JobIdRelationService;
@@ -93,6 +90,8 @@ public class AzkabanCommonModule extends AbstractModule {
     bind(ExceptionalUserLoader.class).to(ExceptionalUserLoaderImpl.class);
     bind(CredentialDao.class).to(CredentialDaoImpl.class);
     bind(AlertMessageTimeDao.class).to(AlertMessageTimeDaoImpl.class);
+    bind(DutyDao.class).to(DutyDaoImpl.class);
+
   }
 
   public Class<? extends Storage> resolveStorageClassType() {

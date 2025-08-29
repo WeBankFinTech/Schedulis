@@ -23,8 +23,8 @@
   #parse("azkaban/webapp/servlet/velocity/style.vm")
   #parse("azkaban/webapp/servlet/velocity/javascript.vm")
 
-  <link rel="stylesheet" type="text/css" href="/css/bootstrap-datetimepicker.css?version=1.49.0"/>
-    <link href="/css/bootstrap-select.min.css?version=1.49.0" rel="stylesheet">
+  <link rel="stylesheet" type="text/css" href="/css/bootstrap-datetimepicker.css?version=0.11.0"/>
+    <link href="/css/bootstrap-select.min.css?version=0.11.0" rel="stylesheet">
   <script type="text/javascript">
     var currentTime = ${currentTime};
     var timezone = "${timezone}";
@@ -45,18 +45,27 @@
 
     var searchCondition = "";
   </script>
-  <script type="text/javascript" src="/js/azkaban/util/utils.js?version=1.49.0"></script>
-
-  <script type="text/javascript" src="/js/moment-2.29.4.min.js?version=1.49.0"></script>
-  <script type="text/javascript" src="/js/bootstrap-datetimepicker.min.js?version=1.49.0"></script>
-  <script type="text/javascript" src="/js/azkaban/i18n-config.js?version=1.49.0"></script>
-  <script type="text/javascript" src="/js/azkaban/view/history.js?version=1.49.0"></script>
-  <script type="text/javascript" src="/js/jquery/jquery.tablesorter.js?version=1.49.0"></script>
-  <script type="text/javascript" src="/js/azkaban/util/job-status.js?version=1.49.0"></script>
-
-  <script type="text/javascript" src="/js/azkaban/view/table-sort.js?version=1.49.0"></script>
-  <script src="/js/select2/select2.js?version=1.49.0"></script>
-  <script type="text/javascript" src="/js/bootstrap-select.js?version=1.49.0"></script>
+  <link rel="stylesheet" href="/css/kalendae.css?version=0.11.0" type="text/css">
+  <script type="text/javascript" src="/js/dust-full-2.2.3.min.js?version=0.11.0"></script>
+  <script type='text/javascript' src='/js/lodash.min.js?version=0.11.0'></script>
+  <script type="text/javascript" src="/js/later.min.js?version=0.11.0"></script>
+  <script type="text/javascript" src="/js/moment-2.29.4.min.js?version=0.11.0"></script>
+  <script type="text/javascript" src="/js/bootstrap-datetimepicker.min.js?version=0.11.0"></script>
+  <script type='text/javascript' src='/js/kalendae.standalone.js?version=0.11.0'></script>
+  <script type="text/javascript" src="/js/select2/select2.js?version=0.11.0"></script>
+  <script type="text/javascript" src="/js/bootstrap-select.js?version=0.11.0"></script>
+  <script type="text/javascript" src="/js/jquery/jquery.tablesorter.js?version=0.11.0"></script>
+  <script type="text/javascript" src="/js/azkaban/util/utils.js?version=0.11.0"></script>
+  <script type="text/javascript" src="/js/azkaban/i18n-config.js?version=0.11.0"></script>
+  <script type="text/javascript" src="/js/azkaban/util/ajax.js?version=0.11.0"></script>
+  <script type="text/javascript" src="/js/azkaban/model/svg-graph.js?version=0.11.0"></script>
+  <script type="text/javascript" src="/js/azkaban/view/history-recover.js?version=0.11.0"></script>
+  <script type="text/javascript" src="/js/azkaban/view/context-menu.js?version=0.11.0"></script>
+  <script type="text/javascript" src="/js/azkaban/view/flow-execute-dialog.js?version=0.11.0"></script>
+  <script type="text/javascript" src="/js/azkaban/view/history.js?version=0.11.0"></script>
+  <script type="text/javascript" src="/js/azkaban/util/job-status.js?version=0.11.0"></script>
+  
+  <script type="text/javascript" src="/js/azkaban/view/table-sort.js?version=0.11.0"></script>
 </head>
 <body>
 
@@ -75,7 +84,7 @@
         <div class="header-title">
           <h1><a href="/history">$flowExecHistory</a></h1>
         </div>
-        <div class="header-control">
+        <div class="header-control" style="width: 800px">
             <div class="form-group">
               <div class="input-group">
               <input type="text" id="searchtextbox"
@@ -85,6 +94,7 @@
                   <button id="quick-serach-btn" type="button" class="btn btn-primary btn-sm">$quickSearch</button>
                   <button type="button" class="btn btn-success btn-sm margin-l10 " id="adv-filter-btn">$advancedFilter</button>
                   <button type="button" class="btn btn-success btn-sm margin-l10 " id="batch-reRun-btn">$batchrerun</button>
+                  <button type="button" class="btn btn-success btn-sm margin-l10 " id="batch-history-reRun-btn">$batchHistoryRerun</button>
                   <button type="button" class="btn btn-success btn-sm margin-l10 " id="batch-download-btn">$batchExport</button>
                 </span>
               </div>
@@ -275,8 +285,10 @@
       </div>
     </div>
 
-
+  
     #parse ("azkaban/webapp/servlet/velocity/invalidsessionmodal.vm")
+    #parse ("azkaban/webapp/servlet/velocity/flowexecutionpanel.vm")
+    #parse ("azkaban/webapp/servlet/velocity/messagedialog.vm")
   </div><!-- /container-full -->
   #end
 </body>

@@ -1,4 +1,4 @@
-type=hadoopJava
+type=Java
 job.class=azkaban.jobtype.examples.java.WordCount
 
 classpath=./lib/*,${hadoop.home}/lib/*

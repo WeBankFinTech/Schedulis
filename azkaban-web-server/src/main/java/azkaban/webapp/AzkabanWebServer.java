@@ -268,7 +268,7 @@ public class AzkabanWebServer extends AbstractAzkabanServer {
       logger.error("instantace LinkisErrorCodeHandler failed",e);
     }
 
-	  // FIXME New feature: When restarting the web service, it is necessary to terminate the job stream that is executed cyclically.
+    // FIXME New feature: When restarting the web service, it is necessary to terminate the job stream that is executed cyclically.
     webServer.stopAllCycleFlows(args);
 
     Runtime.getRuntime().addShutdownHook(new Thread() {
@@ -339,15 +339,15 @@ public class AzkabanWebServer extends AbstractAzkabanServer {
             && new File("/usr/bin/head").exists()) {
           logger.info("logging top memory consumer");
 
-          final java.lang.ProcessBuilder processBuilder =
-              new java.lang.ProcessBuilder("/bin/bash", "-c",
+          final ProcessBuilder processBuilder =
+              new ProcessBuilder("/bin/bash", "-c",
                   "/bin/ps aux --sort -rss | /usr/bin/head");
           final Process p = processBuilder.start();
           p.waitFor();
 
           final InputStream is = p.getInputStream();
-          final java.io.BufferedReader reader =
-              new java.io.BufferedReader(new InputStreamReader(is, StandardCharsets.UTF_8));
+          final BufferedReader reader =
+              new BufferedReader(new InputStreamReader(is, StandardCharsets.UTF_8));
           String line = null;
           while ((line = reader.readLine()) != null) {
             logger.info(line);
@@ -553,7 +553,7 @@ public class AzkabanWebServer extends AbstractAzkabanServer {
     configureRoutes();
 
     // Todo jamiesjc: enable web metrics for azkaban poll model later
-    if (this.props.getBoolean(Constants.ConfigurationKeys.IS_METRICS_ENABLED, false)
+    if (this.props.getBoolean(ConfigurationKeys.IS_METRICS_ENABLED, false)
         && !this.props.getBoolean(ConfigurationKeys.AZKABAN_POLL_MODEL, false)) {
       startWebMetrics();
     }
@@ -681,8 +681,8 @@ public class AzkabanWebServer extends AbstractAzkabanServer {
   }
 
   public TriggerManager getTriggerManager() {
-      return this.triggerManager;
-    }
+    return this.triggerManager;
+  }
 
   public EventScheduleServiceImpl getEventScheduleService() {
     return eventScheduleService;
@@ -811,11 +811,11 @@ public class AzkabanWebServer extends AbstractAzkabanServer {
     root.addFilter(new FilterHolder(DSSOriginSSOFilter.class),"/*", EnumSet.of(DispatcherType.REQUEST));
 
     FilterHolder docsFilterHolder = new FilterHolder(new DocsAccessFilter());
-    root.addFilter(docsFilterHolder, "docs/*", EnumSet.of(DispatcherType.REQUEST));
+    root.addFilter(docsFilterHolder, "/docs/*", EnumSet.of(DispatcherType.REQUEST));
 
     ResourceHandler resourceHandler = new ResourceHandler();
     resourceHandler.setDirectoriesListed(false);
-    resourceHandler.setResourceBase("/docs");
+    resourceHandler.setResourceBase(staticDir + "/docs");
 
     ContextHandler contextHandler = new ContextHandler("/docs");
     contextHandler.setHandler(resourceHandler);
@@ -857,26 +857,24 @@ public class AzkabanWebServer extends AbstractAzkabanServer {
     root.addServlet(new ServletHolder(new RecoverServlet()), "/recover");
     root.addServlet(new ServletHolder(new CycleServlet()), "/cycle");
 
-
     final ServletHolder restliHolder = new ServletHolder(new RestliServlet());
     restliHolder.setInitParameter("resourcePackages", "azkaban.restli");
     root.addServlet(restliHolder, "/restli/*");
 
     final String viewerPluginDir =
-        this.props.getString("viewer.plugin.dir", "/plugins/viewer");
+        this.props.getString("viewer.plugin.dir", "plugins/viewer");
     loadViewerPlugins(root, viewerPluginDir, getVelocityEngine());
 
     // Trigger Plugin Loader
     final TriggerPluginLoader triggerPluginLoader = new TriggerPluginLoader(this.props);
-     logger.info("11111");
+
     final Map<String, TriggerPlugin> triggerPlugins = triggerPluginLoader.loadTriggerPlugins(root);
     setTriggerPlugins(triggerPlugins);
     // always have basic time trigger
     // TODO: find something else to do the job
     getTriggerManager().start();
-    logger.info("222");
     getScheduleManager().start();
-    logger.info("333");
+
     root.setAttribute(Constants.AZKABAN_SERVLET_CONTEXT_KEY, this);
 
     try {

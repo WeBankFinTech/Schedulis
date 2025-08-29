@@ -19,4 +19,6 @@ public interface JobIdRelationDao {
   int updateJobIdRelation(Map<String,String> jobIdRelation, String... params) throws SQLException;
 
   int updateProxyUrl(JobIdRelation jobIdRelation) throws SQLException;
+
+  JobIdRelation  getJobIdRelationByAppId(String appId) throws SQLException;
 }

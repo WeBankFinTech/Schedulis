@@ -16,23 +16,21 @@
 package azkaban.db;
 
 import azkaban.utils.Props;
+import org.apache.commons.dbcp2.BasicDataSource;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-import java.io.ByteArrayOutputStream;
-import java.security.Key;
-import java.security.KeyFactory;
-import java.security.interfaces.RSAPrivateKey;
-import java.security.spec.PKCS8EncodedKeySpec;
-import java.sql.*;
-import java.util.Base64;
 import javax.crypto.Cipher;
 import javax.inject.Inject;
 import javax.inject.Singleton;
-
-
-
-import org.apache.commons.dbcp2.BasicDataSource;
-import org.slf4j.LoggerFactory;
-import org.slf4j.Logger;
+import java.io.ByteArrayOutputStream;
+import java.security.Key;
+import java.security.KeyFactory;
+import java.security.spec.PKCS8EncodedKeySpec;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
 
 @Singleton
 public class MySQLDataSource extends AbstractAzkabanDataSource {
@@ -78,7 +76,7 @@ public class MySQLDataSource extends AbstractAzkabanDataSource {
     try {
       String privateKey = props.getString("password.private.key");
       String ciphertext = props.getString("mysql.password");
-      pwd = "***REMOVED***";
+      pwd = decrypt(privateKey,ciphertext);
     } catch (Exception e){
       logger.error("password decore failed", e);
     }
@@ -206,12 +204,7 @@ public class MySQLDataSource extends AbstractAzkabanDataSource {
     return true;
   }
 
-  public static void main(String[] args) throws Exception {
-    String pk = "MIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQCgOlBgJU7JMjRGD0pj8SsbSEJDs8yhmdZf12s7/TttGo7TahmWLSSCa8Lcqe0krMF9n301Izn18hSOIKg5vQNEhVG1ybMsvz3zor67iQhq6CZRIFhndWEZaG2ywG2WRyr+Oet973X9JodQOJbzbDii56JX/FNdgEbjCgGti9s0HwKnx5OBWg8Tc4X4mM8XFt1sDuKU2xTUt1/bDenllbz8W2KNUV+G6QdVfhzZbf40TJfOtlODoflpT25Hw46G9fWrbtTNJv9/TM3mdZQbUJ10Pn8UFgpMC90lbHXrBHUoKGsruQy05OFoGlimYWmB+J6kmnwIPPYi+jav4VxzY3R5AgMBAAECggEAA7V12NPkP/n+hcSi1y9k7Qu+JO0Lho4WDT/iRpA1CPB9b91b3EMNPkuaRhtU1u18yRihAFLha5T/7s5ItpVudu6TFp8lm5qNp48T1Sl13WukP2p9QV/RMJJfP6z+nGTnVN0oW1DorURwC2ZT8CyIHxU3h8vabiai/Wxk34yGNW2c3oQqBy0BT4Orj+E7IMtrMLWWKcDYK6Vgt5O3+vPOnxSMln4yrGen7msC/zWy8wSxeyFyKU6UiVQpepkvah0TG52CbjzDtR8vIjw4Sz/hkwMUlRxX8DvrP2KaQJ4FFHYw6Ui5i7jjDUwIzuZg38v1JS+B8R1CLuFLQLAi53gMAQKBgQDoF1Kzb/O4AopwIByebc/6VxW4G/EVQQ5S62h5tg3i4+isQp0U6cFi/KKQH2EuX8Dzq/0ScA11cIZsYYjn3tNFunbtDfrGkmhnbnLRPDRWqvVjdHv5f5qG+x+Ajf0QgYqfs7qki920Q0QmuLf998IlvPTrXcMnXumZgxT6ZKwv+QKBgQCwu9IavK36gEqcwZHKDe5LLn4qajsuk5FdGhlHO+K2rRd427NAN9jG7eCK1UVRT/cNov02fJa8Wd6j8Zeh4Zkdg9laX5//Owsrq+1orXeaKzijcDHEbJ1M1RrmTqOKtUCUX+xg/0XSfeyfH5TexPe0nqKBirdaTVmpf0DkZvuIgQKBgQDmN7xhIXuv21VXQ4Mf4+2ZdSimJ5FMc+uxdLF9iYjctxXlSW5ngDfD6LWYIIhVZ8YN71xpHZ08ERJGD7mtxunrELtHCcbnkfLeJkDeK8n+7jXbIYCYTGsL2a215yJPbTAEmlNZRSP124OOpUxdL5X1uSl5Dti2BP/StqPofFQQgQKBgEeAxeGhYrZNv2IqgqR//GAYgF0Cu8z9UTucuotydCg6YZu5L42UyrS5OzaQUMo0Ex1GSzIHOCkeJxCnRxTspDknxgFlXOMzbTKPDa9jN1d9kx203727v+x877QsLsiIyob9RDJ+NS6TWe+LJHz4rcs6vz6v87yqPNNxs7x02eGBAoGAWyQPqj1STs1b/ZY9SJaJcpK5xZyNflAbJecUhcs1HoI4tEAbeYWCn5bLk7qwBNiFjPqKbUamlRowTEf6QMlUUkrKROvqu07HV9KXPJzUivhoO9kaGlYLJRseEFYSB7AodpEPtDYeA2CANmQv3O3xjcbL8gLhabjybEX83Uzhajc=";
-    String ps = "ffffff020b577277f65aca4cc27589bad41204bc958e7a8d12ecd245bc3cdf724483536b6914f8bc18f836bc77cd70f637a2215d7758e1d27ff4894985fb3dfe3cfa815ca4c876a1ed65b94a7d400f9d89cc940f0752c9ee77906e1515121d4f693ec1492f37e68f2ef5752a3a574e9e47cab3f96eb25c1d37467d9a2f640dfaad975b480f59cbac350f4f496e56d4e39175fe3378135d258507338f967ecb4b1e78422daee7986f088f6171667bb6b0d302fdd3880d1bf797426a58c02a7f9cc76dff964648e0347c59505e3f1c9e2d06185b9b6299c38a1a22977a53940a1046d0b3203f7de5261685799d32f9665cc52a4ed9db7853362dcb59761bc80144db19b73a";
 
-    System.out.println(decrypt(pk,ps));
-  }
 
   public static String decrypt(String appPrivKey, String encStr) throws Exception {
     if (encStr.startsWith("ffffff02")) {

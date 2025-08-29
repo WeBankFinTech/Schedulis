@@ -1,31 +1,27 @@
 package azkaban.project.validator;
 
 import azkaban.project.Project;
-import azkaban.utils.XmlResolveUtils;
 import azkaban.utils.Props;
-import java.io.File;
-import java.io.IOException;
-import java.lang.reflect.Constructor;
-import java.net.MalformedURLException;
-import java.net.URL;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Map.Entry;
-import javax.xml.XMLConstants;
-import javax.xml.parsers.DocumentBuilder;
-import javax.xml.parsers.DocumentBuilderFactory;
-import javax.xml.parsers.ParserConfigurationException;
-
-import org.slf4j.LoggerFactory;
+import azkaban.utils.XmlResolveUtils;
 import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.w3c.dom.Document;
 import org.w3c.dom.NamedNodeMap;
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 import org.xml.sax.SAXException;
+
+import javax.xml.XMLConstants;
+import javax.xml.parsers.DocumentBuilder;
+import javax.xml.parsers.DocumentBuilderFactory;
+import javax.xml.parsers.ParserConfigurationException;
+import java.io.File;
+import java.io.IOException;
+import java.lang.reflect.Constructor;
+import java.net.MalformedURLException;
+import java.net.URL;
+import java.util.*;
+import java.util.Map.Entry;
 
 /**
  * Xml implementation of the ValidatorManager.
@@ -126,7 +122,7 @@ public class XmlValidatorManager implements ValidatorManager {
    *
    * {@inheritDoc}
    *
-   * @see azkaban.project.validator.ValidatorManager#loadValidators(azkaban.utils.Props,
+   * @see ValidatorManager#loadValidators(Props,
    * Logger)
    */
   @Override

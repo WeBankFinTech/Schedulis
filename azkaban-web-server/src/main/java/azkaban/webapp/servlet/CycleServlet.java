@@ -3,7 +3,6 @@ package azkaban.webapp.servlet;
 import azkaban.executor.*;
 import azkaban.flow.Flow;
 import azkaban.project.Project;
-import azkaban.project.ProjectLogEvent;
 import azkaban.project.ProjectManager;
 import azkaban.scheduler.EventScheduleServiceImpl;
 import azkaban.server.session.Session;
@@ -54,7 +53,7 @@ public class CycleServlet extends AbstractLoginAzkabanServlet {
 
     @Override
     protected void handleGet(HttpServletRequest req, HttpServletResponse resp, Session session)
-        throws ServletException, IOException {
+            throws ServletException, IOException {
         if (hasParam(req, "ajax")) {
             handleAJAXAction(req, resp, session);
         } else {
@@ -110,7 +109,7 @@ public class CycleServlet extends AbstractLoginAzkabanServlet {
             map.put("error", "Error fetch execution cycle");
         }
         map.put("total", cycleFlowsTotal);
-        map.put("page",pageNum);
+        map.put("page", pageNum);
         map.put("pageSize", pageSize);
         map.put("executionCycleList", cycleFlows2ListMap(cycleFlows));
         writeJSON(resp, map);
@@ -140,22 +139,22 @@ public class CycleServlet extends AbstractLoginAzkabanServlet {
 
     private Object cycleFlows2ListMap(List<ExecutionCycle> cycleFlows) {
         return cycleFlows.stream()
-            .map(flow -> {
-                Map<String, Object> map = new HashMap<>();
-                map.put("id", flow.getId());
-                map.put("status", flow.getStatus());
-                map.put("currentExecId", flow.getCurrentExecId());
-                Project project = projectManager.getProject(flow.getProjectId());
-                map.put("projectName", project.getName());
-                map.put("flowId", flow.getFlowId());
-                map.put("submitUser", flow.getSubmitUser());
-                String proxyUsers = project.getProxyUsers().stream()
-                    .collect(joining(",", "[", "]"));
-                map.put("proxyUsers", proxyUsers);
+                .map(flow -> {
+                    Map<String, Object> map = new HashMap<>();
+                    map.put("id", flow.getId());
+                    map.put("status", flow.getStatus());
+                    map.put("currentExecId", flow.getCurrentExecId());
+                    Project project = projectManager.getProject(flow.getProjectId());
+                    map.put("projectName", project.getName());
+                    map.put("flowId", flow.getFlowId());
+                    map.put("submitUser", flow.getSubmitUser());
+                    String proxyUsers = project.getProxyUsers().stream()
+                            .collect(joining(",", "[", "]"));
+                    map.put("proxyUsers", proxyUsers);
 
-                return map;
-            })
-            .collect(toList());
+                    return map;
+                })
+                .collect(toList());
     }
 
     private Object cycleFlows2ListMapToPages(List<ExecutionCycle> cycleFlows) {
@@ -191,6 +190,7 @@ public class CycleServlet extends AbstractLoginAzkabanServlet {
                     }
                     otherOption.put("activeFlag", true);
                     Map<String, Object> cycleOptions = execFlow.getCycleOption();
+
                     try {
                         if (Objects.nonNull(cycleOptions) && Status.isStatusFailed(execFlow.getStatus())) {
                             if (cycleOptions.get("cycleErrorOption").equals("errorStop") || Status.KILLED.equals(execFlow.getStatus())) {
@@ -205,6 +205,7 @@ public class CycleServlet extends AbstractLoginAzkabanServlet {
                     map.put("otherOptions", otherOption);
                     map.put("cycleOptions", execFlow.getCycleOption());
                     map.put("executionOptions", execFlow.getExecutionOptions());
+                    map.put("slaOptions",execFlow.getSlaOptions());
                     mapList.add(map);
                 } catch (Exception e) {
                     logger.error("获取循环调度失败", e);
@@ -234,7 +235,7 @@ public class CycleServlet extends AbstractLoginAzkabanServlet {
 
     private void alertOnCycleFlowInterrupt(List<ExecutionCycle> executionCycles) {
         CompletableFuture.runAsync(() -> {
-            for (ExecutionCycle executionCycle: executionCycles) {
+            for (ExecutionCycle executionCycle : executionCycles) {
                 if (executionCycle != null) {
                     try {
                         ExecutableFlow exFlow = this.executorManager.getExecutableFlow(executionCycle.getCurrentExecId());

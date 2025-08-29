@@ -148,6 +148,26 @@
     "hostname": "Hostname",
     "hostport": "Port",
     "isValid": "Is Valid",
-    "lastGroupInfo": "Last Group Information"
+    "lastGroupInfo": "Last Group Information",
+    "addDutyGroup": "Add Duty Group",
+    "editDutyGroup": "Edit Duty Group",
+    "dutyGroupManage": "Duty Group Management",
+    "dutyGroupId": "Duty Group Id",
+    "dutyGroupName": "Duty Group Name",
+    "dutyGroupMembers": "Duty Group Members",
+    "operations": "Operations",
+    "viewEdit": "View/Edit",
+    "delete": "Delete",
+    "inputDutyGroupName": "Please input duty group name",
+    "memberName": "Member Name",
+    "dutyStartDate": "Duty Start Date",
+    "dutyEndDate": "Duty End Date",
+    "dutyNaturalDate": "Duty Natural Date",
+    "selectDate": "Select Date",
+    "addMember": "Add Member",
+    "save": "Save",
+    "isDutyManager": "Is Duty Manager",
+    "true": "Yes",
+    "false": "No"
   }
 }

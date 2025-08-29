@@ -70,10 +70,6 @@ public class ShellUtils {
 		return "";
 	}
 	
-	public static void main(String[] args) {
-		ShellUtils.getPid();
-		String ppid = ShellUtils.getPPid(getPid());
-		System.out.println(ppid);
-	}
+
 
 }

@@ -17,12 +17,7 @@ public class JwtTokenUtils {
     private Key key;
     private SignatureAlgorithm signatureAlgorithm = SignatureAlgorithm.HS256;
 
-//    static {
-//        String secret = "bdp";
-//        //We will sign our JWT with our ApiKey secret
-//        byte[] apiKeySecretBytes = secret.getBytes(Charsets.UTF_8);
-//        key = new SecretKeySpec(apiKeySecretBytes, signatureAlgorithm.getJcaName());
-//    }
+
 
 
     /**
@@ -186,16 +181,5 @@ public class JwtTokenUtils {
         }
     }
 
-    public static void main(String[] args) {
-        String token = getToken(null,false,"***REMOVED***",1 * 7 * 24 * 60 * 60 );
-        System.out.println("testEncode: " + token);
 
-        Claims claims = getJws(token,"***REMOVED***").getBody();
-        System.out.println("ID: " + claims.getId());
-        System.out.println("Subject: " + claims.getSubject());
-        System.out.println("Issuer: " + claims.getIssuer());
-        System.out.println("Audience: " + claims.getAudience());
-        System.out.println("Expiration: " + claims.getExpiration());
-
-    }
 }

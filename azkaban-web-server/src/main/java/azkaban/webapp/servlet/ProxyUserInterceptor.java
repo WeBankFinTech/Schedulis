@@ -5,7 +5,7 @@ import com.webank.wedatasphere.dss.standard.app.sso.plugin.filter.UserIntercepto
 
 public interface ProxyUserInterceptor extends UserInterceptor {
     default ProxyUserType getProxyUserType() {
-        return ProxyUserInterceptor.ProxyUserType.ONLY_PROXY_USER;
+        return ProxyUserType.ONLY_PROXY_USER;
     }
 
     public static enum ProxyUserType {

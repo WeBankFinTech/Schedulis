@@ -24,30 +24,27 @@ import azkaban.exception.UserManagerException;
 import azkaban.service.UserManager;
 import azkaban.utils.Props;
 import azkaban.utils.XmlResolveUtils;
-import java.io.File;
-import java.io.IOException;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Set;
-import javax.xml.XMLConstants;
-import javax.xml.parsers.DocumentBuilder;
-import javax.xml.parsers.DocumentBuilderFactory;
-import javax.xml.parsers.ParserConfigurationException;
-
-import org.slf4j.LoggerFactory;
 import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.w3c.dom.Document;
 import org.w3c.dom.NamedNodeMap;
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 import org.xml.sax.SAXException;
 
+import javax.xml.XMLConstants;
+import javax.xml.parsers.DocumentBuilder;
+import javax.xml.parsers.DocumentBuilderFactory;
+import javax.xml.parsers.ParserConfigurationException;
+import java.io.File;
+import java.io.IOException;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Set;
+
 /**
  * Xml implementation of the UserManager. Looks for the property user.manager.xml.file in the
  * azkaban properties.
- *
- * The xml to be in the following form: <azkaban-users> <user username="username" password="azkaban"
- * roles="admin" groups="azkaban"/> </azkaban-users>
  */
 public class XmlUserManager implements UserManager {
 
@@ -88,20 +85,20 @@ public class XmlUserManager implements UserManager {
     final File file = new File(this.xmlPath);
     if (!file.exists()) {
       throw new IllegalArgumentException("User xml file " + this.xmlPath
-          + " doesn't exist.");
+              + " doesn't exist.");
     }
 
     final HashMap<String, User> users = new HashMap<>();
     final HashMap<String, String> userPassword = new HashMap<>();
     final HashMap<String, Role> roles = new HashMap<>();
     final HashMap<String, Set<String>> groupRoles =
-        new HashMap<>();
+            new HashMap<>();
     final HashMap<String, Set<String>> proxyUserMap =
-        new HashMap<>();
+            new HashMap<>();
 
     // Creating the document builder to parse xml.
     final DocumentBuilderFactory docBuilderFactory =
-        DocumentBuilderFactory.newInstance();
+            DocumentBuilderFactory.newInstance();
     DocumentBuilder builder = null;
     try {
 
@@ -112,7 +109,7 @@ public class XmlUserManager implements UserManager {
       builder = docBuilderFactory.newDocumentBuilder();
     } catch (final ParserConfigurationException e) {
       throw new IllegalArgumentException(
-          "Exception while parsing user xml. Document builder not created.", e);
+              "Exception while parsing user xml. Document builder not created.", e);
     }
 
     Document doc = null;
@@ -120,10 +117,10 @@ public class XmlUserManager implements UserManager {
       doc = builder.parse(file);
     } catch (final SAXException e) {
       throw new IllegalArgumentException("Exception while parsing " + this.xmlPath
-          + ". Invalid XML.", e);
+              + ". Invalid XML.", e);
     } catch (final IOException e) {
       throw new IllegalArgumentException("Exception while parsing " + this.xmlPath
-          + ". Error reading file.", e);
+              + ". Error reading file.", e);
     }
 
     // Only look at first item, because we should only be seeing
@@ -156,19 +153,19 @@ public class XmlUserManager implements UserManager {
   }
 
   private void parseUserTag(final Node node, final HashMap<String, User> users,
-      final HashMap<String, String> userPassword,
-      final HashMap<String, Set<String>> proxyUserMap) {
+                            final HashMap<String, String> userPassword,
+                            final HashMap<String, Set<String>> proxyUserMap) {
     final NamedNodeMap userAttrMap = node.getAttributes();
     final Node userNameAttr = userAttrMap.getNamedItem(USERNAME_ATTR);
     if (userNameAttr == null) {
       throw new RuntimeException("Error loading user. The '" + USERNAME_ATTR
-          + "' attribute doesn't exist");
+              + "' attribute doesn't exist");
     }
 
     final Node passwordAttr = userAttrMap.getNamedItem(PASSWORD_ATTR);
     if (passwordAttr == null) {
       throw new RuntimeException("Error loading user. The '" + PASSWORD_ATTR
-          + "' attribute doesn't exist");
+              + "' attribute doesn't exist");
     }
 
     // Add user to the user/password map
@@ -224,12 +221,12 @@ public class XmlUserManager implements UserManager {
     final Node roleNameAttr = roleAttrMap.getNamedItem(ROLENAME_ATTR);
     if (roleNameAttr == null) {
       throw new RuntimeException(
-          "Error loading role. The role 'name' attribute doesn't exist");
+              "Error loading role. The role 'name' attribute doesn't exist");
     }
     final Node permissionAttr = roleAttrMap.getNamedItem(ROLEPERMISSIONS_ATTR);
     if (permissionAttr == null) {
       throw new RuntimeException(
-          "Error loading role. The role 'permissions' attribute doesn't exist");
+              "Error loading role. The role 'permissions' attribute doesn't exist");
     }
 
     final String roleName = roleNameAttr.getNodeValue();
@@ -244,7 +241,7 @@ public class XmlUserManager implements UserManager {
         perm.addPermission(type);
       } catch (final IllegalArgumentException e) {
         logger.error("Error adding type " + permString
-            + ". Permission doesn't exist.", e);
+                + ". Permission doesn't exist.", e);
       }
     }
 
@@ -310,12 +307,12 @@ public class XmlUserManager implements UserManager {
   }
 
   private void parseGroupRoleTag(final Node node,
-      final HashMap<String, Set<String>> groupRoles) {
+                                 final HashMap<String, Set<String>> groupRoles) {
     final NamedNodeMap groupAttrMap = node.getAttributes();
     final Node groupNameAttr = groupAttrMap.getNamedItem(GROUPNAME_ATTR);
     if (groupNameAttr == null) {
       throw new RuntimeException(
-          "Error loading role. The role 'name' attribute doesn't exist");
+              "Error loading role. The role 'name' attribute doesn't exist");
     }
 
     final String groupName = groupNameAttr.getNodeValue();
@@ -353,7 +350,7 @@ public class XmlUserManager implements UserManager {
   @Override
   public boolean validateProxyUser(final String proxyUser, final User realUser) {
     if (this.proxyUserMap.containsKey(realUser.getUserId())
-        && this.proxyUserMap.get(realUser.getUserId()).contains(proxyUser)) {
+            && this.proxyUserMap.get(realUser.getUserId()).contains(proxyUser)) {
       return true;
     } else {
       return false;

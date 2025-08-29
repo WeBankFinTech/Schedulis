@@ -16,23 +16,24 @@
  */
 package azkaban.db;
 
-import static java.util.Objects.requireNonNull;
-
-import java.sql.Connection;
-import java.sql.SQLException;
-import javax.inject.Inject;
 import org.apache.commons.dbutils.DbUtils;
 import org.apache.commons.dbutils.QueryRunner;
 import org.apache.commons.dbutils.ResultSetHandler;
-import org.slf4j.LoggerFactory;
 import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import javax.inject.Inject;
+import java.sql.Connection;
+import java.sql.SQLException;
+
+import static java.util.Objects.requireNonNull;
 
 /**
  * This interface is to define Base Data Access Object contract for Azkaban. All azkaban DB related
  * operations must be performed upon this interface. AZ DB operators all leverages QueryRunner
  * interface.
  *
- * @see org.apache.commons.dbutils.QueryRunner
+ * @see QueryRunner
  */
 public class DatabaseOperator {
 

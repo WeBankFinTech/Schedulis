@@ -1,16 +1,15 @@
 package azkaban.utils;
 
 import azkaban.executor.ExecutorInfo;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
-import java.util.Arrays;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
  * @author lebronwang
@@ -111,7 +110,7 @@ public class OsUtils {
         process.waitFor();
         final InputStream inputStream = process.getInputStream();
         try {
-          final java.io.BufferedReader reader = new java.io.BufferedReader(
+          final BufferedReader reader = new BufferedReader(
               new InputStreamReader(inputStream, StandardCharsets.UTF_8));
           String line = null;
           while ((line = reader.readLine()) != null) {

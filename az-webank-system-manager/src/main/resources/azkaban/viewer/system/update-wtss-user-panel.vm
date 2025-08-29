@@ -65,6 +65,15 @@
               </select>
             </div>
           </div>
+          <div class="form-group">
+            <label for="description" class="col-sm-2 control-label">$isDutyManager</label>
+            <div class="col-sm-8">
+              <select id="update-is-duty-manager-select" class="form-control">
+                <option value="N">$false</option>
+                <option value="Y">$true</option>
+              </select>
+            </div>
+          </div>
         </fieldset>
       </div>
       <div class="modal-footer">

@@ -18,7 +18,7 @@ azkaban.SystemUserView = Backbone.View.extend({
     this.model.bind('render', this.render, this);
     this.model.set({ page: 1, pageSize: 20 });
     this.model.bind('change:page', this.handlePageChange, this);
-    this.model.set('elDomId','pageSelection');
+    this.model.set('elDomId','pageSelection'); 
     this.createResize();
   },
 
@@ -85,6 +85,12 @@ azkaban.SystemUserView = Backbone.View.extend({
       $(tdEmail).attr("style", "word-break:break-all;max-width:350px");
       $(tdEmail).text(users[i].email);
       row.appendChild(tdEmail);
+
+      //组装是否值班组管理员行
+      var tdDutyManager = document.createElement("td");
+      $(tdDutyManager).attr("style", "word-break:break-all;max-width:350px");
+      $(tdDutyManager).text(users[i].dutyManager === 'Y' ? wtssI18n.common.yes : wtssI18n.common.no);
+      row.appendChild(tdDutyManager);
 
       //组装操作行
       var tdAction = document.createElement("td");
@@ -159,6 +165,7 @@ azkaban.UserOptionsView = Backbone.View.extend({
     $("#webank-user-select").empty();
     $("#password").val("");
     $("#user-role-select").val("0");
+    $("#is-duty-manager-select").val("N");
     $("#user-category-select").val("0");
     $("#proxy-user").val("");
     $("#webank-department-select2").val("0");
@@ -227,6 +234,7 @@ azkaban.AddSystemUserView = Backbone.View.extend({
     var userId = $("#webank-user-select").val();
     var password = $("#password").val();
     var roleId = $("#user-role-select").val();
+    var dutyManager = $("#is-duty-manager-select").val();
     var categoryUser = $("#user-category-select").val();
     var proxyUser = $("#proxy-user").val();
     var departmentId = $("#webank-department-select2").val();
@@ -258,6 +266,7 @@ azkaban.AddSystemUserView = Backbone.View.extend({
       "userId": userId,
       "password": password,
       "roleId": roleId,
+      "dutyManager": dutyManager,
       "proxyUser": proxyUser,
       "departmentId": departmentId,
       "categoryUser": categoryUser,
@@ -344,6 +353,7 @@ azkaban.UpdateSystemUserView = Backbone.View.extend({
     var password = $("#update-password").val();
     var categoryUser = $("#wtss-user-category").attr('userType');
     var roleId = $("#update-user-role-select").val();
+    var dutyManager = $("#update-is-duty-manager-select").val();
     var proxyUser = $("#update-proxy-user").val();
     var departmentId = $("#update-wtss-department-select").val();
     var email = $("#update-system-user-panel [name=email]").val();
@@ -366,6 +376,7 @@ azkaban.UpdateSystemUserView = Backbone.View.extend({
       "categoryUser": categoryUser,
       "password": password,
       "roleId": roleId,
+      "dutyManager": dutyManager,
       "proxyUser": proxyUser,
       "departmentId": departmentId,
       "email": email
@@ -459,12 +470,13 @@ azkaban.UpdateSystemUserView = Backbone.View.extend({
             messageBox.show(`${data.systemUser.departmentName}不存在，请重新选择用户部门`,"warning");
             data.systemUser.departmentId = "";
         }
-
+       
         $("#wtss-user-id").val(data.systemUser.userId);
         $("#wtss-full-name").val(data.systemUser.fullName);
         $("#wtss-user-category").val(showUserCategory).attr('userType', data.systemUser.userType);
         $("#update-password").val(data.systemUser.password);
         $("#update-user-role-select").val(data.systemUser.roleId);
+        $("#update-is-duty-manager-select").val(data.systemUser.dutyManager);
         $("#update-proxy-user").val(data.systemUser.proxyUsers);
         $("#update-wtss-department-select").val(data.systemUser.departmentId);
         $("#update-system-user-panel [name=email]").val(data.systemUser.email);

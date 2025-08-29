@@ -1,6 +1,7 @@
 package azkaban.system.entity;
 
 import com.google.common.collect.ImmutableMap;
+
 import java.util.Arrays;
 
 /**
@@ -9,6 +10,8 @@ import java.util.Arrays;
 public class WtssUser {
 
   public final static String PERSONAL = "personal";
+
+  public final static String TEST = "test";
   /**
    * 用户ID
    */

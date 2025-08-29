@@ -24,23 +24,20 @@ import azkaban.utils.FileIOUtils;
 import azkaban.utils.FileIOUtils.LogData;
 import azkaban.utils.GZIPUtils;
 import azkaban.utils.Pair;
-import java.io.BufferedInputStream;
-import java.io.ByteArrayOutputStream;
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.IOException;
-import java.nio.charset.StandardCharsets;
-import java.sql.Blob;
-import java.sql.ResultSet;
-import java.sql.SQLException;
-import java.util.Arrays;
-import javax.inject.Inject;
-import javax.inject.Singleton;
 import org.apache.commons.dbutils.ResultSetHandler;
 import org.apache.commons.io.IOUtils;
 import org.joda.time.DateTime;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import javax.inject.Inject;
+import javax.inject.Singleton;
+import java.io.*;
+import java.nio.charset.StandardCharsets;
+import java.sql.Blob;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.util.Arrays;
 
 
 @Singleton
@@ -89,7 +86,7 @@ public class ExecutionLogsDao implements ExecutionLogsAdapter {
     FetchLogEncTypeHandler handler = new FetchLogEncTypeHandler();
     try {
       return this.dbOperator.query(FetchLogEncTypeHandler.FETCH_LOG_ENCTYPE, handler,
-              execId, name, attempt);
+              execId, name, attempt );
     } catch (SQLException e) {
       throw new ExecutorManagerException(
               String.format("Error fetching log encType, execId: %d, job: %s, attempt: %d .", execId,

@@ -1,17 +1,14 @@
 package azkaban.project.validator;
 
+import sun.net.www.protocol.jar.JarURLConnection;
+
 import java.io.IOException;
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.net.URL;
 import java.net.URLClassLoader;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Iterator;
-import java.util.Vector;
+import java.util.*;
 import java.util.jar.JarFile;
-import sun.net.www.protocol.jar.JarURLConnection;
 
 /**
  * Workaround for jdk 6 disgrace with open jar files & native libs, which is a reason of
@@ -211,7 +208,7 @@ public class ValidatorClassLoader extends URLClassLoader {
   public boolean finalizeNativeLibs(final ClassLoader cl) throws ValidatorManagerException {
     boolean res = false;
     final Class classClassLoader = ClassLoader.class;
-    java.lang.reflect.Field nativeLibraries = null;
+    Field nativeLibraries = null;
     try {
       nativeLibraries = classClassLoader.getDeclaredField("nativeLibraries");
     } catch (final NoSuchFieldException e) {

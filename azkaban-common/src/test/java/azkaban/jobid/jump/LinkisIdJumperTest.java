@@ -6,8 +6,6 @@ import org.junit.Test;
 import java.util.HashMap;
 import java.util.Map;
 
-import static org.junit.Assert.*;
-
 /**
  * Created by shangda on 2023/1/11.
  */
@@ -37,8 +35,8 @@ public class LinkisIdJumperTest {
         input.put("jobName", "dqm_test_test_dqm_left_debc0c71ebac461abd5a0df3b07a464d");
         input.put("session.id", "def2694c-727b-4518-8fc7-b4d1c135c9ea");
         input.put("submitUser", "hduser05");
-        props.put(AZKABAN_WEBSERVER_URL, "http://127.0.0.1:8290");
-        props.put(LINKIS_SERVER_URL, "http://***REMOVED***:9001");
+        props.put(AZKABAN_WEBSERVER_URL, "http://:8290");
+        props.put(LINKIS_SERVER_URL, "http://127.0.0.1:9001");
         props.put(WTSS_LINKIS_TOKEN, "BML-AUTH");
         String cookieStr = jumper.getRedirectCookieString(input, props);
         System.out.println(cookieStr);

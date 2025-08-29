@@ -1,12 +1,13 @@
 package azkaban.log.diagnosis.util;
 
+import org.apache.commons.io.IOUtils;
+import org.apache.commons.lang.StringEscapeUtils;
+
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.util.HashMap;
 import java.util.Map;
-import org.apache.commons.io.IOUtils;
-import org.apache.commons.lang.StringEscapeUtils;
 
 /**
  * @author lebronwang
@@ -20,6 +21,11 @@ public class DiagnosisUtils {
       throws IOException, InterruptedException {
 
     HashMap<String, String> resultMap = new HashMap<>();
+    // 对用户输入的参数进行严格验证
+    if (!isValidJobName(jobName) || !isValidAttempt(attempt)) {
+      resultMap.put("error", "Invalid job name or attempt.");
+      return resultMap;
+    }
     String[] command = {
         "bash", scriptPath,
         String.valueOf(execId),
@@ -63,5 +69,14 @@ public class DiagnosisUtils {
     }
 
     return resultMap;
+  }
+
+  private static boolean isValidJobName(String jobName) {
+    // jobName只能包含字母、数字和下划线
+    return jobName.matches("^[a-zA-Z0-9_]+$");
+  }
+
+  private static boolean isValidAttempt(int attempt) {
+    return attempt >= 0;
   }
 }

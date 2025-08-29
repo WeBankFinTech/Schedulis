@@ -1,11 +1,7 @@
 package azkaban.system;
 
-import azkaban.system.entity.DepartmentMaintainer;
-import azkaban.system.entity.WebankDepartment;
-import azkaban.system.entity.WebankUser;
-import azkaban.system.entity.WtssPermissions;
-import azkaban.system.entity.WtssRole;
-import azkaban.system.entity.WtssUser;
+import azkaban.system.entity.*;
+
 import java.sql.SQLException;
 import java.util.List;
 import java.util.Set;
@@ -240,6 +236,7 @@ public interface SystemUserLoader {
      */
     WtssUser getSystemUserByUserName(String userName) throws SystemUserManagerException;
 
+    List<WtssUser> getSystemUserLikeUserName(String userName) throws SystemUserManagerException;
     List<DepartmentMaintainer> getDepartmentMaintainerList(String searchterm, int start, int pageSize) throws SystemUserManagerException;
 
     List<DepartmentMaintainer> getDepartmentMaintainerList(int start, int pageSize) throws SystemUserManagerException;

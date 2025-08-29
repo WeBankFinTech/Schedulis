@@ -18,9 +18,9 @@ package azkaban.execapp.metric;
 
 import azkaban.event.Event;
 import azkaban.event.EventListener;
+import azkaban.metric.AbstractTimeBasedReportingMetric;
 import azkaban.metric.MetricException;
 import azkaban.metric.MetricReportManager;
-import azkaban.metric.AbstractTimeBasedReportingMetric;
 import azkaban.spi.EventType;
 
 /**
@@ -45,7 +45,7 @@ public class NumRunningJobMetric extends AbstractTimeBasedReportingMetric<Intege
   /**
    * Listen for events to maintain correct value of number of running jobs {@inheritDoc}
    *
-   * @see azkaban.event.EventListener#handleEvent(azkaban.event.Event)
+   * @see EventListener#handleEvent(Event)
    */
   @Override
   public synchronized void handleEvent(final Event event) {

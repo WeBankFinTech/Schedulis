@@ -3,30 +3,21 @@ package azkaban.system;
 import azkaban.Constants;
 import azkaban.db.DatabaseOperator;
 import azkaban.executor.DepartmentGroup;
-import azkaban.system.entity.DepartmentAlarmReceiver;
-import azkaban.system.entity.DepartmentMaintainer;
-import azkaban.system.entity.WebankDepartment;
-import azkaban.system.entity.WebankUser;
-import azkaban.system.entity.WtssPermissions;
-import azkaban.system.entity.WtssRole;
-import azkaban.system.entity.WtssUser;
+import azkaban.system.entity.*;
 import azkaban.utils.MD5Utils;
 import azkaban.utils.Props;
-import java.sql.ResultSet;
-import java.sql.SQLException;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
-import java.util.stream.Collectors;
-import javax.inject.Inject;
-import javax.inject.Singleton;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.dbutils.ResultSetHandler;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import javax.inject.Inject;
+import javax.inject.Singleton;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.util.*;
+import java.util.stream.Collectors;
 
 /**
  * Created by zhu on 7/6/18.
@@ -40,11 +31,11 @@ public class JdbcSystemUserImpl implements SystemUserLoader {
 
     // 表 wtss_user 字段
     private static final String SQL_PARAMS_TABLE_WTSS_USER = "user_id, username, password, full_name, department_id, department_name, "
-        + "email, proxy_users, role_id, user_type, create_time, update_time, modify_info, modify_type, user_category ";
+            + "email, proxy_users, role_id, user_type, create_time, update_time, modify_info, modify_type, user_category ";
     // 表 cfg_webank_all_users 字段
     private static final String SQL_PARAMS_TABLE_CFG_WEBANK_ALL_USERS = "app_id, user_id, urn, full_name, display_name, title, employee_number,"
-        + "manager_urn, org_id, default_group_name, email, department_id, department_name,"
-        + "start_date, mobile_phone, is_active, person_group, created_time, modified_time ";
+            + "manager_urn, org_id, default_group_name, email, department_id, department_name,"
+            + "start_date, mobile_phone, is_active, person_group, created_time, modified_time ";
     // 表 wtss_role 字段
     public static final String SQL_PARAMS_TABLE_WTSS_ROLE = "role_id,role_name, permissions_ids, description, create_time, update_time";
 
@@ -114,7 +105,7 @@ public class JdbcSystemUserImpl implements SystemUserLoader {
 
     @Override
     public List<WebankUser> findAllWebankUserPageList(String searchName, int pageNum, int pageSize)
-        throws SystemUserManagerException {
+            throws SystemUserManagerException {
         List<WebankUser> webankUserList = null;
 
         String querySQL = findAllWebankUserHandler.BASE_SQL_FIND_ALL_WEBANK_USER;
@@ -209,8 +200,8 @@ public class JdbcSystemUserImpl implements SystemUserLoader {
                 final long modifiedTime = rs.getLong(19);
 
                 final WebankUser info = new WebankUser(appId, userId, urn, fullName, displayName, title
-                    , employeeNumber, mangerUrn, orgId, defaultGroupName, email, departmentId
-                    , departmentName, startDate, mobilePhone, isActive, personGroup, createdTime, modifiedTime);
+                        , employeeNumber, mangerUrn, orgId, defaultGroupName, email, departmentId
+                        , departmentName, startDate, mobilePhone, isActive, personGroup, createdTime, modifiedTime);
                 webankUserList.add(info);
             } while (rs.next());
 
@@ -220,7 +211,7 @@ public class JdbcSystemUserImpl implements SystemUserLoader {
 
     @Override
     public List<WtssUser> findSystemUserPage(final String userName, final String fullName, final String departmentName, int start, int pageSize)
-        throws SystemUserManagerException {
+            throws SystemUserManagerException {
         List<WtssUser> wtssUserList = null;
 
         String querySQL = SystemUserHandler.BASE_SQL_FIND_WTSS_USER;
@@ -383,21 +374,21 @@ public class JdbcSystemUserImpl implements SystemUserLoader {
         final String INSERT_WTSS_USER = "INSERT INTO wtss_user (" + SQL_PARAMS_TABLE_WTSS_USER + ") values (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)";
         try {
             return this.dbOperator.update(INSERT_WTSS_USER,
-                wtssUser.getUserId(),
-                wtssUser.getUsername(),
-                wtssUser.getPassword(),
-                wtssUser.getFullName(),
-                wtssUser.getDepartmentId(),
-                wtssUser.getDepartmentName(),
-                wtssUser.getEmail(),
-                wtssUser.getProxyUsers(),
-                wtssUser.getRoleId(),
-                wtssUser.getUserType(),
-                wtssUser.getCreateTime(),
-                wtssUser.getUpdateTime(),
-                wtssUser.getModifyInfo(),
-                wtssUser.getModifyType(),
-                wtssUser.getUserCategory()
+                    wtssUser.getUserId(),
+                    wtssUser.getUsername(),
+                    wtssUser.getPassword(),
+                    wtssUser.getFullName(),
+                    wtssUser.getDepartmentId(),
+                    wtssUser.getDepartmentName(),
+                    wtssUser.getEmail(),
+                    wtssUser.getProxyUsers(),
+                    wtssUser.getRoleId(),
+                    wtssUser.getUserType(),
+                    wtssUser.getCreateTime(),
+                    wtssUser.getUpdateTime(),
+                    wtssUser.getModifyInfo(),
+                    wtssUser.getModifyType(),
+                    wtssUser.getUserCategory()
             );
         } catch (final SQLException e) {
             throw new SystemUserManagerException(String.format("Add User %s Failed", wtssUser.toString()), e);
@@ -479,20 +470,20 @@ public class JdbcSystemUserImpl implements SystemUserLoader {
     @Override
     public int updateWtssUser(WtssUser wtssUser) throws SystemUserManagerException {
         final String INSERT_WTSS_USER = "UPDATE wtss_user SET "
-            + "password=?, department_id=?, department_name=?, "
-            + "proxy_users=?, role_id=?, user_type=?, update_time=?, user_category=? "
-            + "WHERE user_id=? ";
+                + "password=?, department_id=?, department_name=?, "
+                + "proxy_users=?, role_id=?, user_type=?, update_time=?, user_category=? "
+                + "WHERE user_id=? ";
         try {
             return this.dbOperator.update(INSERT_WTSS_USER,
-                wtssUser.getPassword(),
-                wtssUser.getDepartmentId(),
-                wtssUser.getDepartmentName(),
-                wtssUser.getProxyUsers(),
-                wtssUser.getRoleId(),
-                wtssUser.getUserType(),
-                wtssUser.getUpdateTime(),
-                wtssUser.getUserCategory(),
-                wtssUser.getUserId());
+                    wtssUser.getPassword(),
+                    wtssUser.getDepartmentId(),
+                    wtssUser.getDepartmentName(),
+                    wtssUser.getProxyUsers(),
+                    wtssUser.getRoleId(),
+                    wtssUser.getUserType(),
+                    wtssUser.getUpdateTime(),
+                    wtssUser.getUserCategory(),
+                    wtssUser.getUserId());
         } catch (final SQLException e) {
             throw new SystemUserManagerException(String.format("Error update by wtssUser, %s ", wtssUser.toString()), e);
         }
@@ -501,16 +492,16 @@ public class JdbcSystemUserImpl implements SystemUserLoader {
     @Override
     public int updateWtssUser(WtssUser wtssUser, boolean synEsb) throws SystemUserManagerException {
         final String INSERT_WTSS_USER = "UPDATE wtss_user SET user_id=?, department_id=?, department_name=?, update_time=?, modify_type=? ,modify_info=? "
-            + "WHERE user_id=? ";
+                + "WHERE user_id=? ";
         try {
             return this.dbOperator.update(INSERT_WTSS_USER,
-                wtssUser.getUserId(),
-                wtssUser.getDepartmentId(),
-                wtssUser.getDepartmentName(),
-                wtssUser.getUpdateTime(),
-                wtssUser.getModifyType(),
-                wtssUser.getModifyInfo(),
-                wtssUser.getUserId());
+                    wtssUser.getUserId(),
+                    wtssUser.getDepartmentId(),
+                    wtssUser.getDepartmentName(),
+                    wtssUser.getUpdateTime(),
+                    wtssUser.getModifyType(),
+                    wtssUser.getModifyInfo(),
+                    wtssUser.getUserId());
         } catch (final SQLException e) {
             throw new SystemUserManagerException(String.format("Error update by esb, %s ", wtssUser.toString()), e);
         }
@@ -519,16 +510,16 @@ public class JdbcSystemUserImpl implements SystemUserLoader {
     @Override
     public int updateWtssUserByName(WtssUser wtssUser, boolean synEsb) throws SystemUserManagerException {
         final String INSERT_WTSS_USER = "UPDATE wtss_user SET user_id=?, department_id=?, department_name=?, update_time=?, modify_type=? ,modify_info=? "
-            + "WHERE username=? ";
+                + "WHERE username=? ";
         try {
             return this.dbOperator.update(INSERT_WTSS_USER,
-                wtssUser.getUserId(),
-                wtssUser.getDepartmentId(),
-                wtssUser.getDepartmentName(),
-                wtssUser.getUpdateTime(),
-                wtssUser.getModifyType(),
-                wtssUser.getModifyInfo(),
-                wtssUser.getUsername());
+                    wtssUser.getUserId(),
+                    wtssUser.getDepartmentId(),
+                    wtssUser.getDepartmentName(),
+                    wtssUser.getUpdateTime(),
+                    wtssUser.getModifyType(),
+                    wtssUser.getModifyInfo(),
+                    wtssUser.getUsername());
         } catch (final SQLException e) {
             throw new SystemUserManagerException(String.format("Error update by name, %s ", wtssUser.toString()), e);
         }
@@ -560,7 +551,7 @@ public class JdbcSystemUserImpl implements SystemUserLoader {
         try {
 
             wtssUserList = this.dbOperator.query(SystemUserHandler.FIND_WTSS_USER_BY_USERNAME_AND_PASSWORD,
-                new SystemUserHandler(), username, password);
+                    new SystemUserHandler(), username, password);
 
         } catch (final SQLException e) {
             throw new SystemUserManagerException("Failed to find WTSS User by userName and password.", e);
@@ -582,7 +573,7 @@ public class JdbcSystemUserImpl implements SystemUserLoader {
             String encodePwd = MD5Utils.md5(MD5Utils.md5(wtssUser.getPassword()) + wtssUser.getUserId());
 
             wtssUserList = this.dbOperator.query(SystemUserHandler.FIND_WTSS_USER_BY_USERNAME_AND_PASSWORD,
-                new SystemUserHandler(), username, encodePwd);
+                    new SystemUserHandler(), username, encodePwd);
 
         } catch (final SQLException e) {
             throw new SystemUserManagerException("Failed to find WTSS User by userName and password.", e);
@@ -645,12 +636,12 @@ public class JdbcSystemUserImpl implements SystemUserLoader {
 
     @Override
     public WtssPermissions getWtssPermissionsById(int permissionsId)
-        throws SystemUserManagerException {
+            throws SystemUserManagerException {
         List<WtssPermissions> wtssPermissionsList = null;
         try {
 
             wtssPermissionsList = this.dbOperator.query(WtssPermissionsHandler.FIND_WTSS_PERM_BY_ID,
-                new WtssPermissionsHandler(), permissionsId);
+                    new WtssPermissionsHandler(), permissionsId);
 
         } catch (final SQLException e) {
             throw new SystemUserManagerException("Failed to find WTSS Permission by permissionsId", e);
@@ -709,7 +700,7 @@ public class JdbcSystemUserImpl implements SystemUserLoader {
                 final long updateTime = rs.getLong(7);
 
                 final WtssPermissions info = new WtssPermissions(permissionsId, rolepermissionsName, permissions_value,
-                    permissions_type, description, createdTime, updateTime);
+                        permissions_type, description, createdTime, updateTime);
                 wtssPermissionsList.add(info);
             } while (rs.next());
 
@@ -723,7 +714,7 @@ public class JdbcSystemUserImpl implements SystemUserLoader {
         try {
 
             wtssUserList = this.dbOperator.query(SystemUserHandler.FIND_WTSS_USER_BY_USERNAME,
-                new SystemUserHandler(), username);
+                    new SystemUserHandler(), username);
 
         } catch (final SQLException e) {
             throw new SystemUserManagerException("Failed to find WTSS User by userName", e);
@@ -764,13 +755,13 @@ public class JdbcSystemUserImpl implements SystemUserLoader {
             return this.dbOperator.query(querySQL, intHandler, params.toArray());
         } catch (final SQLException e) {
             throw new SystemUserManagerException("Failed to find the total of Webank Department",
-                e);
+                    e);
         }
     }
 
     @Override
     public List<WebankDepartment> findAllWebankDepartmentList()
-        throws SystemUserManagerException {
+            throws SystemUserManagerException {
         String querySQL = WebankDepartmentHandler.FIND_WEBANK_DEPARTMENT_NO_DEP;
 
         try {
@@ -821,7 +812,7 @@ public class JdbcSystemUserImpl implements SystemUserLoader {
         try {
 
             webankDepartmentList = this.dbOperator.query(WebankDepartmentHandler.FIND_WEBANK_DEPARTMENT_BY_DPID,
-                new WebankDepartmentHandler(), dpId);
+                    new WebankDepartmentHandler(), dpId);
 
         } catch (final SQLException e) {
             throw new SystemUserManagerException("Failed to find Webank Department by dpId", e);
@@ -843,7 +834,7 @@ public class JdbcSystemUserImpl implements SystemUserLoader {
         try {
 
             webankDepartmentList = this.dbOperator.query(WebankDepartmentHandler.FIND_WEBANK_DEPARTMENT_BY_PID,
-                new WebankDepartmentHandler(), pId);
+                    new WebankDepartmentHandler(), pId);
 
         } catch (final SQLException e) {
             throw new SystemUserManagerException("Failed to find Webank Department by dpId", e);
@@ -933,7 +924,7 @@ public class JdbcSystemUserImpl implements SystemUserLoader {
     private static class FetchWebankDepartmentHandler implements ResultSetHandler<List<WebankDepartment>> {
 
         private static final String FETCH_ALL_WEBANK_DEPARTMENT = "SELECT dp_id, pid, dp_name, dp_ch_name, org_id, org_name, division, g.`name` , c.`upload_flag` " +
-            " FROM cfg_webank_organization c LEFT JOIN department_group g ON g.`id` = c.`group_id` ";
+                " FROM cfg_webank_organization c LEFT JOIN department_group g ON g.`id` = c.`group_id` ";
 
 
         @Override
@@ -956,7 +947,7 @@ public class JdbcSystemUserImpl implements SystemUserLoader {
                 DepartmentGroup departmentGroup = new DepartmentGroup();
                 departmentGroup.setName(groupName);
 
-                final WebankDepartment info = new WebankDepartment(dpId, dpName, dpChName, orgId, orgName, division, pid,uploadFlag);
+                final WebankDepartment info = new WebankDepartment(dpId, dpName, dpChName, orgId, orgName, division, pid, uploadFlag);
                 info.setDepartmentGroup(departmentGroup);
                 webankDepartmentList.add(info);
             } while (rs.next());
@@ -1012,15 +1003,15 @@ public class JdbcSystemUserImpl implements SystemUserLoader {
         final String INSERT_DEPARMENT = "INSERT INTO cfg_webank_organization (" + SQL_PARAMS_TABLE_CFG_WEBANK_ORGANIZATION + ") values (?,?,?,?,?,?,?,?,?)";
         try {
             return this.dbOperator.update(INSERT_DEPARMENT,
-                webankDepartment.getDpId(),
-                webankDepartment.getPid(),
-                webankDepartment.getDpName(),
-                webankDepartment.getDpChName(),
-                webankDepartment.getOrgId(),
-                webankDepartment.getOrgName(),
-                webankDepartment.getDivision(),
-                webankDepartment.getGroupId(),
-                webankDepartment.getUploadFlag()
+                    webankDepartment.getDpId(),
+                    webankDepartment.getPid(),
+                    webankDepartment.getDpName(),
+                    webankDepartment.getDpChName(),
+                    webankDepartment.getOrgId(),
+                    webankDepartment.getOrgName(),
+                    webankDepartment.getDivision(),
+                    webankDepartment.getGroupId(),
+                    webankDepartment.getUploadFlag()
             );
         } catch (final SQLException e) {
             throw new SystemUserManagerException(String.format("Add User %s Failed", webankDepartment.toString()), e);
@@ -1030,19 +1021,19 @@ public class JdbcSystemUserImpl implements SystemUserLoader {
     @Override
     public int updateDeparment(WebankDepartment webankDepartment) throws SystemUserManagerException {
         final String UPDATE_DEPARMENT_BY_ID = "UPDATE cfg_webank_organization SET "
-            + "pid=?, dp_name=?, dp_ch_name=?, org_id=?, org_name=?, division=? , group_id=? ,upload_flag=? "
-            + " WHERE dp_id=? ";
+                + "pid=?, dp_name=?, dp_ch_name=?, org_id=?, org_name=?, division=? , group_id=? ,upload_flag=? "
+                + " WHERE dp_id=? ";
         try {
             int updateResult = this.dbOperator.update(UPDATE_DEPARMENT_BY_ID,
-                webankDepartment.getPid(),
-                webankDepartment.getDpName(),
-                webankDepartment.getDpChName(),
-                webankDepartment.getOrgId(),
-                webankDepartment.getOrgName(),
-                webankDepartment.getDivision(),
-                webankDepartment.getGroupId(),
-                webankDepartment.getUploadFlag(),
-                webankDepartment.getDpId());
+                    webankDepartment.getPid(),
+                    webankDepartment.getDpName(),
+                    webankDepartment.getDpChName(),
+                    webankDepartment.getOrgId(),
+                    webankDepartment.getOrgName(),
+                    webankDepartment.getDivision(),
+                    webankDepartment.getGroupId(),
+                    webankDepartment.getUploadFlag(),
+                    webankDepartment.getDpId());
             return updateResult;
 
         } catch (final SQLException e) {
@@ -1113,7 +1104,7 @@ public class JdbcSystemUserImpl implements SystemUserLoader {
 
     @Override
     public List<WtssUser> getModifySystemUser(String searchterm, int start, int pageSize)
-        throws SystemUserManagerException {
+            throws SystemUserManagerException {
 
         List<WtssUser> wtssUserList = null;
         try {
@@ -1164,6 +1155,21 @@ public class JdbcSystemUserImpl implements SystemUserLoader {
             return null;
         }
 
+    }
+
+    @Override
+    public List<WtssUser> getSystemUserLikeUserName(String userName) throws SystemUserManagerException {
+
+        List<WtssUser> wtssUserList = null;
+        try {
+            String userNameLike  = "%"+userName+"%";
+            String sql = "SELECT " + SQL_PARAMS_TABLE_WTSS_USER + " FROM wtss_user like username = ?";
+            wtssUserList = this.dbOperator.query(sql, new SystemUserHandler(), userNameLike);
+
+        } catch (final SQLException e) {
+            throw new SystemUserManagerException("Failed to find WTSS User by userName", e);
+        }
+        return wtssUserList;
     }
 
     @Override
@@ -1249,8 +1255,8 @@ public class JdbcSystemUserImpl implements SystemUserLoader {
     @Override
     public int updateDepartmentMaintainer(long departmentId, String departmentName, String depMaintainer) throws SystemUserManagerException {
         final String UPDATE_DEPARTMENT_MAINTAINER = "UPDATE department_maintainer SET "
-            + "department_id=?, department_name=?, ops_user=? "
-            + "WHERE department_id=? ";
+                + "department_id=?, department_name=?, ops_user=? "
+                + "WHERE department_id=? ";
         try {
             return this.dbOperator.update(UPDATE_DEPARTMENT_MAINTAINER, departmentId, departmentName, depMaintainer, departmentId);
         } catch (final SQLException e) {
@@ -1283,7 +1289,7 @@ public class JdbcSystemUserImpl implements SystemUserLoader {
     }
 
     @Override
-    public  List<Integer> getDepartmentMaintainerDepListByUserName(String loginUserName) throws SystemUserManagerException {
+    public List<Integer> getDepartmentMaintainerDepListByUserName(String loginUserName) throws SystemUserManagerException {
         List<DepartmentMaintainer> departmentMaintainerList = null;
         try {
 
@@ -1325,15 +1331,15 @@ public class JdbcSystemUserImpl implements SystemUserLoader {
         String middle = "'%," + username + ",%'";
         String suffix = "'%," + username + "'";
         String querySql = "SELECT pr.id FROM projects pr "
-            + "JOIN wtss_user w on w.username=pr.create_user "
-            + "JOIN department_maintainer d on d.department_id=w.department_id "
-            + "WHERE pr.active=? and (d.ops_user like " + prefix + " or d.ops_user like " + middle
-            + " or d.ops_user like " + suffix + ")";
+                + "JOIN wtss_user w on w.username=pr.create_user "
+                + "JOIN department_maintainer d on d.department_id=w.department_id "
+                + "WHERE pr.active=? and (d.ops_user like " + prefix + " or d.ops_user like " + middle
+                + " or d.ops_user like " + suffix + ")";
         try {
             return this.dbOperator.query(querySql, this::getProjectIds, active);
         } catch (SQLException e) {
             throw new SystemUserManagerException(
-                "get maintained projects of " + username + " failed", e);
+                    "get maintained projects of " + username + " failed", e);
         }
     }
 
@@ -1343,14 +1349,14 @@ public class JdbcSystemUserImpl implements SystemUserLoader {
         String middle = "'%," + username + ",%'";
         String suffix = "'%," + username + "'";
         String querySql = "SELECT w.username FROM wtss_user w "
-            + "JOIN department_maintainer d on d.department_id=w.department_id "
-            + "WHERE d.ops_user like " + prefix + " or d.ops_user like " + middle
-            + " or d.ops_user like " + suffix;
+                + "JOIN department_maintainer d on d.department_id=w.department_id "
+                + "WHERE d.ops_user like " + prefix + " or d.ops_user like " + middle
+                + " or d.ops_user like " + suffix;
         try {
             return this.dbOperator.query(querySql, this::getStringList);
         } catch (SQLException e) {
             throw new SystemUserManagerException("get maintained users of " + username + " failed",
-                e);
+                    e);
         }
     }
 
@@ -1370,11 +1376,11 @@ public class JdbcSystemUserImpl implements SystemUserLoader {
 
     @Override
     public String getDepartmentAlarmReceiverByDepartment(String departmentName)
-        throws SQLException {
+            throws SQLException {
 
         List<DepartmentAlarmReceiver> departmentAlarmReceivers = this.dbOperator.query(
-            DepartmentAlarmReceiverHandler.FIND_DEPARTMENT_ALARM_RECEIVER_BY_DEPARTMENT_NAME,
-            new DepartmentAlarmReceiverHandler(), departmentName);
+                DepartmentAlarmReceiverHandler.FIND_DEPARTMENT_ALARM_RECEIVER_BY_DEPARTMENT_NAME,
+                new DepartmentAlarmReceiverHandler(), departmentName);
 
         if (CollectionUtils.isNotEmpty(departmentAlarmReceivers)) {
             return departmentAlarmReceivers.get(0).getReceiver();
@@ -1384,12 +1390,12 @@ public class JdbcSystemUserImpl implements SystemUserLoader {
     }
 
     private static class DepartmentAlarmReceiverHandler implements
-        ResultSetHandler<List<DepartmentAlarmReceiver>> {
+            ResultSetHandler<List<DepartmentAlarmReceiver>> {
 
         private static final String BASE_SQL_FIND_DEPARTMENT_ALARM_RECEIVER = "SELECT department_id, department_name, alarm_receiver FROM department_alarm_receiver ";
 
         private static final String FIND_DEPARTMENT_ALARM_RECEIVER_BY_DEPARTMENT_NAME =
-            BASE_SQL_FIND_DEPARTMENT_ALARM_RECEIVER + "WHERE department_name=? ";
+                BASE_SQL_FIND_DEPARTMENT_ALARM_RECEIVER + "WHERE department_name=? ";
 
         @Override
         public List<DepartmentAlarmReceiver> handle(final ResultSet resultSet) throws SQLException {
@@ -1417,6 +1423,7 @@ public class JdbcSystemUserImpl implements SystemUserLoader {
     /**
      * 过滤垃圾数据, 例如:
      * 将 ",,, ,,ab,,bf,er,,,ghc,d,,der,,," 变成  "ab,bf,er,ghc,d,der"
+     *
      * @param originStr
      * @return
      */

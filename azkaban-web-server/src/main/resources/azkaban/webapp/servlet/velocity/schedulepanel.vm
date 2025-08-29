@@ -14,12 +14,12 @@
  * the License.
 *#
 
-<script type="text/javascript" src="/js/azkaban/util/utils.js?version=1.49.0"></script>
+<script type="text/javascript" src="/js/azkaban/util/utils.js?version=0.11.0"></script>
 <script type="text/javascript"
-        src="/js/azkaban/view/schedule-panel.js?version=1.49.0"></script>
-<script type="text/javascript" src="/js/moment-2.29.4.min.js?version=1.49.0"></script>
-<script type="text/javascript" src="/js/later.min.js?version=1.49.0"></script>
-<script type="text/javascript" src="/js/moment-timezone-with-data.min.js?version=1.49.0"></script>
+        src="/js/azkaban/view/schedule-panel.js?version=0.11.0"></script>
+<script type="text/javascript" src="/js/moment-2.29.4.min.js?version=0.11.0"></script>
+<script type="text/javascript" src="/js/later.min.js?version=0.11.0"></script>
+<script type="text/javascript" src="/js/moment-timezone-with-data.min.js?version=0.11.0"></script>
 <style type="text/css">
   .input-box {
     position: relative;

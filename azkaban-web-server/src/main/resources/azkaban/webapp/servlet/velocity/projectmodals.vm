@@ -29,11 +29,12 @@
         <div class="modal-body">
           <div class="alert alert-danger" id="upload-project-modal-error-msg">$error_msg</div>
           <fieldset class="form-horizontal">
-          <div>
-            <label class="upload-button" for="file" >$uploadFile</label>
-            <input type="file" id="file" name="file" style="position:absolute;clip:rect(0 0 0 0);">
-            <span class="upload-file-name" id="fieldsNameBox" >$noFileUploaded</span>
-          </div>
+            <div>
+              <label class="upload-button" for="file">$uploadFile</label>
+              <input type="file" id="file" name="file"
+                     style="position:absolute;clip:rect(0 0 0 0);">
+              <span class="upload-file-name" id="fieldsNameBox">$noFileUploaded</span>
+            </div>
             #if($itsmSwitch)
               <div>
                 <label class="control-label" id="itsm-label">$itsm</label>
@@ -50,27 +51,27 @@
                 <input type="file" class="form-control" id="file" name="file">
               </div>
             </div>-->
-            #if ($validatorFixPrompt.booleanValue())
-              <div class="form-group">
-                <label for="fix" class="col-sm-3 control-label">
-                  $validatorFixLabel.toString()
+              #if ($validatorFixPrompt.booleanValue())
+                <div class="form-group">
+                  <label for="fix" class="col-sm-3 control-label">
+                      $validatorFixLabel.toString()
                     <a href="javascript:void(0);"
                        onclick="checkHrefUrlXss('$validatorFixLink.toString()',true)"
                        target="_blank">
-                    <span class="ui-icon ui-icon-info" style="display:inline-block;"></span>
-                  </a>
-                </label>
-                <div class="col-sm-3">
-                  <div class="checkbox">
-                  ## Add a hidden input so that when user uncheck the checkbox, "fix" field will
-                  ## still have value set to "off". This enables us to distinguish whether the
-                  ## user uncheck the checkbox or we turn off the fix prompt UI.
-                    <input type="hidden" name="fix" value="off">
-                    <input type="checkbox" id="fix" name="fix" value="on" checked="checked">
+                      <span class="ui-icon ui-icon-info" style="display:inline-block;"></span>
+                    </a>
+                  </label>
+                  <div class="col-sm-3">
+                    <div class="checkbox">
+                        ## Add a hidden input so that when user uncheck the checkbox, "fix" field will
+                        ## still have value set to "off". This enables us to distinguish whether the
+                        ## user uncheck the checkbox or we turn off the fix prompt UI.
+                      <input type="hidden" name="fix" value="off">
+                      <input type="checkbox" id="fix" name="fix" value="on" checked="checked">
+                    </div>
                   </div>
                 </div>
-              </div>
-            #end
+              #end
           </fieldset>
         </div>
         <div class="modal-footer">
@@ -280,24 +281,24 @@
   </div>
 </div>
 
-  ## 提示用户部门权限信息变更会话框
+## 提示用户部门权限信息变更会话框
 <div class="modal" id="department-upload-permit-change-panel">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header">
-                <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
-                <h4 id="title-dep-upload-permit" class="modal-title">$depUploadPerChange</h4>
-            </div>
-            <div class="modal-body">
-                <p id="body-dep-upload-permit"> $tipsUploadPer</p>
-            </div>
-            <div class="modal-footer">
-                <form id="button-department-upload-permit-close">
-                    <button type="button" class="btn btn-default" data-dismiss="modal">$close</button>
-                </form>
-            </div>
-        </div>
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+        <h4 id="title-dep-upload-permit" class="modal-title">$depUploadPerChange</h4>
+      </div>
+      <div class="modal-body">
+        <p id="body-dep-upload-permit"> $tipsUploadPer</p>
+      </div>
+      <div class="modal-footer">
+        <form id="button-department-upload-permit-close">
+          <button type="button" class="btn btn-default" data-dismiss="modal">$close</button>
+        </form>
+      </div>
     </div>
+  </div>
 </div>
 
 ## 提示用户操作权限是否可用会话框
@@ -308,7 +309,7 @@
         <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
         <h4 id="title-user-temp-operator-permit" class="modal-title"></h4>
       </div>
-      <div class="modal-body" >
+      <div class="modal-body">
         <p id="body-user-temp-operator-permit"></p>
       </div>
       <div class="modal-footer">
@@ -349,7 +350,7 @@
             </div>
           </div>
           <div class="form-group">
-            <label for="bus-domain-select" class="col-sm-4 control-label"><span class="required">*</span>$busDomain</label>
+            <label for="bus-domain-select" class="col-sm-4 control-label">$busDomain</label>
             <div class="col-sm-7">
               <select id="bus-domain-select"  class="form-control" style="width: 100%"></select>
             </div>

@@ -37,7 +37,6 @@ import com.google.inject.AbstractModule;
 import com.google.inject.Provides;
 import com.google.inject.Scopes;
 import org.apache.velocity.app.VelocityEngine;
-import org.apache.velocity.runtime.log.Log4JLogChute;
 import org.apache.velocity.runtime.resource.loader.ClasspathResourceLoader;
 import org.apache.velocity.runtime.resource.loader.JarResourceLoader;
 import org.eclipse.jetty.server.Server;
@@ -97,12 +96,13 @@ public class AzkabanWebServerModule extends AbstractModule {
   }
 
   private Class<? extends ExecutorManagerAdapter> resolveExecutorManagerAdaptorClassType() {
-    if(props.getBoolean(ConfigurationKeys.AZKABAN_POLL_MODEL, false)){
+    if (props.getBoolean(ConfigurationKeys.AZKABAN_POLL_MODEL, false)) {
       return ExecutionController.class;
-    }else{
+    } else {
       return ExecutorManager.class;
     }
   }
+  
 
   @Inject
   @Singleton
@@ -133,7 +133,7 @@ public class AzkabanWebServerModule extends AbstractModule {
         "velocimacro.permissions.allow.inline.to.replace.global", true);
     engine.setProperty("velocimacro.arguments.strict", true);
     engine.setProperty("runtime.log.invalid.references", devMode);
-    engine.setProperty("runtime.log.logsystem.class", Log4JLogChute.class);
+   // engine.setProperty("runtime.log.logsystem.class", SLF4JLog.class);
     // TODO: 2020/6/16 log
     engine.setProperty("runtime.log.logsystem.log4j.logger", "velocity");
     engine.setProperty("parser.pool.size", 3);

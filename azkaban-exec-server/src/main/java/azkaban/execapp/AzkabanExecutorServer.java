@@ -16,24 +16,12 @@
 
 package azkaban.execapp;
 
-import static azkaban.Constants.ConfigurationKeys;
-import static azkaban.Constants.DEFAULT_EXECUTOR_PORT_FILE;
-import static azkaban.ServiceProvider.SERVICE_PROVIDER;
-import static azkaban.execapp.ExecJettyServerModule.EXEC_JETTY_SERVER;
-import static azkaban.execapp.ExecJettyServerModule.EXEC_ROOT_CONTEXT;
-import static com.google.common.base.Preconditions.checkState;
-import static java.util.Objects.requireNonNull;
-
 import azkaban.AzkabanCommonModule;
 import azkaban.Constants;
 import azkaban.execapp.event.JobCallbackManager;
 import azkaban.execapp.jmx.JmxFlowRunnerManager;
 import azkaban.execapp.jmx.JmxJobMBeanManager;
-import azkaban.execapp.metric.NumFailedFlowMetric;
-import azkaban.execapp.metric.NumFailedJobMetric;
-import azkaban.execapp.metric.NumQueuedFlowMetric;
-import azkaban.execapp.metric.NumRunningFlowMetric;
-import azkaban.execapp.metric.NumRunningJobMetric;
+import azkaban.execapp.metric.*;
 import azkaban.executor.Executor;
 import azkaban.executor.ExecutorLoader;
 import azkaban.executor.ExecutorManagerException;
@@ -50,6 +38,24 @@ import azkaban.utils.Props;
 import azkaban.utils.Utils;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
+import org.apache.commons.lang.StringUtils;
+import org.eclipse.jetty.server.Connector;
+import org.eclipse.jetty.server.Server;
+import org.eclipse.jetty.server.ServerConnector;
+import org.eclipse.jetty.server.handler.IPAccessHandler;
+import org.eclipse.jetty.servlet.FilterHolder;
+import org.eclipse.jetty.servlet.ServletContextHandler;
+import org.joda.time.DateTimeZone;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import javax.inject.Inject;
+import javax.inject.Named;
+import javax.inject.Singleton;
+import javax.management.MBeanInfo;
+import javax.management.MBeanServer;
+import javax.management.ObjectName;
+import javax.servlet.DispatcherType;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
@@ -69,25 +75,13 @@ import java.util.EnumSet;
 import java.util.List;
 import java.util.TimeZone;
 
-import javax.inject.Inject;
-import javax.inject.Named;
-import javax.inject.Singleton;
-import javax.management.MBeanInfo;
-import javax.management.MBeanServer;
-import javax.management.ObjectName;
-import javax.servlet.DispatcherType;
-
-import org.apache.commons.collections.CollectionUtils;
-import org.apache.commons.lang.StringUtils;
-import org.eclipse.jetty.server.Connector;
-import org.eclipse.jetty.server.Server;
-import org.eclipse.jetty.server.ServerConnector;
-import org.eclipse.jetty.server.handler.IPAccessHandler;
-import org.eclipse.jetty.servlet.FilterHolder;
-import org.eclipse.jetty.servlet.ServletContextHandler;
-import org.joda.time.DateTimeZone;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import static azkaban.Constants.ConfigurationKeys;
+import static azkaban.Constants.DEFAULT_EXECUTOR_PORT_FILE;
+import static azkaban.ServiceProvider.SERVICE_PROVIDER;
+import static azkaban.execapp.ExecJettyServerModule.EXEC_JETTY_SERVER;
+import static azkaban.execapp.ExecJettyServerModule.EXEC_ROOT_CONTEXT;
+import static com.google.common.base.Preconditions.checkState;
+import static java.util.Objects.requireNonNull;
 
 //import org.mortbay.jetty.Connector;
 //import org.mortbay.jetty.Server;
@@ -231,8 +225,8 @@ public class AzkabanExecutorServer {
             && new File("/usr/bin/head").exists()) {
           AzkabanExecutorServer.logger.info("logging top memory consumer");
 
-          final java.lang.ProcessBuilder processBuilder =
-              new java.lang.ProcessBuilder("/bin/bash", "-c",
+          final ProcessBuilder processBuilder =
+              new ProcessBuilder("/bin/bash", "-c",
                   "/bin/ps aux --sort -rss | /usr/bin/head");
           final Process p = processBuilder.start();
           p.waitFor();
@@ -553,7 +547,7 @@ public class AzkabanExecutorServer {
   public String getHost() {
     if (this.props.containsKey(ConfigurationKeys.AZKABAN_SERVER_HOST_NAME)) {
       final String hostName = this.props
-          .getString(Constants.ConfigurationKeys.AZKABAN_SERVER_HOST_NAME);
+          .getString(ConfigurationKeys.AZKABAN_SERVER_HOST_NAME);
       if (!StringUtils.isEmpty(hostName)) {
         return hostName;
       }

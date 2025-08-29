@@ -1,4 +1,4 @@
-//package azkaban.db;
+package azkaban.db;//package azkaban.db;
 //
 //import static org.junit.Assert.assertEquals;
 //

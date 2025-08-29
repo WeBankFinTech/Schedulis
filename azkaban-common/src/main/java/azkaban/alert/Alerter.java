@@ -18,13 +18,7 @@ package azkaban.alert;
 
 import azkaban.batch.HoldBatchAlert;
 import azkaban.eventnotify.entity.EventNotify;
-import azkaban.executor.ExecutableFlow;
-import azkaban.executor.ExecutableFlowBase;
-import azkaban.executor.ExecutableNode;
-import azkaban.executor.ExecutionCycle;
-import azkaban.executor.Executor;
-import azkaban.executor.ExecutorLoader;
-import azkaban.executor.ExecutorManagerException;
+import azkaban.executor.*;
 import azkaban.history.ExecutionRecover;
 import azkaban.metrics.ProjectHourlyReportMertics;
 import azkaban.project.entity.FlowBusiness;
@@ -32,11 +26,12 @@ import azkaban.project.entity.ProjectHourlyReportConfig;
 import azkaban.scheduler.Schedule;
 import azkaban.sla.SlaOption;
 import azkaban.utils.Props;
+import org.slf4j.Logger;
+
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import org.slf4j.Logger;
 
 public interface Alerter {
 
@@ -66,7 +61,7 @@ public interface Alerter {
   void alertOnIMSRegistFlowStart(ExecutableFlow exflow, Map<String, Props> sharedProps, Logger logger,
                                  FlowBusiness flowBusiness, Props props) throws Exception;
 
-  void alertOnIMSRegistNodeStart(ExecutableFlow exflow, org.slf4j.Logger logger,
+  void alertOnIMSRegistNodeStart(ExecutableFlow exflow, Logger logger,
                                  FlowBusiness flowBusiness, Props props, ExecutableNode node) throws Exception;
 
   String alertOnIMSRegistStart(String projectName, String flowId, FlowBusiness flowBusiness,

@@ -18,18 +18,19 @@ package azkaban.execapp;
 
 import azkaban.executor.ExecutorInfo;
 import azkaban.utils.JSONUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import javax.servlet.ServletException;
+import javax.servlet.http.HttpServlet;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
-import javax.servlet.ServletException;
-import javax.servlet.http.HttpServlet;
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
-import org.slf4j.LoggerFactory;
-import org.slf4j.Logger;
 
 
 public class ServerStatisticsServlet extends HttpServlet {
@@ -84,8 +85,8 @@ public class ServerStatisticsServlet extends HttpServlet {
    */
   protected void fillRemainingMemoryPercent(final ExecutorInfo stats) {
     if (EXISTS_BASH && EXISTS_CAT && EXISTS_GREP && EXISTS_MEM_INFO) {
-      final java.lang.ProcessBuilder processBuilder =
-          new java.lang.ProcessBuilder("/bin/bash", "-c",
+      final ProcessBuilder processBuilder =
+          new ProcessBuilder("/bin/bash", "-c",
               "/bin/cat /proc/meminfo | grep -E \"^MemTotal:|^MemFree:|^Buffers:|^Cached:|^SwapCached:\"");
       try {
         final ArrayList<String> output = new ArrayList<>();
@@ -242,8 +243,8 @@ public class ServerStatisticsServlet extends HttpServlet {
    */
   protected void fillCpuUsage(final ExecutorInfo stats) {
     if (EXISTS_BASH && EXISTS_CAT && EXISTS_LOAD_AVG) {
-      final java.lang.ProcessBuilder processBuilder =
-          new java.lang.ProcessBuilder("/bin/bash", "-c", "/bin/cat /proc/loadavg");
+      final ProcessBuilder processBuilder =
+          new ProcessBuilder("/bin/bash", "-c", "/bin/cat /proc/loadavg");
       try {
         final ArrayList<String> output = new ArrayList<>();
         final Process process = processBuilder.start();

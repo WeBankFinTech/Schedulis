@@ -16,8 +16,6 @@
 
 package azkaban.system;
 
-import static java.util.Objects.requireNonNull;
-
 import azkaban.executor.DepartmentGroup;
 import azkaban.executor.Executor;
 import azkaban.executor.ExecutorManagerException;
@@ -26,29 +24,23 @@ import azkaban.i18n.utils.LoadJsonUtils;
 import azkaban.project.Project;
 import azkaban.project.ProjectLoader;
 import azkaban.storage.StorageManager;
-import azkaban.system.entity.DepartmentMaintainer;
-import azkaban.system.entity.WebankDepartment;
-import azkaban.system.entity.WebankUser;
-import azkaban.system.entity.WtssPermissions;
-import azkaban.system.entity.WtssRole;
-import azkaban.system.entity.WtssUser;
+import azkaban.system.entity.*;
 import azkaban.user.User;
 import azkaban.utils.MD5Utils;
 import azkaban.utils.Props;
-import java.sql.SQLException;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.regex.Pattern;
-import java.util.stream.Collectors;
-import javax.inject.Inject;
-import javax.inject.Singleton;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import javax.inject.Inject;
+import javax.inject.Singleton;
+import java.sql.SQLException;
+import java.util.*;
+import java.util.regex.Pattern;
+import java.util.stream.Collectors;
+
+import static java.util.Objects.requireNonNull;
 
 
 @Singleton
@@ -714,6 +706,10 @@ public class SystemManager {
    */
   public WtssUser getSystemUserByUserName(String userName) throws SystemUserManagerException {
     return this.systemUserLoader.getSystemUserByUserName(userName);
+  }
+
+  public List<WtssUser> getSystemUserLikeUserName(String userName) throws SystemUserManagerException {
+    return this.systemUserLoader.getSystemUserLikeUserName(userName);
   }
 
   /**

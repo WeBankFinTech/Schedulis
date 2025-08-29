@@ -68,7 +68,7 @@
     </div>
   </div>
 
-  <script type="text/javascript" src="/js/azkaban/view/hideHead.js?version=1.49.0"></script>
+  <script type="text/javascript" src="/js/azkaban/view/hideHead.js?version=0.11.0"></script>
 
   <div class="container-full">
 
@@ -82,7 +82,7 @@
         <div class="panel panel-default">
           <div class="panel-heading">$property</div>
 
-          <table class="table table-striped table-bordered properties-table job-param-table">
+          <table style="word-break:break-all;" class="table table-striped table-bordered properties-table job-param-table">
             <thead>
             <tr>
               <th class="tb-pname">$paramName</th>
@@ -102,7 +102,7 @@
       </div><!-- /col-xs-8 -->
       <div class="col-xs-6 col-sm-3 sidebar-offcanvas">
         <div class="well" id="job-summary">
-          <h4>$program
+          <h4 style="word-break:break-all;">$program
             <small>$property</small>
           </h4>
           <p><strong>$job</strong> $jobid</p>

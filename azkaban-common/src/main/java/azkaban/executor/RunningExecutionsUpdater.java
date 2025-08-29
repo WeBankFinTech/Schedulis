@@ -23,16 +23,13 @@ import azkaban.distributelock.DBTableDistributeLock;
 import azkaban.metrics.CommonMetrics;
 import azkaban.utils.Pair;
 import azkaban.utils.Props;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Map.Entry;
-import java.util.Optional;
-import javax.inject.Inject;
 import org.joda.time.DateTime;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import javax.inject.Inject;
+import java.util.*;
+import java.util.Map.Entry;
 
 /**
  * Updates running executions.
@@ -83,7 +80,7 @@ public class RunningExecutionsUpdater {
     final ArrayList<ExecutableFlow> finalizeFlows =
             new ArrayList<>();
 
-    for (final Map.Entry<Optional<Executor>, List<ExecutableFlow>> entry : exFlowMap
+    for (final Entry<Optional<Executor>, List<ExecutableFlow>> entry : exFlowMap
             .entrySet()) {
 
       final Optional<Executor> executorOption = entry.getKey();

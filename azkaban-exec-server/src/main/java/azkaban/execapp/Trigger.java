@@ -17,17 +17,20 @@
 
 package azkaban.execapp;
 
-import azkaban.executor.*;
+import azkaban.executor.ExecutableFlow;
+import azkaban.executor.ExecutorLoader;
+import azkaban.executor.Status;
 import azkaban.trigger.Condition;
 import azkaban.trigger.TriggerAction;
-import java.util.List;
-import org.slf4j.LoggerFactory;
 import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import java.util.List;
 
 
 public class Trigger implements Runnable {
 
-  private static final Logger logger = LoggerFactory.getLogger(azkaban.execapp.Trigger.class);
+  private static final Logger logger = LoggerFactory.getLogger(Trigger.class);
   private final int execId;
 //  private final ExecutorLoader executorLoader ;
 
@@ -78,7 +81,7 @@ public class Trigger implements Runnable {
           }
         } catch (final Exception e) {
           logger.error("Failed to do action " + action.getDescription()
-              + " for execution " + azkaban.execapp.Trigger.this.execId, e);
+              + " for execution " + Trigger.this.execId, e);
         }
       }
     } else {

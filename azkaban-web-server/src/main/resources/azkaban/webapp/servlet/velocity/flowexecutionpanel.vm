@@ -282,61 +282,67 @@
                       <option value="failedPause">$suspendCurrentFlow</option>
                     </select>
                     <hr>
-                    <p>$rerunActionTips</p>
-                    <div class="radio">
-                      <label>
-                        <input type="radio" name="rerunAction" value="killServer">
-                        $killServerTips
-                      </label>
-                    </div>
+                    <div id="should-be-hidden-if-in-batch">
+                      <p>$rerunActionTips</p>
+                      <div class="radio">
+                        <label>
+                          <input type="radio" name="rerunAction" value="killServer">
+                          $killServerTips
+                        </label>
+                      </div>
 
-                    <div class="radio">
-                      <label>
-                        <input type="radio" name="rerunAction" value="rerun" checked="checked">
-                        $rerunTips
-                      </label>
-                    </div>
-                    <hr>
-                    <p>$retryFailed</p>
-                    <div id="job-failed-retry-view">
-                      <table class="table table-striped" id="jobFailedRetryTable">
-                        <thead>
-                        <tr>
-                          <th>$job</th>
-                          <th>$retryInterval</th>
-                          <th>$timesOfRetry</th>
-                          <th>$operate</th>
-                        </tr>
-                        </thead>
-                        <tbody id="set-job-retry-failed-tbody">
-                        <tr id="addFailedRow">
-                          <td id="addFailedRow-col" colspan="5">
-                            <span class="addIcon"></span>
-                            <button type="button" class="btn btn-xs btn-success" id="add-failed-retry-btn">$addOneLine</button>
-                          </td>
-                        </tr>
-                        </tbody>
-                      </table>
-                    </div>
-                    <p>$skipFailed</p>
-                    <p class="help-block">$skipActionTips</p>
-                    <div id="job-skip-failed-view">
-                      <table class="table table-striped" id="jobSkipFailedTable">
-                        <thead>
-                        <tr>
-                          <th>$skipActionHead</th>
-                          <th>$jobName</th>
-                        </tr>
-                        </thead>
-                        <tbody id="set-job-skip-failed-tbody">
-                        <tr id="addSkipJobRow">
-                          <td id="addSkipJobRow-col" colspan="5">
-                            <span class="addIcon"></span>
-                            <button type="button" class="btn btn-xs btn-success" id="add-skip-failed-btn">$addOneLine</button>
-                          </td>
-                        </tr>
-                        </tbody>
-                      </table>
+                      <div class="radio">
+                        <label>
+                          <input type="radio" name="rerunAction" value="rerun" checked="checked">
+                          $rerunTips
+                        </label>
+                      </div>
+                      <hr>
+                      <p>$retryFailed</p>
+                      <div id="job-failed-retry-view">
+                        <table class="table table-striped" id="jobFailedRetryTable">
+                          <thead>
+                          <tr>
+                            <th>$job</th>
+                            <th>$retryInterval</th>
+                            <th>$timesOfRetry</th>
+                            <th>$operate</th>
+                          </tr>
+                          </thead>
+                          <tbody id="set-job-retry-failed-tbody">
+                          <tr id="addFailedRow">
+                            <td id="addFailedRow-col" colspan="5">
+                              <span class="addIcon"></span>
+                              <button type="button" class="btn btn-xs btn-success" id="add-failed-retry-btn">$addOneLine</button>
+                            </td>
+                          </tr>
+                          </tbody>
+                        </table>
+                      </div>
+                      <p>$retryFailedWhitelist</p>
+                      <div id="job-failed-retry-whitelist-view" style="margin-bottom: 10px;">
+                        <select class="form-control" style="width: 100%;" id="job-failed-retry-whitelist-select"></select>
+                      </div>                    
+                      <p>$skipFailed</p>
+                      <p class="help-block">$skipActionTips</p>
+                      <div id="job-skip-failed-view">
+                        <table class="table table-striped" id="jobSkipFailedTable">
+                          <thead>
+                          <tr>
+                            <th>$skipActionHead</th>
+                            <th>$jobName</th>
+                          </tr>
+                          </thead>
+                          <tbody id="set-job-skip-failed-tbody">
+                          <tr id="addSkipJobRow">
+                            <td id="addSkipJobRow-col" colspan="5">
+                              <span class="addIcon"></span>
+                              <button type="button" class="btn btn-xs btn-success" id="add-skip-failed-btn">$addOneLine</button>
+                            </td>
+                          </tr>
+                          </tbody>
+                        </table>
+                      </div>
                     </div>
                   </div>
 

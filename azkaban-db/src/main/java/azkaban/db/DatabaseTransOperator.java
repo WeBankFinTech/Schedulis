@@ -16,13 +16,14 @@
  */
 package azkaban.db;
 
-import java.sql.Connection;
-import java.sql.SQLException;
 import org.apache.commons.dbutils.QueryRunner;
 import org.apache.commons.dbutils.ResultSetHandler;
 import org.apache.commons.dbutils.handlers.ScalarHandler;
-import org.slf4j.LoggerFactory;
 import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import java.sql.Connection;
+import java.sql.SQLException;
 
 
 /**
@@ -35,7 +36,7 @@ import org.slf4j.Logger;
  * usually group a couple of sql operations which need the same connection into
  * DatabaseTransOperator.
  *
- * @see org.apache.commons.dbutils.QueryRunner
+ * @see QueryRunner
  */
 public class DatabaseTransOperator {
 

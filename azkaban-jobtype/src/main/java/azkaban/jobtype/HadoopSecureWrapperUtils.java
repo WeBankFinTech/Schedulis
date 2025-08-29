@@ -32,8 +32,8 @@ import java.util.Properties;
  * here.
  * </pre>
  *
- * @see azkaban.jobtype.HadoopSecureHiveWrapper
- * @see azkaban.jobtype.HadoopSecureSparkWrapper
+ * @see HadoopSecureHiveWrapper
+ * @see HadoopSecureSparkWrapper
  */
 public class HadoopSecureWrapperUtils {
 

@@ -74,4 +74,15 @@ public class JobIdRelationServiceImpl implements JobIdRelationService {
       logger.error("update proxyUrl failed." , e);
     }
   }
+
+  @Override
+  public JobIdRelation  getJobIdRelationByAppId(String appId) {
+    try {
+      return jobIdRelationDao.getJobIdRelationByAppId(appId);
+    }catch (Exception e){
+      logger.error("获取JobIdRelation失败，applicationId：{}，Exception：{}",appId,e);
+      return null;
+    }
+
+  }
 }

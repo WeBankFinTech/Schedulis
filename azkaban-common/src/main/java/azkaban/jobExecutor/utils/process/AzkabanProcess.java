@@ -20,6 +20,9 @@ import azkaban.jobid.BDPClientJobInfo;
 import azkaban.utils.LogGobbler;
 import azkaban.utils.Props;
 import com.google.common.base.Joiner;
+import org.apache.commons.io.IOUtils;
+import org.slf4j.Logger;
+
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStreamReader;
@@ -29,8 +32,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
-import org.apache.commons.io.IOUtils;
-import org.slf4j.Logger;
 
 /**
  * An improved version of java.lang.Process.
@@ -251,7 +252,7 @@ public class AzkabanProcess {
    * @param process The process to get the id from
    * @return The id of the process
    */
-  private int processId(final java.lang.Process process) {
+  private int processId(final Process process) {
     int processId = 0;
     try {
       final Field f = process.getClass().getDeclaredField("pid");

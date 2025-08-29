@@ -21,7 +21,9 @@ public class JobIdRelation {
 
   public JobIdRelation() {
   }
-
+  public JobIdRelation(Integer id) {
+    this.id = id;
+  }
   public JobIdRelation(Integer id, Integer execId, Integer attempt, String jobNamePath, String jobServerJobId, String applicationId, String linkisId, String proxyUrl) {
     this.id = id;
     this.execId = execId;

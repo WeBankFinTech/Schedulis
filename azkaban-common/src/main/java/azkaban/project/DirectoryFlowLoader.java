@@ -16,28 +16,18 @@
 
 package azkaban.project;
 
-import azkaban.flow.CommonJobProperties;
-import azkaban.flow.Edge;
-import azkaban.flow.Flow;
-import azkaban.flow.FlowProps;
-import azkaban.flow.Node;
-import azkaban.flow.SpecialJobTypes;
+import azkaban.flow.*;
 import azkaban.project.FlowLoaderUtils.DirFilter;
 import azkaban.project.FlowLoaderUtils.SuffixFilter;
 import azkaban.project.validator.ValidationReport;
 import azkaban.utils.Props;
-import java.io.File;
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.regex.Pattern;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.io.File;
+import java.io.IOException;
+import java.util.*;
+import java.util.regex.Pattern;
 
 /**
  * Loads job and properties files to flows from project directory.
@@ -168,7 +158,7 @@ public class DirectoryFlowLoader implements FlowLoader {
       } catch (final IOException e) {
         logger.error("Error loading properties {}, cause by :", file.getName(), e);
         this.errors.add("Error loading properties " + file.getName() + ", cause by :"
-                + e.getMessage());
+            + e.getMessage());
       }
 
       logger.info("Adding " + relative);
@@ -240,7 +230,7 @@ public class DirectoryFlowLoader implements FlowLoader {
       } catch (final IOException e) {
         logger.error("Error loading job file {}, cause by :", file.getName(), e);
         this.errors.add("Error loading job file " + file.getName() + ", cause by : "
-                + e.getMessage());
+            + e.getMessage());
       }
     }
 
@@ -254,14 +244,14 @@ public class DirectoryFlowLoader implements FlowLoader {
     Map<String, String> labels = props.getMapByPrefix(LABEL_PREFIX);
 
     labels.entrySet().stream()
-            .filter(k -> validLabel(k.getKey()))
-            .map(m -> Integer.valueOf(m.getKey()))
-            .sorted().forEach(x -> {
-              String key = String.valueOf(x);
-              if (labels.containsKey(key) && "true".equals(labels.get(key))) {
-                labelList.add(Integer.valueOf(key));
-              }
-            });
+        .filter(k -> validLabel(k.getKey()))
+        .map(m -> Integer.valueOf(m.getKey()))
+        .sorted().forEach(x -> {
+      String key = String.valueOf(x);
+      if (labels.containsKey(key) && "true".equals(labels.get(key))) {
+        labelList.add(Integer.valueOf(key));
+      }
+    });
     return labelList;
   }
 
@@ -289,11 +279,11 @@ public class DirectoryFlowLoader implements FlowLoader {
     for (final String embeddedFlowId : embeddedFlow) {
       if (visited.contains(embeddedFlowId)) {
         this.errors.add("Embedded flow cycle found in " + flowId + "->"
-                + embeddedFlowId);
+            + embeddedFlowId);
         return;
       } else if (!this.flowMap.containsKey(embeddedFlowId)) {
         this.errors.add("Flow " + flowId + " depends on " + embeddedFlowId
-                + " but can't be found.");
+            + " but can't be found.");
         return;
       } else {
         resolveEmbeddedFlow(embeddedFlowId, visited);
@@ -315,8 +305,8 @@ public class DirectoryFlowLoader implements FlowLoader {
       }
 
       final List<String> dependencyList =
-              props.getStringList(CommonJobProperties.DEPENDENCIES,
-                      (List<String>) null);
+          props.getStringList(CommonJobProperties.DEPENDENCIES,
+              (List<String>) null);
 
       if (dependencyList != null) {
         Map<String, Edge> dependencies = this.nodeDependencies.get(node.getId());
@@ -325,7 +315,7 @@ public class DirectoryFlowLoader implements FlowLoader {
 
           for (String dependencyName : dependencyList) {
             dependencyName =
-                    dependencyName == null ? null : dependencyName.trim();
+                dependencyName == null ? null : dependencyName.trim();
             if (dependencyName == null || dependencyName.isEmpty()) {
               continue;
             }
@@ -338,13 +328,13 @@ public class DirectoryFlowLoader implements FlowLoader {
                 dependencies.put(dependencyName, edge);
                 // 依赖关系不清晰
                 this.errors.add(node.getId() + " has ambiguous dependency, please check the dependency information."
-                        + dependencyName);
+                    + dependencyName);
               } else {
                 edge.setError("Dependency not found.");
                 dependencies.put(dependencyName, edge);
                 // 找不到依赖
                 this.errors.add(node.getId() + " cannot find dependency, please check the dependency information. "
-                        + dependencyName);
+                    + dependencyName);
               }
             } else if (dependencyNode == node) {
               // We have a self cycle
@@ -382,7 +372,7 @@ public class DirectoryFlowLoader implements FlowLoader {
     for (final Node base : this.nodeMap.values()) {
       // Root nodes can be discovered when parsing jobs
       if (this.rootNodes.contains(base.getId())
-              || !nonRootNodes.contains(base.getId())) {
+          || !nonRootNodes.contains(base.getId())) {
         this.rootNodes.add(base.getId());
         final Flow flow = new Flow(base.getId());
         final Props jobProp = this.jobPropsMap.get(base.getId());
@@ -401,7 +391,7 @@ public class DirectoryFlowLoader implements FlowLoader {
   }
 
   private void constructFlow(final Flow flow, final Node node, final Set<String> visitedOnPath,
-                             final Set<String> visitedEver) {
+      final Set<String> visitedEver) {
     visitedOnPath.add(node.getId());
     visitedEver.add(node.getId());
 

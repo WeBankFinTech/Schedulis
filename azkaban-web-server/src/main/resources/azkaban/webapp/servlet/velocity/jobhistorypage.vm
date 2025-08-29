@@ -35,20 +35,20 @@
     var langType = "${currentlangType}";
     //var dataSeries = $dataSeries;
   </script>
-  <script type="text/javascript" src="/js/raphael.min.js?version=1.49.0"></script>
-  <script type="text/javascript" src="/js/morris.min.js?version=1.49.0"></script>
+  <script type="text/javascript" src="/js/raphael.min.js?version=0.11.0"></script>
+  <script type="text/javascript" src="/js/morris.min.js?version=0.11.0"></script>
 
-  <script type="text/javascript" src="/js/moment-2.29.4.min.js?version=1.49.0"></script>
-  <script type="text/javascript" src="/js/bootstrap-datetimepicker.min.js?version=1.49.0"></script>
+  <script type="text/javascript" src="/js/moment-2.29.4.min.js?version=0.11.0"></script>
+  <script type="text/javascript" src="/js/bootstrap-datetimepicker.min.js?version=0.11.0"></script>
 
-  <script type="text/javascript" src="/js/azkaban/i18n-config.js?version=1.49.0"></script>
-  <script type="text/javascript" src="/js/azkaban/util/utils.js?version=1.49.0"></script>
-  <script type="text/javascript" src="/js/azkaban/view/time-graph.js?version=1.49.0"></script>
-  <script type="text/javascript" src="/js/azkaban/view/job-history.js?version=1.49.0"></script>
-  <script type="text/javascript" src="/js/azkaban/util/job-status.js?version=1.49.0"></script>
-
-  <link rel="stylesheet" type="text/css" href="/css/morris.css?version=1.49.0"/>
-  <link rel="stylesheet" type="text/css" href="/css/bootstrap-datetimepicker.css?version=1.49.0">
+  <script type="text/javascript" src="/js/azkaban/i18n-config.js?version=0.11.0"></script>
+  <script type="text/javascript" src="/js/azkaban/util/utils.js?version=0.11.0"></script>
+  <script type="text/javascript" src="/js/azkaban/view/time-graph.js?version=0.11.0"></script>
+  <script type="text/javascript" src="/js/azkaban/view/job-history.js?version=0.11.0"></script>
+  <script type="text/javascript" src="/js/azkaban/util/job-status.js?version=0.11.0"></script>
+  
+  <link rel="stylesheet" type="text/css" href="/css/morris.css?version=0.11.0"/>
+  <link rel="stylesheet" type="text/css" href="/css/bootstrap-datetimepicker.css?version=0.11.0">
 </head>
 <body>
 
@@ -79,7 +79,7 @@
     </div>
   </div>
 
-  <script type="text/javascript" src="/js/azkaban/view/hideHead.js?version=1.49.0"></script>
+  <script type="text/javascript" src="/js/azkaban/view/hideHead.js?version=0.11.0"></script>
 
   <div class="container-full">
 

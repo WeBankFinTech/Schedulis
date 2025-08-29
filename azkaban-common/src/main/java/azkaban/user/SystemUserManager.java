@@ -10,21 +10,14 @@ import azkaban.system.entity.WtssRole;
 import azkaban.system.entity.WtssUser;
 import azkaban.utils.LdapCheckCenter;
 import azkaban.utils.Props;
-
-
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import javax.inject.Inject;
-
 import azkaban.utils.RSAUtils;
 import org.apache.commons.lang.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import javax.inject.Inject;
+import java.io.IOException;
+import java.util.*;
 
 /**
  * Created by johnnwang on 7/11/18.
@@ -168,7 +161,7 @@ public class SystemUserManager implements UserManager  {
 
       String proxyUsers = wtssUser.getProxyUsers();
       //空字符串不做处理
-      if(org.apache.commons.lang.StringUtils.isNotEmpty(proxyUsers)){
+      if(StringUtils.isNotEmpty(proxyUsers)){
         final String[] proxySplit = proxyUsers.split("\\s*,\\s*");
         for (final String proxyUser : proxySplit) {
           Set<String> proxySet = new HashSet<>();

@@ -3,6 +3,7 @@ package azkaban.executor;
 import azkaban.db.DatabaseOperator;
 import azkaban.db.EncodingType;
 import azkaban.db.SQLTransaction;
+import azkaban.sla.SlaOption;
 import azkaban.utils.GZIPUtils;
 import azkaban.utils.JSONUtils;
 import org.apache.commons.dbutils.ResultSetHandler;
@@ -178,7 +179,18 @@ public class ExecutionCycleDao {
     public ExecutionCycle getExecutionCycleFlow(String projectId, String flowId) throws ExecutorManagerException {
         try {
             List<ExecutionCycle> cycleFlows = dbOperator.query(GET_CYCLE_FLOW_SQL, this::resultSet2CycleFlows, projectId, flowId);
-            return cycleFlows.isEmpty() ? null : cycleFlows.get(0);
+            ExecutionCycle cycleFlow = cycleFlows.isEmpty() ? null : cycleFlows.get(0);
+            if(cycleFlow != null){
+                Map<String, Object> mp = parseData(cycleFlow.getCurrentExecId());
+                if (!mp.isEmpty()) {
+                    cycleFlow.setCycleOption((Map<String, Object>) mp.get("cycleOptions"));
+                    cycleFlow.setOtherOption((Map<String, Object>) mp.get("otherOptions"));
+                    cycleFlow.setExecutionOptions(ExecutionOptions.createFromObject(mp.get("executionOptions")));
+                    cycleFlow.setSlaOptions((List<SlaOption>) mp.get("slaOptions"));
+                }
+            }
+
+            return cycleFlow;
         } catch (SQLException e) {
             logger.error(String.format("get cycle flow failed, projectId: %s, flowId: %s", projectId, flowId), e);
             throw new ExecutorManagerException(String.format("get cycle flow failed, projectId: %s, flowId: %s", projectId, flowId), e);
@@ -458,6 +470,7 @@ public class ExecutionCycleDao {
                 cycleFlow.setCycleOption((Map<String, Object>) mp.get("cycleOptions"));
                 cycleFlow.setOtherOption((Map<String, Object>) mp.get("otherOptions"));
                 cycleFlow.setExecutionOptions(ExecutionOptions.createFromObject(mp.get("executionOptions")));
+                cycleFlow.setSlaOptions((List<SlaOption>) mp.get("slaOptions"));
             }
 
             cycleFlows.add(cycleFlow);

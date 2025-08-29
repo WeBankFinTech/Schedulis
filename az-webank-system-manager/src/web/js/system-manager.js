@@ -17,7 +17,8 @@ azkaban.SystemTabView = Backbone.View.extend({
     'click #system-department-group-view-link': 'handleSystemDepartmentGroupViewLinkClick',
     'click #system-user-modify-list-view-link': 'handleSystemUserModifyViewLinkClick',
     'click #system-department-maintainer-list-view-link': 'handleSystemDepartmentMaintainerViewLinkClick',
-    'click #exceptional-user-view-link': 'handleExceptionalUserViewLinkClick'
+    'click #exceptional-user-view-link': 'handleExceptionalUserViewLinkClick',
+    'click #duty-group-view-link': 'handleDutyGroupViewLinkClick'
   },
 
   initialize: function (settings) {
@@ -47,6 +48,8 @@ azkaban.SystemTabView = Backbone.View.extend({
     $('#system-user-view').show();
     $('#exceptional-user-view-link').removeClass('active');
     $('#exceptional-user-view').hide();
+    $('#duty-group-view-link').removeClass('active');
+    $('#duty-group-view').hide();
     $('#system-executor-view-link').removeClass('active');
     $('#system-executor-view').hide();
     systemUserModel.trigger("change:view");
@@ -66,6 +69,8 @@ azkaban.SystemTabView = Backbone.View.extend({
     $('#system-deparment-view').show();
     $('#exceptional-user-view-link').removeClass('active');
     $('#exceptional-user-view').hide();
+    $('#duty-group-view-link').removeClass('active');
+    $('#duty-group-view').hide();
     $('#system-executor-view-link').removeClass('active');
     $('#system-executor-view').hide();
     systemDeparmentModel.trigger("change:view");
@@ -87,6 +92,8 @@ azkaban.SystemTabView = Backbone.View.extend({
     $('#system-executor-view').show();
     $('#exceptional-user-view-link').removeClass('active');
     $('#exceptional-user-view').hide();
+    $('#duty-group-view-link').removeClass('active');
+    $('#duty-group-view').hide();
     systemExecutorModel.trigger("change:view");
   },
 
@@ -104,6 +111,8 @@ azkaban.SystemTabView = Backbone.View.extend({
     $('#system-department-group-view').show();
     $('#exceptional-user-view-link').removeClass('active');
     $('#exceptional-user-view').hide();
+    $('#duty-group-view-link').removeClass('active');
+    $('#duty-group-view').hide();
     $('#system-executor-view-link').removeClass('active');
     $('#system-executor-view').hide();
     systemDepartmentGroupModel.trigger("change:view");
@@ -123,6 +132,8 @@ azkaban.SystemTabView = Backbone.View.extend({
     $('#system-user-modify-list-view').show();
     $('#exceptional-user-view-link').removeClass('active');
     $('#exceptional-user-view').hide();
+    $('#duty-group-view-link').removeClass('active');
+    $('#duty-group-view').hide();
     $('#system-executor-view-link').removeClass('active');
     $('#system-executor-view').hide();
     systemUserModifyListModel.trigger("change:view");
@@ -142,6 +153,8 @@ azkaban.SystemTabView = Backbone.View.extend({
     $('#system-department-maintainer-list-view').show();
     $('#exceptional-user-view-link').removeClass('active');
     $('#exceptional-user-view').hide();
+    $('#duty-group-view-link').removeClass('active');
+    $('#duty-group-view').hide();
     $('#system-executor-view-link').removeClass('active');
     $('#system-executor-view').hide();
     departmentMaintainerListModel.trigger("change:view");
@@ -162,9 +175,33 @@ azkaban.SystemTabView = Backbone.View.extend({
 
     $('#exceptional-user-view-link').addClass('active');
     $('#exceptional-user-view').show();
+    $('#duty-group-view-link').removeClass('active');
+    $('#duty-group-view').hide();
     $('#system-executor-view-link').removeClass('active');
     $('#system-executor-view').hide();
     exceptionalUserListModel.trigger("change:view");
+  },
+
+  //值班组页面
+  handleDutyGroupViewLinkClick: function () {
+    $('#system-user-view-link').removeClass('active');
+    $('#system-deparment-view-link').removeClass('active');
+    $('#system-department-group-view-link').removeClass('active');
+    $('#system-user-modify-list-view-link').removeClass('active');
+    $('#system-user-view').hide();
+    $('#system-deparment-view').hide();
+    $('#system-department-group-view').hide();
+    $('#system-user-modify-list-view').hide();
+    $('#system-department-maintainer-list-view-link').removeClass('active');
+    $('#system-department-maintainer-list-view').hide();
+
+    $('#exceptional-user-view-link').removeClass('active');
+    $('#exceptional-user-view').hide();
+    $('#duty-group-view-link').addClass('active');
+    $('#duty-group-view').show();
+    $('#system-executor-view-link').removeClass('active');
+    $('#system-executor-view').hide();
+    dutyGroupListModel.trigger("change:view");
   },
 
 });
@@ -183,6 +220,8 @@ $(function () {
   departmentMaintainerListModel = new azkaban.DepartmentMaintainerListModel();
 
   exceptionalUserListModel = new azkaban.ExceptionalUserListModel();
+
+  dutyGroupListModel = new azkaban.DutyGroupListModel()
 
   systemExecutorModel = new azkaban.SystemExecutorModel()
 
@@ -316,6 +355,22 @@ $(function () {
   });
   // exceptional-user-manager
 
+  // 值班组管理
+  addDutyGroupView = new azkaban.AddDutyGroupView({
+    el: $('#add-duty-group-panel'),
+    model: dutyGroupListModel
+  });
+
+  dutyGroupView = new azkaban.DutyGroupView({
+    el: $('#duty-group-view'),
+    model: dutyGroupListModel
+  });
+  // 值班组管理
+
+  if(!isAdminPerm){
+    window.location.href = "/system#duty-group";
+  }
+
   if (window.location.hash) {//浏览器输入对于的链接时跳转到对应的Tab页
     var hash = window.location.hash;
     if (hash.indexOf('#system-user') != -1) {
@@ -385,6 +440,15 @@ $(function () {
       } else {
         systemTabView.handleExceptionalUserViewLinkClick();
       }
+    } else if (hash.indexOf('#duty-group') != -1){
+      if (hash.indexOf("#page") != -1) {
+        var page = hash.substring("#duty-group-page#page".length, hash.length);
+        console.log("page " + page);
+        dutyGroupListModel.set({ "page": parseInt(page) });
+        systemTabView.handleDutyGroupViewLinkClick();
+      } else {
+        systemTabView.handleDutyGroupViewLinkClick();
+      }
     }
   } else {
     window.location.href = "/system#system-user";
@@ -412,7 +476,7 @@ $(function () {
   if (navigator.userAgent.indexOf('Chrome') === -1) {
     document.getElementById('password').setAttribute('type', 'password');
     document.getElementById('update-password').setAttribute('type', 'password');
-  }
+  }   
 });
 
 // 以下用于保存浏览数据，切换页面也能返回之前的浏览进度。
@@ -436,4 +500,7 @@ azkaban.DepartmentMaintainerListModel = Backbone.Model.extend({});
 
 var exceptionalUserListModel;
 azkaban.ExceptionalUserListModel = Backbone.Model.extend({});
+
+var dutyGroupListModel;
+azkaban.DutyGroupListModel = Backbone.Model.extend({});
 

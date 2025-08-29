@@ -127,5 +127,5 @@ insert into wtss_permissions (permissions_name, permissions_value, permissions_t
 values ("UPLOADPROJECTS", 0x0008000, 1, "上传项目权限", UNIX_TIMESTAMP(CURRENT_TIMESTAMP(3)), UNIX_TIMESTAMP(CURRENT_TIMESTAMP(3)));
 
 INSERT INTO `wtss_user` (`user_id`, `username`, `password`, `full_name`, `department_id`, `department_name`, `email`, `proxy_users`, `role_id`, `user_type`, `create_time`, `update_time`)
-VALUES ('wtss_superadmin', 'superadmin', '***REMOVED***', '超级管理员', 0, '', '', 'hadoop', 1, 1, 1532593640335, 1532593640335);
+VALUES ('wtss_superadmin', 'superadmin', 'Abcd1234', '超级管理员', 0, '', '', 'hadoop', 1, 1, 1532593640335, 1532593640335);
 

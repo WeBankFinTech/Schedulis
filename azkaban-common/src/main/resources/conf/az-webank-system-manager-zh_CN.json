@@ -148,6 +148,26 @@
     "hostname": "主机名",
     "hostport": "端口",
     "isValid": "是否有效",
-    "lastGroupInfo": "上次分组信息"
+    "lastGroupInfo": "上次分组信息",
+    "dutyGroupManage": "值班组管理",
+    "addDutyGroup": "新增值班组",
+    "editDutyGroup": "编辑值班组",
+    "dutyGroupId": "值班组ID",
+    "dutyGroupName": "值班组名称",
+    "dutyGroupMembers": "值班组成员",
+    "operations": "操作",
+    "viewEdit": "查看/编辑",
+    "delete": "删除",
+    "inputDutyGroupName": "请输入值班组名称",
+    "memberName": "成员名称",
+    "dutyStartDate": "值班开始日期",
+    "dutyEndDate": "值班结束日期",
+    "dutyNaturalDate": "值班自然日",
+    "selectDate": "请选择日期",
+    "addMember": "新增值班组成员",
+    "save": "保存",
+    "isDutyManager": "是否为值班组管理员",
+    "true": "是",
+    "false": "否"
   }
 }

@@ -12,7 +12,7 @@ import org.slf4j.Logger;
 public class HookContext {
 
     static public enum HookType {
-        PRE_EXEC_SYS_HOOK, POST_EXEC_SYS_HOOK, PRE_EXEC_USER_HOOK, POSTEXEC_USER_HOOK
+        PRE_EXEC_SYS_HOOK, POST_EXEC_SYS_HOOK, POST_FAIL_SYS_HOOK, PRE_EXEC_USER_HOOK, POSTEXEC_USER_HOOK
     }
 
     private HookType hookType;

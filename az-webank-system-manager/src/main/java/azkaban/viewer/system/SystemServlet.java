@@ -5,11 +5,11 @@ import azkaban.batch.HoldBatchContext;
 import azkaban.batch.HoldBatchLevel;
 import azkaban.common.utils.ExcelUtil;
 import azkaban.dto.ModifyWtssUserDto;
-import azkaban.entity.DepartmentMaintainer;
-import azkaban.entity.WebankDepartment;
-import azkaban.entity.WebankUser;
-import azkaban.entity.WtssRole;
-import azkaban.entity.WtssUser;
+import azkaban.duty.entity.DutyGroup;
+import azkaban.duty.entity.DutyPerson;
+import azkaban.duty.service.DutyService;
+import azkaban.duty.service.impl.DutyServiceImpl;
+import azkaban.entity.*;
 import azkaban.exception.SystemUserManagerException;
 import azkaban.executor.DepartmentGroup;
 import azkaban.executor.Executor;
@@ -21,42 +21,25 @@ import azkaban.project.ProjectManager;
 import azkaban.project.entity.ProjectChangeOwnerInfo;
 import azkaban.scheduler.Schedule;
 import azkaban.scheduler.ScheduleManager;
+import azkaban.server.AppConnUtils;
 import azkaban.server.HttpRequestUtils;
 import azkaban.server.session.Session;
 import azkaban.service.impl.SystemManager;
+import azkaban.system.credential.CredentialService;
+import azkaban.system.credential.CredentialServiceImpl;
+import azkaban.system.dto.CredentialDto;
 import azkaban.user.SystemUserManager;
 import azkaban.user.User;
+import azkaban.utils.DateUtils;
 import azkaban.utils.GsonUtils;
 import azkaban.utils.Props;
 import azkaban.webank.data.WebankUsersSync;
 import azkaban.webapp.AzkabanWebServer;
-import azkaban.webapp.servlet.AbstractLoginAzkabanServlet;
-import azkaban.webapp.servlet.HistoryServlet;
-import azkaban.webapp.servlet.Page;
-import azkaban.webapp.servlet.ProjectManagerServlet;
-import azkaban.webapp.servlet.RecoverServlet;
+import azkaban.webapp.servlet.*;
+import com.alibaba.fastjson.JSONArray;
 import com.google.common.base.Joiner;
 import com.google.gson.JsonObject;
 import com.google.inject.Injector;
-import java.io.File;
-import java.io.IOException;
-import java.io.OutputStream;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Date;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.StringJoiner;
-import java.util.concurrent.ScheduledThreadPoolExecutor;
-import java.util.concurrent.TimeUnit;
-import java.util.regex.Pattern;
-import java.util.stream.Collectors;
-import javax.servlet.ServletConfig;
-import javax.servlet.ServletException;
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.collections4.MapUtils;
 import org.apache.commons.io.IOUtils;
@@ -65,6 +48,20 @@ import org.joda.time.DateTime;
 import org.json.JSONObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import javax.servlet.ServletConfig;
+import javax.servlet.ServletException;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+import java.io.File;
+import java.io.IOException;
+import java.io.OutputStream;
+import java.sql.SQLException;
+import java.util.*;
+import java.util.concurrent.ScheduledThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
+import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 /**
  * Created by zhu on 7/5/18.
@@ -101,6 +98,12 @@ public class SystemServlet extends AbstractLoginAzkabanServlet {
 
     private ScheduledThreadPoolExecutor scheduledLoadWebankUsers;
 
+    private DutyService dutyService;
+
+    private CredentialService credentialService;
+
+
+    private static String NO_NEED_ADMIN_LIST ="system.no.need.admin.list";
 
     public SystemServlet(final Props propsPlugin) {
 
@@ -108,8 +111,7 @@ public class SystemServlet extends AbstractLoginAzkabanServlet {
         this.viewerName = propsPlugin.getString("viewer.name");
         this.viewerPath = propsPlugin.getString("viewer.path");
 
-        this.webResourcesPath = new File(
-            new File(propsPlugin.getSource()).getParentFile().getParentFile(), "web");
+        this.webResourcesPath = new File(new File(propsPlugin.getSource()).getParentFile().getParentFile(), "web");
         this.webResourcesPath.mkdirs();
 
         setResourceDirectory(this.webResourcesPath);
@@ -120,19 +122,17 @@ public class SystemServlet extends AbstractLoginAzkabanServlet {
     public void init(final ServletConfig config) throws ServletException {
         super.init(config);
 
-        Injector injector = ServiceProvider.SERVICE_PROVIDER.getInjector()
-            .createChildInjector(new SystemModule());
+        Injector injector = ServiceProvider.SERVICE_PROVIDER.getInjector().createChildInjector(new SystemModule());
         systemManager = injector.getInstance(SystemManager.class);
         propsAzkaban = ServiceProvider.SERVICE_PROVIDER.getInstance(Props.class);
-        department_maintainer_check_switch = propsAzkaban.getBooleanDefaultFalse(
-            DEPARTMENT_MAINTAINER_CHECK_SWITCH_KEY, false);
-        this.holdBatchContext = ServiceProvider.SERVICE_PROVIDER.getInstance(
-            HoldBatchContext.class);
+        department_maintainer_check_switch = propsAzkaban.getBooleanDefaultFalse(DEPARTMENT_MAINTAINER_CHECK_SWITCH_KEY, false);
+        this.holdBatchContext = ServiceProvider.SERVICE_PROVIDER.getInstance(HoldBatchContext.class);
         this.projectManager = ServiceProvider.SERVICE_PROVIDER.getInstance(ProjectManager.class);
-        this.systemUserManager = ServiceProvider.SERVICE_PROVIDER.getInstance(
-            SystemUserManager.class);
+        this.systemUserManager = ServiceProvider.SERVICE_PROVIDER.getInstance(SystemUserManager.class);
         this.scheduleManager = ServiceProvider.SERVICE_PROVIDER.getInstance(ScheduleManager.class);
         scheduledLoadWebankUsers = new ScheduledThreadPoolExecutor(1);
+        this.dutyService = ServiceProvider.SERVICE_PROVIDER.getInstance(DutyServiceImpl.class);
+        this.credentialService = ServiceProvider.SERVICE_PROVIDER.getInstance(CredentialServiceImpl.class);
         scheduledLoadWebankUsers.scheduleAtFixedRate(new Runnable() {
             @Override
             public void run() {
@@ -148,8 +148,7 @@ public class SystemServlet extends AbstractLoginAzkabanServlet {
     }
 
     @Override
-    protected void handleGet(final HttpServletRequest req, final HttpServletResponse resp,
-                             final Session session) throws ServletException, IOException {
+    protected void handleGet(final HttpServletRequest req, final HttpServletResponse resp, final Session session) throws ServletException, IOException {
 
         // 下载人员变动信息表
         if ("/system/downloadModifyInfo".equals(req.getRequestURI())) {
@@ -172,9 +171,7 @@ public class SystemServlet extends AbstractLoginAzkabanServlet {
      * @throws ServletException
      * @throws IOException
      */
-    private void handleAJAXAction(final HttpServletRequest req,
-                                  final HttpServletResponse resp, final Session session) throws ServletException,
-            IOException {
+    private void handleAJAXAction(final HttpServletRequest req, final HttpServletResponse resp, final Session session) throws ServletException, IOException {
         final HashMap<String, Object> ret = new HashMap<>();
         final String ajaxName = getParam(req, "ajax");
 
@@ -185,12 +182,15 @@ public class SystemServlet extends AbstractLoginAzkabanServlet {
             return;
         }
         if (!user.getRoles().contains("admin")) {
-            if (!"loadSystemUserSelectData".equals(ajaxName) && !"loadWebankDepartmentSelectData".equals(ajaxName)) {
+            String WithoutAdminWhiteList = propsAzkaban.getString(NO_NEED_ADMIN_LIST);
+            if (!WithoutAdminWhiteList.contains(ajaxName)) {
                 ret.put("error", "No Access Permission");
-                    this.writeJSON(resp, ret);
+                this.writeJSON(resp, ret);
                 return;
             }
+
         }
+
 
         if ("addSystemUserViaFastTrack".equals(ajaxName)) {
             // 通过非登录页面的快速通道新增用户
@@ -241,7 +241,7 @@ public class SystemServlet extends AbstractLoginAzkabanServlet {
             ajaxFetchDepartmentGroupById(req, resp, session, ret);
         } else if ("fetchExecutors".equals(ajaxName)) {
             ajaxFetchExecutors(req, resp, session, ret);
-        }  else if ("updateExecutor".equals(ajaxName)) {
+        } else if ("updateExecutor".equals(ajaxName)) {
             ajaxUpdateExecutor(req, resp, session, ret);
         } else if ("findModifySystemUserPage".equals(ajaxName)) {
             ajaxFindModifySystemUserPage(req, resp, session, ret);
@@ -259,9 +259,9 @@ public class SystemServlet extends AbstractLoginAzkabanServlet {
             ajaxGetDepMaintainerByDepId(req, resp, session, ret);
         } else if ("deleteDepartmentMaintainer".equals(ajaxName)) {
             ajaxDeleteDepartmentMaintainer(req, resp, session, ret);
-        } else if("deleteExceptionalUser".equals(ajaxName)){
+        } else if ("deleteExceptionalUser".equals(ajaxName)) {
             ajaxDeleteExceptionalUser(req, resp, session, ret);
-        } else if("addExceptionalUser".equals(ajaxName)){
+        } else if ("addExceptionalUser".equals(ajaxName)) {
             ajaxAddExceptionalUser(req, resp, session, ret);
         } else if ("fetchAllExceptionUsers".equals(ajaxName)) {
             ajaxFetchAllExceptionUsers(req, resp, session, ret);
@@ -269,24 +269,105 @@ public class SystemServlet extends AbstractLoginAzkabanServlet {
             ajaxRevokeUser(req, resp, session, ret);
         } else if ("privilegeReport".equals(ajaxName)) {
             ajaxPrivilegeReport(req, resp, session, ret);
+        } else if("genAppSecret".equals(ajaxName)){
+            //新增白名单鉴权用户，生成appSecret并返回
+            genAppSecret(req, ret);
         }
+        //值班
+        dealDutyRequest(req, ret, ajaxName, user);
 
-            this.writeJSON(resp, ret);
+
+        this.writeJSON(resp, ret);
+    }
+
+    private void genAppSecret(HttpServletRequest req, HashMap<String, Object> ret) throws ServletException {
+        String appId = getParam(req,"appId");
+        String ipWhiteListFromPage =getParam(req,"ipWhiteList");
+        CredentialDto credentialDto = new CredentialDto();
+        try {
+            //需要加悲观锁
+            synchronized (appId){
+                //1.通过appid查询是否存在，已经存在的话，ip白名单更新，并返回
+                credentialDto = credentialService.getCredentialByAppId(appId);
+                if(credentialDto != null){
+                    String ipWhiteListFromDB = credentialDto.getIpWhitelist();
+                    StringBuilder sBuilder =new StringBuilder();
+                    sBuilder.append(ipWhiteListFromDB)
+                            .append(",")
+                            .append(ipWhiteListFromPage);
+                    credentialDto.setIpWhitelist(sBuilder.toString());
+                    credentialService.updateCredential(credentialDto);
+
+                }else {
+                    //2.不存在的话，直接新增
+                    //生成appSecret
+                    String appSecret = AppConnUtils.genAppSecret(appId);
+                    credentialDto = new CredentialDto(appId,appId,appSecret,ipWhiteListFromPage,new Date(),new Date());
+                    credentialService.addCredential(credentialDto);
+                }
+                ret.put("appId",credentialDto.getAppId());
+                ret.put("appSecret",credentialDto.getAppSecret());
+            }
+
+        }catch (SQLException e){
+            logger.error("appId:{},genAppSecret have an error:{}",appId,e);
+            ret.put("error","Add Whitelist failed");
+        }
+    }
+
+    /**
+     * 值班组逻辑
+     *
+     * @param req
+     * @param ret
+     * @param ajaxName
+     * @param user
+     * @throws IOException
+     */
+    private void dealDutyRequest(HttpServletRequest req, HashMap<String, Object> ret, String ajaxName, User user) throws IOException {
+        switch (ajaxName) {
+            case "getDutyPageList":
+                getDutyPageList(req, ret,user);
+                break;
+            case "getPersonList":
+                getPersonList(req, ret);
+                break;
+            case "addGroup":
+                addGroup(req, user, ret);
+                break;
+            case "addDutyPerson":
+                addDutyPerson(req, user, ret);
+                break;
+            case "updateDuty":
+                updateDuty(req, user, ret);
+                break;
+            case "updateDutyPersonById":
+                updateDutyPersonById(req, user, ret);
+                break;
+            case "deleteDutyGroup":
+                deleteDutyGroup(req, user, ret);
+                break;
+            case "deleteDutyPersonById":
+                deleteDutyPersonById(req, user, ret);
+                break;
+            default:
+                break;
+
+        }
     }
 
     /**
      * 加载 SystemServlet 中的异常信息等国际化资源
+     *
      * @return
      */
     private Map<String, String> loadSystemServletI18nData() {
         String languageType = LoadJsonUtils.getLanguageType();
         Map<String, String> dataMap;
         if ("zh_CN".equalsIgnoreCase(languageType)) {
-            dataMap = LoadJsonUtils.transJson("/conf/az-webank-system-manager-zh_CN.json",
-                "azkaban.viewer.system.SystemServlet");
+            dataMap = LoadJsonUtils.transJson("/conf/az-webank-system-manager-zh_CN.json", "azkaban.viewer.system.SystemServlet");
         } else {
-            dataMap = LoadJsonUtils.transJson("/conf/az-webank-system-manager-en_US.json",
-                "azkaban.viewer.system.SystemServlet");
+            dataMap = LoadJsonUtils.transJson("/conf/az-webank-system-manager-en_US.json", "azkaban.viewer.system.SystemServlet");
         }
         return dataMap;
     }
@@ -299,8 +380,7 @@ public class SystemServlet extends AbstractLoginAzkabanServlet {
      * @param session
      * @param ret
      */
-    private void ajaxRevokeUser(HttpServletRequest req, HttpServletResponse resp, Session session,
-        Map<String, Object> ret) {
+    private void ajaxRevokeUser(HttpServletRequest req, HttpServletResponse resp, Session session, Map<String, Object> ret) {
 
         String username = null;
         try {
@@ -329,8 +409,7 @@ public class SystemServlet extends AbstractLoginAzkabanServlet {
             // 判断该用户拥有的项目是否都已经完成了交接
             for (Project userProject : userProjects) {
                 if (userProject.isActive()) {
-                    ProjectChangeOwnerInfo projectChangeOwnerInfo = projectManager.getProjectChangeOwnerInfo(
-                        userProject);
+                    ProjectChangeOwnerInfo projectChangeOwnerInfo = projectManager.getProjectChangeOwnerInfo(userProject);
 
                     if (projectChangeOwnerInfo != null && 3 != projectChangeOwnerInfo.getStatus()) {
                         // 存在未交接完成的项目，无法进行权限回收
@@ -380,8 +459,7 @@ public class SystemServlet extends AbstractLoginAzkabanServlet {
             // 删除部门管理员（部门运维人员）
             long departmentId = wtssUser.getDepartmentId();
             String departmentName = wtssUser.getDepartmentName();
-            DepartmentMaintainer maintainer = this.systemManager.getDepMaintainerByDepId(
-                departmentId);
+            DepartmentMaintainer maintainer = this.systemManager.getDepMaintainerByDepId(departmentId);
             if (maintainer != null) {
                 // 存在部门管理员
                 String opsUser = maintainer.getOpsUser();
@@ -399,9 +477,7 @@ public class SystemServlet extends AbstractLoginAzkabanServlet {
                 }
                 stringBuilder.deleteCharAt(stringBuilder.lastIndexOf(","));
 
-                int updateResult = this.systemManager.updateDepartmentMaintainer(departmentId,
-                    departmentName,
-                    stringBuilder.toString());
+                int updateResult = this.systemManager.updateDepartmentMaintainer(departmentId, departmentName, stringBuilder.toString());
                 if (updateResult != 1) {
                     ret.put("code", 1006);
                     ret.put("user", username);
@@ -429,9 +505,7 @@ public class SystemServlet extends AbstractLoginAzkabanServlet {
      * @param ret
      * @throws ServletException
      */
-    private void ajaxAddSystemUserViaFastTrack(final HttpServletRequest req,
-        final HttpServletResponse resp,
-                                               final Session session, final HashMap<String, Object> ret) throws ServletException {
+    private void ajaxAddSystemUserViaFastTrack(final HttpServletRequest req, final HttpServletResponse resp, final Session session, final HashMap<String, Object> ret) throws ServletException {
         String userId;
         if (hasParam(req, "userId")) {
             userId = getParam(req, "userId");
@@ -455,12 +529,13 @@ public class SystemServlet extends AbstractLoginAzkabanServlet {
             departmentId = -1;
         }
         final String email = getParam(req, "email", "");
+        final String dutyManager = getParam(req, "dutyManager", "N");
         try {
 
             if (StringUtils.isBlank(userId)) {
                 throw new SystemUserManagerException("未填写用户ID。");
             }
-            if(email != null && email.length() > 1 && !azkaban.utils.StringUtils.isEmail(email)){
+            if (email != null && email.length() > 1 && !azkaban.utils.StringUtils.isEmail(email)) {
                 throw new SystemUserManagerException("email格式不正确");
             }
             if (departmentId == -1) {
@@ -475,7 +550,7 @@ public class SystemServlet extends AbstractLoginAzkabanServlet {
                 throw new SystemUserManagerException("请选择部门。");
             }
 
-            if(this.systemManager.checkUserIsExceptionalUser(userId)){
+            if (this.systemManager.checkUserIsExceptionalUser(userId)) {
                 throw new SystemUserManagerException("Failed to create, the new user is an exception.");
             }
 
@@ -527,14 +602,14 @@ public class SystemServlet extends AbstractLoginAzkabanServlet {
                                 proxyUser = dbProxyUsers + "," + proxyUser;
 
                                 logger.info("for update value is userId:{}, password:{}, roleId:{}, proxyUser:{}, departmentId:{}, email:{}", userId, password, roleId, proxyUser, departmentId, email);
-                                addResult = this.systemManager.updateSystemUser(userId, password, roleId, proxyUser, departmentId, email);
+                                addResult = this.systemManager.updateSystemUser(userId, password, roleId, proxyUser, departmentId, email,dutyManager);
                             }
                         } else {
 
                             // 单个代理用户只需要判断添加的代理是否和用户名一样
                             if (!proxyUser.equals(wtssUser.getUsername())) {
                                 proxyUser = wtssUser.getProxyUsers() + "," + proxyUser;
-                                addResult = this.systemManager.updateSystemUser(userId, password, roleId, proxyUser, departmentId, email);
+                                addResult = this.systemManager.updateSystemUser(userId, password, roleId, proxyUser, departmentId, email,dutyManager);
                             } else {
                                 logger.error("wtssUser=" + wtssUser.toString());
                                 addResult = 3;
@@ -549,7 +624,7 @@ public class SystemServlet extends AbstractLoginAzkabanServlet {
                 }
 
             } else {
-                addResult = this.systemManager.addSystemUser(userId, password, roleId, 3, proxyUser, departmentId, email);
+                addResult = this.systemManager.addSystemUser(userId, password, roleId, 3, proxyUser, departmentId, email,dutyManager);
             }
 
             if (addResult == 1) {
@@ -571,14 +646,11 @@ public class SystemServlet extends AbstractLoginAzkabanServlet {
     }
 
 
-    private void fetchHistoryData(final HttpServletRequest req,
-                                  final HttpServletResponse resp, final HashMap<String, Object> ret)
-            throws ServletException {
+    private void fetchHistoryData(final HttpServletRequest req, final HttpServletResponse resp, final HashMap<String, Object> ret) throws ServletException {
     }
 
     //返回当前用户的角色列表
-    private void ajaxGetUserRole(final HttpServletRequest req,
-                                 final HttpServletResponse resp, final Session session, final HashMap<String, Object> ret) {
+    private void ajaxGetUserRole(final HttpServletRequest req, final HttpServletResponse resp, final Session session, final HashMap<String, Object> ret) {
         final String[] userRoles = session.getUser().getRoles().toArray(new String[0]);
         ret.put("userRoles", userRoles);
     }
@@ -591,10 +663,8 @@ public class SystemServlet extends AbstractLoginAzkabanServlet {
      * @param session
      * @throws ServletException
      */
-    private void handleSystemPage(final HttpServletRequest req, final HttpServletResponse resp, final Session session)
-            throws ServletException {
-        final Page page =
-                newPage(req, resp, session, "azkaban/viewer/system/system-manager.vm");
+    private void handleSystemPage(final HttpServletRequest req, final HttpServletResponse resp, final Session session) throws ServletException {
+        final Page page = newPage(req, resp, session, "azkaban/viewer/system/system-manager.vm");
         int pageNum = getIntParam(req, "page", 1);
         final int pageSize = getIntParam(req, "size", 16);
 
@@ -628,8 +698,7 @@ public class SystemServlet extends AbstractLoginAzkabanServlet {
         if (pageNum == 1) {
             page.add("previous", new HistoryServlet.PageSelection(1, pageSize, true, false));
         } else {
-            page.add("previous", new HistoryServlet.PageSelection(pageNum - 1, pageSize, false,
-                    false));
+            page.add("previous", new HistoryServlet.PageSelection(pageNum - 1, pageSize, false, false));
         }
         page.add("next", new HistoryServlet.PageSelection(pageNum + 1, pageSize, false, false));
         // Now for the 5 other values.
@@ -638,35 +707,26 @@ public class SystemServlet extends AbstractLoginAzkabanServlet {
             pageStartValue = pageNum - 2;
         }
 
-        page.add("page1", new HistoryServlet.PageSelection(pageStartValue, pageSize, false,
-                pageStartValue == pageNum));
+        page.add("page1", new HistoryServlet.PageSelection(pageStartValue, pageSize, false, pageStartValue == pageNum));
         pageStartValue++;
-        page.add("page2", new HistoryServlet.PageSelection(pageStartValue, pageSize, false,
-                pageStartValue == pageNum));
+        page.add("page2", new HistoryServlet.PageSelection(pageStartValue, pageSize, false, pageStartValue == pageNum));
         pageStartValue++;
-        page.add("page3", new HistoryServlet.PageSelection(pageStartValue, pageSize, false,
-                pageStartValue == pageNum));
+        page.add("page3", new HistoryServlet.PageSelection(pageStartValue, pageSize, false, pageStartValue == pageNum));
         pageStartValue++;
-        page.add("page4", new HistoryServlet.PageSelection(pageStartValue, pageSize, false,
-                pageStartValue == pageNum));
+        page.add("page4", new HistoryServlet.PageSelection(pageStartValue, pageSize, false, pageStartValue == pageNum));
         pageStartValue++;
-        page.add("page5", new HistoryServlet.PageSelection(pageStartValue, pageSize, false,
-                pageStartValue == pageNum));
+        page.add("page5", new HistoryServlet.PageSelection(pageStartValue, pageSize, false, pageStartValue == pageNum));
         pageStartValue++;
 
         String languageType = LoadJsonUtils.getLanguageType();
         Map<String, String> viewDataMap;
         Map<String, String> subPageMap1;
         if ("zh_CN".equalsIgnoreCase(languageType)) {
-             viewDataMap = LoadJsonUtils.transJson("/conf/az-webank-system-manager-zh_CN.json",
-                    "azkaban.viewer.system.system-manager.vm");
-            subPageMap1 = LoadJsonUtils.transJson("/conf/azkaban-web-server-zh_CN.json",
-                    "azkaban.webapp.servlet.velocity.nav.vm");
-        }else {
-            viewDataMap = LoadJsonUtils.transJson("/conf/az-webank-system-manager-en_US.json",
-                    "azkaban.viewer.system.system-manager.vm");
-            subPageMap1 = LoadJsonUtils.transJson("/conf/azkaban-web-server-en_US.json",
-                    "azkaban.webapp.servlet.velocity.nav.vm");
+            viewDataMap = LoadJsonUtils.transJson("/conf/az-webank-system-manager-zh_CN.json", "azkaban.viewer.system.system-manager.vm");
+            subPageMap1 = LoadJsonUtils.transJson("/conf/azkaban-web-server-zh_CN.json", "azkaban.webapp.servlet.velocity.nav.vm");
+        } else {
+            viewDataMap = LoadJsonUtils.transJson("/conf/az-webank-system-manager-en_US.json", "azkaban.viewer.system.system-manager.vm");
+            subPageMap1 = LoadJsonUtils.transJson("/conf/azkaban-web-server-en_US.json", "azkaban.webapp.servlet.velocity.nav.vm");
         }
         viewDataMap.forEach(page::add);
         subPageMap1.forEach(page::add);
@@ -678,8 +738,7 @@ public class SystemServlet extends AbstractLoginAzkabanServlet {
     }
 
     @Override
-    protected void handlePost(final HttpServletRequest req, final HttpServletResponse resp,
-                              final Session session) throws ServletException, IOException {
+    protected void handlePost(final HttpServletRequest req, final HttpServletResponse resp, final Session session) throws ServletException, IOException {
         if (hasParam(req, "ajax")) {
             handleAJAXAction(req, resp, session);
         }
@@ -692,8 +751,7 @@ public class SystemServlet extends AbstractLoginAzkabanServlet {
         private final boolean disabled;
         private boolean selected;
 
-        public PageSelection(final int page, final int size, final boolean disabled,
-                             final boolean selected) {
+        public PageSelection(final int page, final int size, final boolean disabled, final boolean selected) {
             this.page = page;
             this.size = size;
             this.disabled = disabled;
@@ -722,8 +780,7 @@ public class SystemServlet extends AbstractLoginAzkabanServlet {
     }
 
 
-    private void ajaxSyncWebankUsers(final HttpServletRequest req, final HttpServletResponse resp
-            , final Session session, final HashMap<String, Object> ret) {
+    private void ajaxSyncWebankUsers(final HttpServletRequest req, final HttpServletResponse resp, final Session session, final HashMap<String, Object> ret) {
         Map<String, String> dataMap = loadSystemServletI18nData();
         try {
             loadWebankUsers();
@@ -736,8 +793,7 @@ public class SystemServlet extends AbstractLoginAzkabanServlet {
     }
 
     private void loadWebankUsers() throws SystemUserManagerException {
-        if (this.holdBatchContext.getBatchMap().values().stream()
-                .anyMatch(opr -> HoldBatchLevel.CUSTOMIZE.getNumVal() == opr.getOperateLevel())) {
+        if (this.holdBatchContext.getBatchMap().values().stream().anyMatch(opr -> HoldBatchLevel.CUSTOMIZE.getNumVal() == opr.getOperateLevel())) {
             throw new SystemUserManagerException("some user is holding, can not update");
         }
         try {
@@ -751,9 +807,7 @@ public class SystemServlet extends AbstractLoginAzkabanServlet {
         }
     }
 
-    private void ajaxLoadWebankUserSelectData(final HttpServletRequest req, final HttpServletResponse resp
-            , final Session session, final HashMap<String, Object> ret)
-            throws ServletException {
+    private void ajaxLoadWebankUserSelectData(final HttpServletRequest req, final HttpServletResponse resp, final Session session, final HashMap<String, Object> ret) throws ServletException {
 
         String searchName = req.getParameter("serach");
         int pageNum = getIntParam(req, "page");
@@ -799,15 +853,13 @@ public class SystemServlet extends AbstractLoginAzkabanServlet {
     }
 
 
-    private void ajaxFindSystemUserPage(final HttpServletRequest req, final HttpServletResponse resp,
-                                        final Session session, final HashMap<String, Object> ret)
-            throws ServletException {
+    private void ajaxFindSystemUserPage(final HttpServletRequest req, final HttpServletResponse resp, final Session session, final HashMap<String, Object> ret) throws ServletException {
         int start = Integer.valueOf(getParam(req, "start"));
         final int pageSize = Integer.valueOf(getParam(req, "pageSize"));
         final String searchterm = getParam(req, "searchterm").trim();
         String preciseSearch = "false";
-        if(hasParam(req, "preciseSearch")){
-            preciseSearch = getParam(req, "preciseSearch","false").trim();
+        if (hasParam(req, "preciseSearch")) {
+            preciseSearch = getParam(req, "preciseSearch", "false").trim();
         }
 
         Map<String, String> dataMap = loadSystemServletI18nData();
@@ -819,12 +871,10 @@ public class SystemServlet extends AbstractLoginAzkabanServlet {
             List<WtssUser> wtssUserList;
             if (StringUtils.isNotBlank(searchterm)) {
                 // 如果搜索条件非空,则默认从第一页开始查找
-                wtssUserList =
-                    this.systemManager.findSystemUserPage(preciseSearch,null, searchterm, null,start * pageSize, pageSize);
+                wtssUserList = this.systemManager.findSystemUserPage(preciseSearch, null, searchterm, null, start * pageSize, pageSize);
                 total = this.systemManager.getSystemUserTotal(searchterm);
             } else {
-                wtssUserList =
-                    this.systemManager.findSystemUserPage(preciseSearch,null, searchterm, null,start * pageSize, pageSize);
+                wtssUserList = this.systemManager.findSystemUserPage(preciseSearch, null, searchterm, null, start * pageSize, pageSize);
                 total = this.systemManager.getSystemUserTotal();
             }
 
@@ -842,7 +892,7 @@ public class SystemServlet extends AbstractLoginAzkabanServlet {
                 wtssUserMap.put("role", wtssUser.getRoleId() == 1 ? dataMap.get("admin") : dataMap.get("ordinaryUsers"));
                 wtssUserMap.put("permission", this.systemManager.getUserPermission(wtssUser.getRoleId()));
                 wtssUserMap.put("userType", wtssUser.getUserType());
-
+                wtssUserMap.put("dutyManager",wtssUser.getDutyManager());
                 wtssUserPageList.add(wtssUserMap);
             }
             ret.put("total", total);
@@ -859,9 +909,7 @@ public class SystemServlet extends AbstractLoginAzkabanServlet {
     }
 
 
-    private void ajaxAddSystemUser(final HttpServletRequest req,
-                                   final HttpServletResponse resp, final Session session, final HashMap<String, Object> ret)
-            throws ServletException {
+    private void ajaxAddSystemUser(final HttpServletRequest req, final HttpServletResponse resp, final Session session, final HashMap<String, Object> ret) throws ServletException {
 
         final String userId = getParam(req, "userId");
         final String password = getParam(req, "password");
@@ -870,7 +918,7 @@ public class SystemServlet extends AbstractLoginAzkabanServlet {
         final String proxyUser = getParam(req, "proxyUser");
         final int departmentId = Integer.valueOf(getParam(req, "departmentId"));
         final String email = getParam(req, "email", "");
-
+        final String dutyManager = getParam(req, "dutyManager", "N");
         Map<String, String> dataMap = loadSystemServletI18nData();
 
         try {
@@ -883,11 +931,11 @@ public class SystemServlet extends AbstractLoginAzkabanServlet {
                 throw new SystemUserManagerException(dataMap.get("plsSelectDep"));
             }
 
-            if(email != null && email.length() > 1 && !azkaban.utils.StringUtils.isEmail(email)){
+            if (email != null && email.length() > 1 && !azkaban.utils.StringUtils.isEmail(email)) {
                 throw new SystemUserManagerException("The mailbox format is incorrect.");
             }
 
-            if(this.systemManager.checkUserIsExceptionalUser(userId)){
+            if (this.systemManager.checkUserIsExceptionalUser(userId)) {
                 throw new SystemUserManagerException("Failed to create, the new user is an exception.");
             }
 
@@ -907,7 +955,7 @@ public class SystemServlet extends AbstractLoginAzkabanServlet {
                         if (DEPARTMENT_PATTERN.matcher(simpleDepartmentCode).matches()) {
                             throw new SystemUserManagerException(dataMap.get("invalidUserNamePrefix") + userId + dataMap.get("invalidDepCode"));
                         }
-                    }else {
+                    } else {
                         throw new SystemUserManagerException(dataMap.get("invalidUserNamePrefix") + userId + dataMap.get("invalidLength"));
                     }
 
@@ -968,7 +1016,7 @@ public class SystemServlet extends AbstractLoginAzkabanServlet {
                 throw new SystemUserManagerException(dataMap.get("userHasExist"));
             }
 
-            int addResult = this.systemManager.addSystemUser(userId, password, roleId, categoryUser, proxyUser, departmentId, email);
+            int addResult = this.systemManager.addSystemUser(userId, password, roleId, categoryUser, proxyUser, departmentId, email,dutyManager);
             if (addResult != 1) {
                 throw new SystemUserManagerException(dataMap.get("addSystemUserFailed"));
             }
@@ -977,9 +1025,7 @@ public class SystemServlet extends AbstractLoginAzkabanServlet {
         }
     }
 
-    private void ajaxGetSystemUserById(final HttpServletRequest req,
-                                       final HttpServletResponse resp, final Session session, final HashMap<String, Object> ret)
-            throws ServletException {
+    private void ajaxGetSystemUserById(final HttpServletRequest req, final HttpServletResponse resp, final Session session, final HashMap<String, Object> ret) throws ServletException {
 
         final String userId = getParam(req, "userId");
 
@@ -1009,9 +1055,7 @@ public class SystemServlet extends AbstractLoginAzkabanServlet {
         }
     }
 
-    private void ajaxUpdateSystemUser(final HttpServletRequest req,
-                                      final HttpServletResponse resp, final Session session, final HashMap<String, Object> ret)
-            throws ServletException {
+    private void ajaxUpdateSystemUser(final HttpServletRequest req, final HttpServletResponse resp, final Session session, final HashMap<String, Object> ret) throws ServletException {
 
         final String userId = getParam(req, "userId");
         final String password = getParam(req, "password");
@@ -1019,14 +1063,12 @@ public class SystemServlet extends AbstractLoginAzkabanServlet {
         final String proxyUser = getParam(req, "proxyUser");
         final int departmentId = Integer.valueOf(getParam(req, "departmentId"));
         final String email = getParam(req, "email", "");
-
+        final String dutyManager = getParam(req, "dutyManager", "N");
         Map<String, String> dataMap = loadSystemServletI18nData();
         try {
             WtssUser wtssUser = this.systemManager.getSystemUserById(userId);
 
-            if (this.holdBatchContext.getBatchMap().values().stream()
-                .filter(opr -> HoldBatchLevel.USER.getNumVal() == opr.getOperateLevel()).anyMatch(
-                    opr -> opr.getDataList().contains(wtssUser.getUsername()))) {
+            if (this.holdBatchContext.getBatchMap().values().stream().filter(opr -> HoldBatchLevel.USER.getNumVal() == opr.getOperateLevel()).anyMatch(opr -> opr.getDataList().contains(wtssUser.getUsername()))) {
                 ret.put("error", "user[" + wtssUser.getUsername() + "] is holding, can not update");
                 return;
             }
@@ -1034,7 +1076,7 @@ public class SystemServlet extends AbstractLoginAzkabanServlet {
             if (0 == roleId) {
                 throw new SystemUserManagerException(dataMap.get("plsSelectRole"));
             }
-            if(email != null && email.length() > 1 && !azkaban.utils.StringUtils.isEmail(email)){
+            if (email != null && email.length() > 1 && !azkaban.utils.StringUtils.isEmail(email)) {
                 throw new SystemUserManagerException("email格式不正确");
             }
             if (0 == departmentId) {
@@ -1045,31 +1087,31 @@ public class SystemServlet extends AbstractLoginAzkabanServlet {
             boolean wtssProjectPrivilegeCheck = ProjectManagerServlet.getWtssProjectPrivilegeCheck();
 
 
-                // 实名用户的普通用户只能设置自己为代理
-                if (USER_ID_PATTERN.matcher(userId).matches()) {
-                    if (roleId != 1) {
-                        if (StringUtils.isNotBlank(proxyUser)) {
-                            // 校验开关是否打开,打开,只能设置自己为代理用户
-                            if (wtssProjectPrivilegeCheck) {
-                                if (!wtssUser.getUsername().equals(proxyUser)) {
-                                    throw new SystemUserManagerException(dataMap.get("invalidUpdateRealNameUserProxy") + wtssUser.getUsername());
-                                }
-                            }
-                        }
-                    }
-                } else if (wtssUser.getUsername().startsWith("hduser")) {
+            // 实名用户的普通用户只能设置自己为代理
+            if (USER_ID_PATTERN.matcher(userId).matches()) {
+                if (roleId != 1) {
                     if (StringUtils.isNotBlank(proxyUser)) {
+                        // 校验开关是否打开,打开,只能设置自己为代理用户
                         if (wtssProjectPrivilegeCheck) {
-                            if (roleId != 1) {
-                                if (!proxyUser.equals(wtssUser.getUsername())) {
-                                    throw new SystemUserManagerException(dataMap.get("invalidUpdateSystemUserProxy") + wtssUser.getUsername());
-                                }
+                            if (!wtssUser.getUsername().equals(proxyUser)) {
+                                throw new SystemUserManagerException(dataMap.get("invalidUpdateRealNameUserProxy") + wtssUser.getUsername());
                             }
                         }
                     }
                 }
+            } else if (wtssUser.getUsername().startsWith("hduser")) {
+                if (StringUtils.isNotBlank(proxyUser)) {
+                    if (wtssProjectPrivilegeCheck) {
+                        if (roleId != 1) {
+                            if (!proxyUser.equals(wtssUser.getUsername())) {
+                                throw new SystemUserManagerException(dataMap.get("invalidUpdateSystemUserProxy") + wtssUser.getUsername());
+                            }
+                        }
+                    }
+                }
+            }
 
-            int addResult = this.systemManager.updateSystemUser(userId, password, roleId, proxyUser, departmentId, email);
+            int addResult = this.systemManager.updateSystemUser(userId, password, roleId, proxyUser, departmentId, email,dutyManager);
             if (addResult != 1) {
                 throw new SystemUserManagerException(dataMap.get("requestFailed"));
             }
@@ -1079,9 +1121,7 @@ public class SystemServlet extends AbstractLoginAzkabanServlet {
     }
 
 
-    private void ajaxLoadSystemUserSelectData(final HttpServletRequest req, final HttpServletResponse resp
-            , final Session session, final HashMap<String, Object> ret)
-            throws ServletException {
+    private void ajaxLoadSystemUserSelectData(final HttpServletRequest req, final HttpServletResponse resp, final Session session, final HashMap<String, Object> ret) throws ServletException {
 
         String searchName = req.getParameter("serach");
 
@@ -1093,9 +1133,7 @@ public class SystemServlet extends AbstractLoginAzkabanServlet {
         try {
 
             //查询数据补采全部记录
-            final List<WtssUser> wtssUserList =
-                    this.systemManager.findSystemUserPage("false", searchName, null, null,
-                            (pageNum - 1) * pageSize, pageSize);
+            final List<WtssUser> wtssUserList = this.systemManager.findSystemUserPage("false", searchName, null, null, (pageNum - 1) * pageSize, pageSize);
 
             int total = this.systemManager.getSystemUserTotal();
 
@@ -1121,9 +1159,7 @@ public class SystemServlet extends AbstractLoginAzkabanServlet {
 
     }
 
-    private void ajaxLoadWebankDepartmentSelectData(final HttpServletRequest req, final HttpServletResponse resp
-            , final Session session, final HashMap<String, Object> ret)
-            throws ServletException {
+    private void ajaxLoadWebankDepartmentSelectData(final HttpServletRequest req, final HttpServletResponse resp, final Session session, final HashMap<String, Object> ret) throws ServletException {
 
         String searchName = req.getParameter("serach");
         //int pageNum = getIntParam(req, "page");
@@ -1157,9 +1193,7 @@ public class SystemServlet extends AbstractLoginAzkabanServlet {
     }
 
 
-    private void ajaxDeleteSystemUser(final HttpServletRequest req, final HttpServletResponse resp,
-                                      final Session session, final HashMap<String, Object> ret)
-            throws ServletException {
+    private void ajaxDeleteSystemUser(final HttpServletRequest req, final HttpServletResponse resp, final Session session, final HashMap<String, Object> ret) throws ServletException {
 
         final String userId = getParam(req, "userId");
         Map<String, String> dataMap = loadSystemServletI18nData();
@@ -1174,9 +1208,7 @@ public class SystemServlet extends AbstractLoginAzkabanServlet {
         }
     }
 
-    private void ajaxSyncXmlUsers(final HttpServletRequest req, final HttpServletResponse resp
-            , final Session session, final HashMap<String, Object> ret)
-            throws ServletException {
+    private void ajaxSyncXmlUsers(final HttpServletRequest req, final HttpServletResponse resp, final Session session, final HashMap<String, Object> ret) throws ServletException {
         Map<String, String> dataMap = loadSystemServletI18nData();
         try {
             //获取xml用户数据
@@ -1193,9 +1225,7 @@ public class SystemServlet extends AbstractLoginAzkabanServlet {
     }
 
 
-    private void ajaxFindSystemDeparmentPage(final HttpServletRequest req,
-                                             final HttpServletResponse resp, final Session session, final HashMap<String, Object> ret)
-            throws ServletException {
+    private void ajaxFindSystemDeparmentPage(final HttpServletRequest req, final HttpServletResponse resp, final Session session, final HashMap<String, Object> ret) throws ServletException {
         final int start = Integer.valueOf(getParam(req, "start"));
         final int pageSize = Integer.valueOf(getParam(req, "pageSize"));
         final String searchterm = getParam(req, "searchterm").trim();
@@ -1207,9 +1237,7 @@ public class SystemServlet extends AbstractLoginAzkabanServlet {
         try {
 
             //查询数据补采全部记录
-            final List<WebankDepartment> wtssDepList = this.systemManager.
-                    findAllWebankDepartmentPageOrSearch(searchterm,
-                            start * pageSize, pageSize);
+            final List<WebankDepartment> wtssDepList = this.systemManager.findAllWebankDepartmentPageOrSearch(searchterm, start * pageSize, pageSize);
 
             if (StringUtils.isNotBlank(searchterm)) {
                 total = this.systemManager.getWebankDepartmentTotal(searchterm);
@@ -1248,9 +1276,7 @@ public class SystemServlet extends AbstractLoginAzkabanServlet {
     }
 
 
-    private void ajaxAddDeparment(final HttpServletRequest req,
-                                  final HttpServletResponse resp, final Session session, final HashMap<String, Object> ret)
-            throws ServletException {
+    private void ajaxAddDeparment(final HttpServletRequest req, final HttpServletResponse resp, final Session session, final HashMap<String, Object> ret) throws ServletException {
 
         try {
             List<String> list = Arrays.asList("deparmentId", "pid", "dpName", "dpChName", "orgId", "orgName", "groupId", "uploadFlag");
@@ -1263,51 +1289,48 @@ public class SystemServlet extends AbstractLoginAzkabanServlet {
             }
             Map<String, String> dataMap = loadSystemServletI18nData();
 
-                String dpId = getParam(req, "deparmentId");
-                // 部门编号最长8位
-                if (dpId.length() > 8) {
-                    throw new SystemUserManagerException(dataMap.get("tooLongDepId"));
-                }
+            String dpId = getParam(req, "deparmentId");
+            // 部门编号最长8位
+            if (dpId.length() > 8) {
+                throw new SystemUserManagerException(dataMap.get("tooLongDepId"));
+            }
 
-                final int departmentId = Integer.valueOf(dpId);
-                final int pid = Integer.valueOf(getParam(req, "pid"));
-                final String dpName = getParam(req, "dpName");
-                final String dpChName = getParam(req, "dpChName");
-                final int orgId = Integer.valueOf(getParam(req, "orgId"));
-                final String orgName = getParam(req, "orgName");
-                //final String division = getParam(req, "division");
-                Integer groupId = Integer.valueOf(getParam(req, "groupId"));
-                Integer uploadFlag = Integer.valueOf(getParam(req, "uploadFlag"));
-                if (groupId == 0) {
-                    groupId = 1;
-                }
+            final int departmentId = Integer.valueOf(dpId);
+            final int pid = Integer.valueOf(getParam(req, "pid"));
+            final String dpName = getParam(req, "dpName");
+            final String dpChName = getParam(req, "dpChName");
+            final int orgId = Integer.valueOf(getParam(req, "orgId"));
+            final String orgName = getParam(req, "orgName");
+            //final String division = getParam(req, "division");
+            Integer groupId = Integer.valueOf(getParam(req, "groupId"));
+            Integer uploadFlag = Integer.valueOf(getParam(req, "uploadFlag"));
+            if (groupId == 0) {
+                groupId = 1;
+            }
 
-                WebankDepartment exisDep = this.systemManager.getDeparmentById(departmentId);
-                if (null != exisDep) {
-                    throw new SystemUserManagerException(dataMap.get("existDep"));
-                }
+            WebankDepartment exisDep = this.systemManager.getDeparmentById(departmentId);
+            if (null != exisDep) {
+                throw new SystemUserManagerException(dataMap.get("existDep"));
+            }
 
-                if (0 != pid) {
-                    WebankDepartment parentDep = this.systemManager.getParentDepartmentByPId(pid);
-                    if (null == parentDep) {
-                        throw new SystemUserManagerException(dataMap.get("noParentDep"));
-                    }
+            if (0 != pid) {
+                WebankDepartment parentDep = this.systemManager.getParentDepartmentByPId(pid);
+                if (null == parentDep) {
+                    throw new SystemUserManagerException(dataMap.get("noParentDep"));
                 }
+            }
 
 
-                int addResult = this.systemManager.addDeparment(departmentId, pid, dpName, dpChName,
-                        orgId, orgName, "", groupId, uploadFlag);
-                if (addResult != 1) {
-                    throw new SystemUserManagerException(dataMap.get("requestFailed"));
-                }
+            int addResult = this.systemManager.addDeparment(departmentId, pid, dpName, dpChName, orgId, orgName, "", groupId, uploadFlag);
+            if (addResult != 1) {
+                throw new SystemUserManagerException(dataMap.get("requestFailed"));
+            }
         } catch (SystemUserManagerException e) {
             ret.put("error", e);
         }
     }
 
-    private void ajaxUpdateDeparment(final HttpServletRequest req,
-                                     final HttpServletResponse resp, final Session session, final HashMap<String, Object> ret)
-            throws ServletException {
+    private void ajaxUpdateDeparment(final HttpServletRequest req, final HttpServletResponse resp, final Session session, final HashMap<String, Object> ret) throws ServletException {
 
         final int depmentId = Integer.valueOf(getParam(req, "deparmentId"));
         final int pid = Integer.valueOf(getParam(req, "pid"));
@@ -1326,10 +1349,7 @@ public class SystemServlet extends AbstractLoginAzkabanServlet {
 
         try {
             List<WtssUser> userList = this.systemManager.getSystemUserByDepartmentId(depmentId);
-            if (CollectionUtils.isNotEmpty(userList) && this.holdBatchContext.getBatchMap().values()
-                .stream().filter(opr -> HoldBatchLevel.USER.getNumVal() == opr.getOperateLevel())
-                .anyMatch(opr -> userList.stream()
-                    .anyMatch(user -> opr.getDataList().contains(user.getUsername())))) {
+            if (CollectionUtils.isNotEmpty(userList) && this.holdBatchContext.getBatchMap().values().stream().filter(opr -> HoldBatchLevel.USER.getNumVal() == opr.getOperateLevel()).anyMatch(opr -> userList.stream().anyMatch(user -> opr.getDataList().contains(user.getUsername())))) {
                 ret.put("error", "department user is holding, can not update");
                 return;
             }
@@ -1338,7 +1358,7 @@ public class SystemServlet extends AbstractLoginAzkabanServlet {
                 throw new SystemUserManagerException(dataMap.get("plsInputDepId"));
             }
 
-            if ("".equals(dpName) ) {
+            if ("".equals(dpName)) {
                 throw new SystemUserManagerException(dataMap.get("plsInputEnDepName"));
             }
 
@@ -1350,8 +1370,7 @@ public class SystemServlet extends AbstractLoginAzkabanServlet {
                 throw new SystemUserManagerException(dataMap.get("plsInputOfficeId"));
             }
 
-            int addResult = this.systemManager.updateDeparment(depmentId, pid, dpName, dpChName,
-                    orgId, orgName, "", groupId, uploadFlag);
+            int addResult = this.systemManager.updateDeparment(depmentId, pid, dpName, dpChName, orgId, orgName, "", groupId, uploadFlag);
             if (addResult != 1) {
                 throw new SystemUserManagerException(dataMap.get("requestFailed"));
             }
@@ -1360,9 +1379,7 @@ public class SystemServlet extends AbstractLoginAzkabanServlet {
         }
     }
 
-    private void ajaxGetDeparmentById(final HttpServletRequest req,
-                                      final HttpServletResponse resp, final Session session, final HashMap<String, Object> ret)
-            throws ServletException {
+    private void ajaxGetDeparmentById(final HttpServletRequest req, final HttpServletResponse resp, final Session session, final HashMap<String, Object> ret) throws ServletException {
 
         final int dpId = Integer.valueOf(getParam(req, "dpId"));
         Map<String, String> dataMap = loadSystemServletI18nData();
@@ -1374,9 +1391,7 @@ public class SystemServlet extends AbstractLoginAzkabanServlet {
         }
     }
 
-    private void ajaxDeleteDeparment(final HttpServletRequest req,
-                                     final HttpServletResponse resp, final Session session, final HashMap<String, Object> ret)
-            throws ServletException {
+    private void ajaxDeleteDeparment(final HttpServletRequest req, final HttpServletResponse resp, final Session session, final HashMap<String, Object> ret) throws ServletException {
 
         final int dpId = Integer.valueOf(getParam(req, "dpId"));
         int deleteResult = 0;
@@ -1399,11 +1414,9 @@ public class SystemServlet extends AbstractLoginAzkabanServlet {
                     for (int i = 0; i < 5; i++) {
                         showUserNameList.add(userNameList.get(i));
                     }
-                    s.append(dataMap.get("canNotDeleteDepPrefix")).append(userNameList.size()).append(dataMap.get("canNotDeleteDepSuffix_1"))
-                            .append("[ ").append(Joiner.on("  ").join(showUserNameList)).append(" ]");
+                    s.append(dataMap.get("canNotDeleteDepPrefix")).append(userNameList.size()).append(dataMap.get("canNotDeleteDepSuffix_1")).append("[ ").append(Joiner.on("  ").join(showUserNameList)).append(" ]");
                 } else {
-                    s.append(dataMap.get("canNotDeleteDepPrefix")).append(userNameList.size()).append(dataMap.get("canNotDeleteDepSuffix_2"))
-                            .append("[ ").append(Joiner.on("  ").join(userNameList)).append(" ]");
+                    s.append(dataMap.get("canNotDeleteDepPrefix")).append(userNameList.size()).append(dataMap.get("canNotDeleteDepSuffix_2")).append("[ ").append(Joiner.on("  ").join(userNameList)).append(" ]");
                 }
                 throw new SystemUserManagerException(s.toString());
             }
@@ -1416,9 +1429,7 @@ public class SystemServlet extends AbstractLoginAzkabanServlet {
         }
     }
 
-    private void ajaxGetDepMaintainerByDepId(final HttpServletRequest req, final HttpServletResponse resp,
-                                             final Session session, final HashMap<String, Object> ret)
-            throws ServletException {
+    private void ajaxGetDepMaintainerByDepId(final HttpServletRequest req, final HttpServletResponse resp, final Session session, final HashMap<String, Object> ret) throws ServletException {
 
         final String departmentId = getParam(req, "departmentId");
 
@@ -1431,9 +1442,7 @@ public class SystemServlet extends AbstractLoginAzkabanServlet {
         }
     }
 
-    private void ajaxAddDepartmentMaintainer(final HttpServletRequest req, final HttpServletResponse resp,
-                                             final Session session, final HashMap<String, Object> ret)
-            throws ServletException {
+    private void ajaxAddDepartmentMaintainer(final HttpServletRequest req, final HttpServletResponse resp, final Session session, final HashMap<String, Object> ret) throws ServletException {
 
         final long departmentId = Long.valueOf(getParam(req, "departmentId"));
         final String userId = getParam(req, "userId");
@@ -1446,7 +1455,7 @@ public class SystemServlet extends AbstractLoginAzkabanServlet {
                 throw new SystemUserManagerException(dataMap.get("plsSelectDep"));
             }
 
-            if(this.systemManager.checkUserIsExceptionalUser(userId)){
+            if (this.systemManager.checkUserIsExceptionalUser(userId)) {
                 throw new SystemUserManagerException("Failed to create, the new user is an exception.");
             }
 
@@ -1484,8 +1493,7 @@ public class SystemServlet extends AbstractLoginAzkabanServlet {
                         // 不属于webankUser, 则直接显示填入用户名
                         String opsUser = depMaintainerByDepId.getOpsUser();
                         opsUser = opsUser + "," + userId;
-                        logger.info("switch turn off, department info existed, current add user info is: departmentId:{}, " +
-                                "departmentName:{}, depMaintainer:{}.", departmentId, webankDepartment.dpChName, opsUser);
+                        logger.info("switch turn off, department info existed, current add user info is: departmentId:{}, " + "departmentName:{}, depMaintainer:{}.", departmentId, webankDepartment.dpChName, opsUser);
                         addResult = this.systemManager.updateDepartmentMaintainer(departmentId, webankDepartment.dpChName, opsUser);
                     }
                 } else {
@@ -1493,8 +1501,7 @@ public class SystemServlet extends AbstractLoginAzkabanServlet {
                     if (webankUser != null) {
                         addResult = this.systemManager.addDepartmentMaintainer(departmentId, webankDepartment.dpChName, webankUser.urn);
                     } else {
-                        logger.info("switch turn off, current add user info is: departmentId:{}, departmentName:{}, " +
-                                "depMaintainer:{}.", departmentId, webankDepartment.dpChName, userId);
+                        logger.info("switch turn off, current add user info is: departmentId:{}, departmentName:{}, " + "depMaintainer:{}.", departmentId, webankDepartment.dpChName, userId);
                         addResult = this.systemManager.addDepartmentMaintainer(departmentId, webankDepartment.dpChName, userId);
                     }
                 }
@@ -1513,9 +1520,7 @@ public class SystemServlet extends AbstractLoginAzkabanServlet {
     }
 
 
-    private void ajaxUpdateDepartmentMaintainer(final HttpServletRequest req, final HttpServletResponse resp,
-                                                final Session session, final HashMap<String, Object> ret)
-            throws ServletException {
+    private void ajaxUpdateDepartmentMaintainer(final HttpServletRequest req, final HttpServletResponse resp, final Session session, final HashMap<String, Object> ret) throws ServletException {
 
         final long departmentId = Long.valueOf(getParam(req, "departmentId"));
         final String departmentName = getParam(req, "departmentName");
@@ -1551,25 +1556,21 @@ public class SystemServlet extends AbstractLoginAzkabanServlet {
                     // 校验用户名
                     checkNotMatchedDepMaintainer(depMaintainer, dataMap, departmentId);
                 }
-                logger.info("switch turn on, current update department info is: departmentId:{}, departmentName:{}, " +
-                        "depMaintainer:{}.", departmentId, departmentName, depMaintainer);
+                logger.info("switch turn on, current update department info is: departmentId:{}, departmentName:{}, " + "depMaintainer:{}.", departmentId, departmentName, depMaintainer);
                 updateResult = this.systemManager.updateDepartmentMaintainer(departmentId, departmentName, depMaintainer);
             } else {
 
-                logger.info("switch turn off, current update department info is: departmentId:{}, departmentName:{}, " +
-                        "depMaintainer:{}.", departmentId, departmentName, depMaintainer);
+                logger.info("switch turn off, current update department info is: departmentId:{}, departmentName:{}, " + "depMaintainer:{}.", departmentId, departmentName, depMaintainer);
                 // 开关关闭,则直接操作更新,不需要多余的判断
                 updateResult = this.systemManager.updateDepartmentMaintainer(departmentId, departmentName, depMaintainer);
             }
 
             if (updateResult != 1) {
-                logger.info("failed, current update department info is: departmentId:{}, departmentName:{}, " +
-                        "depMaintainer:{}.", departmentId, departmentName, depMaintainer);
+                logger.info("failed, current update department info is: departmentId:{}, departmentName:{}, " + "depMaintainer:{}.", departmentId, departmentName, depMaintainer);
                 throw new SystemUserManagerException(dataMap.get("requestFailed"));
             }
         } catch (Exception e) {
-            logger.error("failed, current update department info is: departmentId:{}, departmentName:{}, " +
-                    "depMaintainer:{}", departmentId, departmentName, depMaintainer, e);
+            logger.error("failed, current update department info is: departmentId:{}, departmentName:{}, " + "depMaintainer:{}", departmentId, departmentName, depMaintainer, e);
             ret.put("error", e);
         }
     }
@@ -1577,6 +1578,7 @@ public class SystemServlet extends AbstractLoginAzkabanServlet {
     /**
      * 找出存在重复的人员
      * 利用 hashmap 实现
+     *
      * @param nums
      * @return
      */
@@ -1596,6 +1598,7 @@ public class SystemServlet extends AbstractLoginAzkabanServlet {
 
     /**
      * 校验并排除非法用户名和部门不匹配的用户
+     *
      * @param userName
      * @param dataMap
      * @param departmentId
@@ -1617,9 +1620,7 @@ public class SystemServlet extends AbstractLoginAzkabanServlet {
 
     }
 
-    private void ajaxDeleteDepartmentMaintainer(final HttpServletRequest req, final HttpServletResponse resp,
-                                                final Session session, final HashMap<String, Object> ret)
-            throws ServletException {
+    private void ajaxDeleteDepartmentMaintainer(final HttpServletRequest req, final HttpServletResponse resp, final Session session, final HashMap<String, Object> ret) throws ServletException {
 
         final Integer departmentId = Integer.valueOf(getParam(req, "departmentId"));
         Map<String, String> dataMap = loadSystemServletI18nData();
@@ -1648,8 +1649,7 @@ public class SystemServlet extends AbstractLoginAzkabanServlet {
      * @param ret
      * @throws ServletException
      */
-    private void ajaxFindDepartmentMaintainerList(final HttpServletRequest req, final HttpServletResponse resp,
-                                                  final Session session, final HashMap<String, Object> ret) throws ServletException {
+    private void ajaxFindDepartmentMaintainerList(final HttpServletRequest req, final HttpServletResponse resp, final Session session, final HashMap<String, Object> ret) throws ServletException {
 
         try {
             // 数据展示
@@ -1706,8 +1706,7 @@ public class SystemServlet extends AbstractLoginAzkabanServlet {
      * @param ret
      * @throws ServletException
      */
-    private void ajaxGetModifyInfoSystemUserById(final HttpServletRequest req, final HttpServletResponse resp,
-                                                 final Session session, final HashMap<String, Object> ret) throws ServletException {
+    private void ajaxGetModifyInfoSystemUserById(final HttpServletRequest req, final HttpServletResponse resp, final Session session, final HashMap<String, Object> ret) throws ServletException {
 
         try {
             String userId = getParam(req, "userId");
@@ -1729,9 +1728,7 @@ public class SystemServlet extends AbstractLoginAzkabanServlet {
      * @param ret
      * @throws ServletException
      */
-    private void ajaxSyncModifyEsbSystemUsers(final HttpServletRequest req, final HttpServletResponse resp
-            , final Session session, final HashMap<String, Object> ret)
-            throws ServletException {
+    private void ajaxSyncModifyEsbSystemUsers(final HttpServletRequest req, final HttpServletResponse resp, final Session session, final HashMap<String, Object> ret) throws ServletException {
         Map<String, String> dataMap = loadSystemServletI18nData();
         List<String> errorIdList = new ArrayList<>();
         try {
@@ -1826,8 +1823,7 @@ public class SystemServlet extends AbstractLoginAzkabanServlet {
      * @param ret
      * @throws ServletException
      */
-    private void ajaxFindModifySystemUserPage(final HttpServletRequest req, final HttpServletResponse resp,
-                                              final Session session, final HashMap<String, Object> ret) throws ServletException {
+    private void ajaxFindModifySystemUserPage(final HttpServletRequest req, final HttpServletResponse resp, final Session session, final HashMap<String, Object> ret) throws ServletException {
         Map<String, String> dataMap = loadSystemServletI18nData();
         try {
 
@@ -1940,7 +1936,7 @@ public class SystemServlet extends AbstractLoginAzkabanServlet {
                 WtssUser.ModifySystemUserType enumByType = WtssUser.ModifySystemUserType.getEnumByType(tempType);
                 List<Integer> executors = departmentExecutorMap.get(wtssUser.getDepartmentId());
                 String statusDesc = enumByType.getStatusDesc();
-                if(CollectionUtils.isEmpty(executors)){
+                if (CollectionUtils.isEmpty(executors)) {
                     statusDesc += "(no executor)";
                 }
                 wtssUserMap.put("modifyType", statusDesc);
@@ -1958,8 +1954,7 @@ public class SystemServlet extends AbstractLoginAzkabanServlet {
 
     }
 
-    private void downloadAllModifyDetailInfo(final HttpServletRequest req, final HttpServletResponse resp,
-                                             final Session session) throws ServletException {
+    private void downloadAllModifyDetailInfo(final HttpServletRequest req, final HttpServletResponse resp, final Session session) throws ServletException {
         OutputStream os = null;
         Map<String, String> dataMap = loadSystemServletI18nData();
         try {
@@ -2006,14 +2001,14 @@ public class SystemServlet extends AbstractLoginAzkabanServlet {
                 WtssUser.ModifySystemUserType enumByType = WtssUser.ModifySystemUserType.getEnumByType(tempType);
                 String statusDesc = enumByType.getStatusDesc();
                 List<Integer> executors = departmentExecutorMap.get(wtssUser.getDepartmentId());
-                if(CollectionUtils.isEmpty(executors)){
+                if (CollectionUtils.isEmpty(executors)) {
                     statusDesc += "(no executor)";
                 }
                 modifyWtssUserDto.setModifyType(statusDesc);
                 modifyWtssUserDtoList.add(modifyWtssUserDto);
             }
             // 执行导出
-            ExcelUtil.writeExcel(resp, modifyWtssUserDtoList, dataMap.get("userDataModifyTable")+ "_" + downloadDate, dataMap.get("userDataModifyTable"), new ModifyWtssUserDto());
+            ExcelUtil.writeExcel(resp, modifyWtssUserDtoList, dataMap.get("userDataModifyTable") + "_" + downloadDate, dataMap.get("userDataModifyTable"), new ModifyWtssUserDto());
 
         } catch (final Throwable e) {
             logger.error("download modify system user info failed, caused by:{}", e);
@@ -2079,9 +2074,7 @@ public class SystemServlet extends AbstractLoginAzkabanServlet {
         JsonObject jsonObject = HttpRequestUtils.parseRequestToJsonObject(req);
         DepartmentGroup departmentGroup = GsonUtils.jsonToJavaObject(jsonObject, DepartmentGroup.class);
 
-        if (this.holdBatchContext.getBatchMap().values().stream()
-            .filter(opr -> HoldBatchLevel.TENANT.getNumVal() == opr.getOperateLevel()).anyMatch(
-                opr -> opr.getDataList().contains(departmentGroup.getOldId()+""))) {
+        if (this.holdBatchContext.getBatchMap().values().stream().filter(opr -> HoldBatchLevel.TENANT.getNumVal() == opr.getOperateLevel()).anyMatch(opr -> opr.getDataList().contains(departmentGroup.getOldId() + ""))) {
             ret.put("error", "group[" + departmentGroup.getOldId() + "] is holding, can not update");
             return;
         }
@@ -2107,15 +2100,13 @@ public class SystemServlet extends AbstractLoginAzkabanServlet {
         }
     }
 
-    private void ajaxFetchExecutors(final HttpServletRequest req, final HttpServletResponse resp, final Session session,
-                                    final HashMap<String, Object> ret) throws ServletException {
+    private void ajaxFetchExecutors(final HttpServletRequest req, final HttpServletResponse resp, final Session session, final HashMap<String, Object> ret) throws ServletException {
         List<Executor> executors = this.systemManager.fetchAllExecutors();
         ret.put("executors", executors);
     }
 
 
-    private void ajaxUpdateExecutor(final HttpServletRequest req, final HttpServletResponse resp, final Session session,
-                                    final HashMap<String, Object> ret) throws ServletException {
+    private void ajaxUpdateExecutor(final HttpServletRequest req, final HttpServletResponse resp, final Session session, final HashMap<String, Object> ret) throws ServletException {
         JsonObject jsonObject = HttpRequestUtils.parseRequestToJsonObject(req);
         Executor executor = GsonUtils.jsonToJavaObject(jsonObject, Executor.class);
         try {
@@ -2123,44 +2114,42 @@ public class SystemServlet extends AbstractLoginAzkabanServlet {
             this.systemManager.updateExecutor(executor);
             ret.put("executor", executor);
         } catch (ExecutorManagerException e) {
-            logger.warn("update executor {} error", executor,e);
+            logger.warn("update executor {} error", executor, e);
             ret.put("error", e.getMessage());
         }
     }
 
-    private void ajaxFetchAllExceptionUsers(final HttpServletRequest req, final HttpServletResponse resp, final Session session,
-                                            final HashMap<String, Object> ret) throws ServletException {
+    private void ajaxFetchAllExceptionUsers(final HttpServletRequest req, final HttpServletResponse resp, final Session session, final HashMap<String, Object> ret) throws ServletException {
         try {
             String searchName = getParam(req, "searchName");
             int pageNum = getIntParam(req, "pageNum");
             int pageSize = getIntParam(req, "pageSize");
             ret.put("exceptionalUsers", this.systemManager.fetchAllExceptionalUsers(searchName, pageNum * pageSize, pageSize));
             ret.put("total", this.systemManager.getTotalExceptionalUser(searchName));
-        }catch (Exception e){
-            ret.put("error", e.getMessage());
-        }
-    }
-    private void ajaxAddExceptionalUser(final HttpServletRequest req, final HttpServletResponse resp, final Session session,
-                                            final HashMap<String, Object> ret) throws ServletException {
-        try {
-            String userId = getParam(req, "userId");
-            this.systemManager.addExceptionalUser(userId);
-        }catch (Exception e){
-            ret.put("error", e.getMessage());
-        }
-    }
-    private void ajaxDeleteExceptionalUser(final HttpServletRequest req, final HttpServletResponse resp, final Session session,
-                                            final HashMap<String, Object> ret) throws ServletException {
-        try {
-            String userId = getParam(req, "userId");
-            this.systemManager.deleteExceptionalUser(userId);
-        }catch (Exception e){
+        } catch (Exception e) {
             ret.put("error", e.getMessage());
         }
     }
 
-    private void ajaxPrivilegeReport(final HttpServletRequest req, final HttpServletResponse resp, final Session session,
-        final HashMap<String, Object> ret) throws ServletException {
+    private void ajaxAddExceptionalUser(final HttpServletRequest req, final HttpServletResponse resp, final Session session, final HashMap<String, Object> ret) throws ServletException {
+        try {
+            String userId = getParam(req, "userId");
+            this.systemManager.addExceptionalUser(userId);
+        } catch (Exception e) {
+            ret.put("error", e.getMessage());
+        }
+    }
+
+    private void ajaxDeleteExceptionalUser(final HttpServletRequest req, final HttpServletResponse resp, final Session session, final HashMap<String, Object> ret) throws ServletException {
+        try {
+            String userId = getParam(req, "userId");
+            this.systemManager.deleteExceptionalUser(userId);
+        } catch (Exception e) {
+            ret.put("error", e.getMessage());
+        }
+    }
+
+    private void ajaxPrivilegeReport(final HttpServletRequest req, final HttpServletResponse resp, final Session session, final HashMap<String, Object> ret) throws ServletException {
         try {
             // 检查调用接口的用户是否为系统管理员
             if (!(session.getUser().hasRole("admin"))) {
@@ -2174,5 +2163,283 @@ public class SystemServlet extends AbstractLoginAzkabanServlet {
             ret.put("code", 500);
             ret.put("error", e.getMessage());
         }
+    }
+
+    private void deleteDutyPersonById(HttpServletRequest req, User user, Map<String, Object> ret) {
+        if (!havePermission(user)) {
+            ret.put("error", "You have no permission to operate this record");
+            return;
+        }
+        String personId = req.getParameter("personId");
+        dutyService.deleteDutyPerson(Integer.parseInt(personId), user);
+
+    }
+
+    private void deleteDutyGroup(HttpServletRequest req, User user, Map<String, Object> ret) {
+        if (!havePermission(user)) {
+            ret.put("error", "You have no permission to operate this record");
+            return;
+        }
+        String groupId = req.getParameter("groupId");
+        //值班组管理员无法删除其他管理员创建的值班组
+        if(!user.getRoles().contains("admin")){
+            DutyGroup dutyGroup = dutyService.getDutyGroupById(Integer.parseInt(groupId));
+            if (!dutyGroup.getCreator().equals(user.getUserId())){
+                ret.put("error", "You have no permission to operate this record");
+                return;
+            }
+        }
+
+        dutyService.deleteDutyGroup(Integer.parseInt(groupId), user);
+    }
+
+    private void updateDutyPersonById(HttpServletRequest req, User user, Map<String, Object> ret) {
+        try {
+            if (!havePermission(user)) {
+                ret.put("error", "You have no permission to operate this record");
+                return;
+            }
+            List<DutyPerson> dutyPersonList = new ArrayList<>();
+            String json = req.getReader().lines().collect(Collectors.joining(System.lineSeparator()));
+
+            //解析传入的json数据
+            com.alibaba.fastjson.JSONObject personsJSONObject = com.alibaba.fastjson.JSONObject.parseObject(json);
+            DutyPerson dutyPerson = new DutyPerson();
+            dutyPerson.setId(personsJSONObject.getIntValue("personId"));
+            //值班人
+            dutyPerson.setUserName(personsJSONObject.getString("userName"));
+            //创建人
+            dutyPerson.setUpdator(user.getUserId());
+            dutyPerson.setCreator(user.getUserId());
+            //创建时间
+            dutyPerson.setUpdateTime(new Date());
+            //值班自然日
+            dutyPerson.setDutyTime(personsJSONObject.getString("dutyTime"));
+            //值班开始时间和结束时间
+            String beginTime = personsJSONObject.getString("beginTime");
+            String endTime = personsJSONObject.getString("endTime");
+            dutyPerson.setBeginTime(DateUtils.parseDate(beginTime, DateUtils.FORMATTER_Y_M_D));
+            dutyPerson.setEndTime(DateUtils.parseDate(endTime, DateUtils.FORMATTER_Y_M_D));
+            int groupId = personsJSONObject.getIntValue("groupId");
+            dutyPerson.setDutyGroupId(groupId);
+            dutyPersonList.add(dutyPerson);
+            dutyService.updateDutyPerson(dutyPersonList);
+        } catch (Exception e) {
+            logger.error("更新值班人失败:{}", e.getMessage());
+            ret.put("error", e.getMessage());
+        }
+
+    }
+
+    private void updateDuty(HttpServletRequest req, User user, Map<String, Object> ret) {
+        try {
+            if (!havePermission(user)) {
+                ret.put("error", "You have no permission to operate this record");
+                return;
+            }
+            String json = req.getReader().lines().collect(Collectors.joining(System.lineSeparator()));
+
+            //解析传入的json数据
+            com.alibaba.fastjson.JSONObject jsonObject = com.alibaba.fastjson.JSONObject.parseObject(json);
+
+            String groupName = jsonObject.getString("groupName");
+            Integer groupId = jsonObject.getIntValue("groupId");
+            DutyGroup sourceGroup = dutyService.getDutyGroupById(groupId);
+            if(!user.getRoles().contains("admin")){
+                if (!sourceGroup.getCreator().equals(user.getUserId())){
+                    ret.put("error", "You have no permission to operate this record");
+                    return;
+                }
+            }
+
+            String errorRemark = checkInputLength(groupName, "group name", 30);
+            if (StringUtils.isNotEmpty(errorRemark)) {
+                ret.put("error", errorRemark);
+            } else {
+
+                DutyGroup group = new DutyGroup();
+                group.setGroupName(groupName);
+                group.setId(groupId);
+                group.setUpdator(user.getUserId());
+                group.setUpdateTime(new Date());
+                try {
+                    dutyService.updateDutyGroup(group);
+                } catch (Exception e) {
+                    ret.put("error", e.getMessage());
+                    return;
+                }
+                //先删除，再新增
+                dutyService.deleteDutyPersonByGroupId(groupId);
+                JSONArray dutyPersons = jsonObject.getJSONArray("dutyPerson");
+                if (org.apache.commons.collections4.CollectionUtils.isNotEmpty(dutyPersons)) {
+                    for (int i = 0; i < dutyPersons.size(); i++) {
+                        com.alibaba.fastjson.JSONObject personsJSONObject = dutyPersons.getJSONObject(i);
+                        DutyPerson dutyPerson = new DutyPerson();
+                        dutyPerson.setId(personsJSONObject.getIntValue("personId"));
+                        //值班人
+                        dutyPerson.setUserName(personsJSONObject.getString("userName"));
+                        //创建人(保留原始创建人)
+                        dutyPerson.setCreator(sourceGroup.getCreator());
+                        //修改人
+                        dutyPerson.setUpdator(user.getUserId());
+                        //创建时间
+                        dutyPerson.setUpdateTime(new Date());
+                        //值班自然日
+                        dutyPerson.setDutyTime(personsJSONObject.getString("dutyTime"));
+                        //值班开始时间和结束时间
+                        String beginTime = personsJSONObject.getString("beginTime");
+                        String endTime = personsJSONObject.getString("endTime");
+                        dutyPerson.setBeginTime(DateUtils.parseDate(beginTime, DateUtils.FORMATTER_Y_M_D));
+                        dutyPerson.setEndTime(DateUtils.parseDate(endTime, DateUtils.FORMATTER_Y_M_D));
+                        dutyPerson.setDutyGroupId(groupId);
+                        dutyPerson.setCreator(user.getUserId());
+                        dutyService.addDutyPerson(dutyPerson);
+                    }
+
+                }
+
+
+            }
+        } catch (Exception e) {
+            logger.error("更新值班组失败:{}", e.getMessage());
+            ret.put("error", e.getMessage());
+        }
+
+
+    }
+
+    private String checkInputLength(String input, String remark, Integer length) {
+        if (input.length() > length) {
+            return remark + "length more than " + length;
+        }
+        return null;
+    }
+
+    private void addDutyPerson(HttpServletRequest req, User user, Map<String, Object> ret) throws IOException {
+        try {
+            if (!havePermission(user)) {
+                ret.put("error", "You have no permission to operate this record");
+                return;
+            }
+            String json = req.getReader().lines().collect(Collectors.joining(System.lineSeparator()));
+            //解析传入的json数据
+            com.alibaba.fastjson.JSONObject jsonObject = com.alibaba.fastjson.JSONObject.parseObject(json);
+            DutyPerson dutyPerson = new DutyPerson();
+            buildDutyPerson(user, jsonObject, dutyPerson);
+            dutyPerson.setDutyGroupId(Integer.parseInt(jsonObject.getString("dutyGroupId")));
+            dutyService.addDutyPerson(dutyPerson);
+        } catch (Exception e) {
+            logger.error("添加值班人失败:{}", e.getMessage());
+            ret.put("error", e.getMessage());
+        }
+
+    }
+
+    private void addGroup(HttpServletRequest req, User user, Map<String, Object> ret) {
+        try {
+            if (!havePermission(user)) {
+                ret.put("error", "you have no permission to operate");
+                return;
+            }
+            String json = req.getReader().lines().collect(Collectors.joining(System.lineSeparator()));
+
+            //解析传入的json数据
+            com.alibaba.fastjson.JSONObject jsonObject = com.alibaba.fastjson.JSONObject.parseObject(json);
+            DutyGroup group = new DutyGroup();
+            buildDutyGroup(user, jsonObject, group);
+            List<DutyPerson> dutyPersonList = new ArrayList<>();
+            JSONArray dutyPersons = jsonObject.getJSONArray("dutyPerson");
+            if (org.apache.commons.collections4.CollectionUtils.isNotEmpty(dutyPersons)) {
+                for (int i = 0; i < dutyPersons.size(); i++) {
+                    com.alibaba.fastjson.JSONObject personsJSONObject = dutyPersons.getJSONObject(i);
+                    DutyPerson dutyPerson = new DutyPerson();
+                    buildDutyPerson(user, personsJSONObject, dutyPerson);
+                    dutyPersonList.add(dutyPerson);
+
+                }
+
+            }
+
+            dutyService.addDutyGroup(group, dutyPersonList);
+        } catch (Exception e) {
+            ret.put("error", e.getMessage());
+        }
+
+
+    }
+
+    private static void buildDutyPerson(User user, com.alibaba.fastjson.JSONObject personsJSONObject, DutyPerson dutyPerson) {
+        //值班人
+        dutyPerson.setUserName(personsJSONObject.getString("userName"));
+        //创建人
+        dutyPerson.setCreator(user.getUserId());
+        //创建时间
+        dutyPerson.setCreateTime(new Date());
+        //值班自然日
+        dutyPerson.setDutyTime(personsJSONObject.getString("dutyTime"));
+        //值班开始时间和结束时间
+        String beginTime = personsJSONObject.getString("beginTime");
+        String endTime = personsJSONObject.getString("endTime");
+        dutyPerson.setBeginTime(DateUtils.parseDate(beginTime, DateUtils.FORMATTER_Y_M_D));
+        dutyPerson.setEndTime(DateUtils.parseDate(endTime, DateUtils.FORMATTER_Y_M_D));
+    }
+
+    private static void buildDutyGroup(User user, com.alibaba.fastjson.JSONObject jsonObject, DutyGroup group) {
+        String groupName = jsonObject.getString("groupName");
+        group.setGroupName(groupName);
+        group.setCreateTime(new Date());
+        group.setCreator(user.getUserId());
+    }
+
+    private void getPersonList(HttpServletRequest req, Map<String, Object> ret) {
+        int groupId = getIntParam(req, "groupId", 0);
+        List<DutyPerson> persons = dutyService.getDutyPersonByGroupId(groupId);
+        ret.put("personList", persons);
+    }
+
+    private void getDutyPageList(HttpServletRequest req, Map<String, Object> ret,User user) {
+
+        int pageNum = getIntParam(req, "page", 1);
+        int pageSize = getIntParam(req, "size", 20);
+        String groupName = getParam(req, "groupName", "");
+        int pageIndex = (pageNum - 1) * pageSize;
+
+        List<DutyGroup> dutyPage = dutyService.getDutyPage(groupName, pageIndex, pageSize,user);
+
+        if (hasParam(req, "isTotal")) {
+            if (getBooleanParam(req, "isTotal", false)) {
+                dutyPage = dutyService.getDutyList(groupName,user);
+            }
+        }
+        Integer count = 0;
+        try {
+            count = dutyService.getGroupCount(groupName,user);
+        } catch (Exception e) {
+            logger.error("查询值班组异常：{}", e.getMessage());
+            ret.put("error", e.getMessage());
+        }
+        ret.put("total", count);
+        ret.put("page", pageNum);
+        ret.put("pageSize", pageSize);
+        ret.put("dutyGroupList", dutyPage);
+
+    }
+
+
+    private boolean havePermission(User user) {
+
+        try {
+            WtssUser wtssUser = this.systemManager.getSystemUserByUserName(user.getUserId());
+            boolean isDutyManager = wtssUser.getDutyManager().equals("Y");
+            boolean isAdmin = user.getRoles().contains("admin");
+            if(isDutyManager || isAdmin){
+                return true;
+            }
+
+
+        } catch (Exception e) {
+            logger.error("获取用户失败！异常：{}", e.getMessage());
+        }
+        return false;
     }
 }

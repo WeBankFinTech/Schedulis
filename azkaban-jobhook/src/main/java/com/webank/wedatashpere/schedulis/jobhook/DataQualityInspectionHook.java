@@ -10,21 +10,17 @@ import azkaban.hookExecutor.HookContext.HookType;
 import azkaban.jobhook.JobHook;
 import azkaban.utils.Props;
 import azkaban.utils.QualitisUtil;
-import java.util.Map;
-import java.util.concurrent.Callable;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
 import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
+
+import java.util.Map;
+import java.util.concurrent.*;
 
 public class DataQualityInspectionHook implements ExecuteWithJobHook {
 
     private final Logger logger;
     protected volatile ExecutableNode node;
-    private final HookContext.HookType hooktype;
+    private final HookType hooktype;
     private final Props pluginJobProps;
     private ExecutorLoader executorLoader;
     private Props serverProps;

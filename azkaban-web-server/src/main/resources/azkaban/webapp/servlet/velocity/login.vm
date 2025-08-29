@@ -21,16 +21,16 @@
   <meta http-equiv="Cache-Control" content="no-cache, must-revalidate">
   <meta http-equiv="Expires" content="0">
   #parse("azkaban/webapp/servlet/velocity/style.vm")
-  <script type="text/javascript" src="/js/azkaban/i18n-config.js?version=1.49.0"></script>
+  <script type="text/javascript" src="/js/azkaban/i18n-config.js?version=0.11.0"></script>
   #parse("azkaban/webapp/servlet/velocity/javascript.vm")
 
-  <script type="text/javascript" src="/js/azkaban/view/login.js?version=1.49.0"></script>
-  <script type="text/javascript" src="/js/jsencrypt.min.js?version=1.49.0"></script>
+  <script type="text/javascript" src="/js/azkaban/view/login.js?version=0.11.0"></script>
+  <script type="text/javascript" src="/js/jsencrypt.min.js?version=0.11.0"></script>
   <link rel="stylesheet" href="/css/bootstrap.css">
   <link rel="stylesheet" href="/css/login.css">
   <script type="text/javascript" src="/js/bootstrap.min.js"></script>
   <script type="text/javascript" src="/js/jquery/jquery-3.5.1.min.js"></script>
-  <script type="text/javascript" src="/js/azkaban/util/utils.js?version=1.49.0"></script>
+  <script type="text/javascript" src="/js/azkaban/util/utils.js?version=0.11.0"></script>
   <script type="text/javascript">
     var langType = "${currentlangType}";
     var opsLoginCheck = "${opsLoginCheck}";
@@ -64,12 +64,12 @@
                 <div class="popover-content">
                     $testInfo <strong>UM $staticPwd</strong>
                     <div>$reset</div>
-                    <a href="http://127.0.0.1:8090/umapp/resetPwd/skipResetUser" target="_bank">http://127.0.0.1:8090/umapp/resetPwd/skipResetUser</a>
+                    <a href="http://:8090/umapp/resetPwd/skipResetUser" target="_bank">http://:8090/umapp/resetPwd/skipResetUser</a>
                     <div>$resetTestPwd</div>
-                    <a href="http://127.0.0.1:8080/umapp/admin/#/resetPwd" target="_bank">http://127.0.0.1:8080/umapp/admin/#/resetPwd</a>
+                    <a href="http://:8080/umapp/admin/#/resetPwd" target="_bank">http://:8080/umapp/admin/#/resetPwd</a>
                     <div>$productInfo<strong> PIN + TOKEN</strong></div>
                     <div>$prodreset</div>
-                    <a href="http://127.0.0.1" target="_bank">http://127.0.0.1</a>
+                    <a href="http:///umapp/" target="_bank">http:///umapp/</a>
                 </div>
             </div>
           </legend>
@@ -113,7 +113,7 @@
     </div><!-- /.well -->
   </div><!-- /.login -->
 
+
 </div><!-- /container -->
 </body>
 </html>
-

@@ -80,11 +80,21 @@ public class WtssUser {
    */
   private long updateTime;
 
+
   /**
    * 用户种类
    */
   private String userCategory;
 
+  private String dutyManager;
+
+  public String getDutyManager() {
+    return dutyManager;
+  }
+
+  public void setDutyManager(String dutyManager) {
+    this.dutyManager = dutyManager;
+  }
 
   public String getUserId() {
     return userId;
@@ -209,27 +219,28 @@ public class WtssUser {
   public WtssUser(){
   }
 
+
+
   @Override
   public String toString() {
     return "WtssUser{" +
-        "userId='" + userId + '\'' +
-        ", username='" + username + '\'' +
+            "userId='" + userId + '\'' +
+            ", username='" + username + '\'' +
             ", password='" + password + '\'' +
-        ", fullName='" + fullName + '\'' +
+            ", fullName='" + fullName + '\'' +
             ", departmentId=" + departmentId +
-        ", departmentName='" + departmentName + '\'' +
-        ", email='" + email + '\'' +
-        ", proxyUsers='" + proxyUsers + '\'' +
-        ", roleId=" + roleId +
-        ", userType=" + userType +
+            ", departmentName='" + departmentName + '\'' +
+            ", email='" + email + '\'' +
+            ", proxyUsers='" + proxyUsers + '\'' +
+            ", roleId=" + roleId +
+            ", userType=" + userType +
             ", modifyInfo='" + modifyInfo + '\'' +
             ", modifyType='" + modifyType + '\'' +
-        ", createTime=" + createTime +
-        ", updateTime=" + updateTime +
+            ", createTime=" + createTime +
+            ", updateTime=" + updateTime +
             ", userCategory='" + userCategory + '\'' +
-        '}';
+            '}';
   }
-
 
   /**
    * the type of WTSS user
@@ -252,7 +263,7 @@ public class WtssUser {
     }
 
     private static final ImmutableMap<Integer, UserType> USER_TYPE_NUM_MAP = Arrays.stream(UserType.values())
-        .collect(ImmutableMap.toImmutableMap(userType -> userType.getUserTypeNum(), userType -> userType));
+            .collect(ImmutableMap.toImmutableMap(userType -> userType.getUserTypeNum(), userType -> userType));
 
     public static UserType fromInteger(final int x) {
       return USER_TYPE_NUM_MAP.getOrDefault(x, OTHER);
