@@ -89,7 +89,7 @@
         <poi.version>3.17</poi.version>
         <c3p0.version>0.9.5.5</c3p0.version>
         <commons-beanutils.version>1.9.4</commons-beanutils.version>
-        <fasterxml.jackson.version>2.14.0</fasterxml.jackson.version>
+        <fasterxml.jackson.version>2.15.0</fasterxml.jackson.version>
         <dss.version>1.1.1</dss.version>
         <linkis.version>1.2.0</linkis.version>
         <encrypt.version>1.0.2</encrypt.version>
