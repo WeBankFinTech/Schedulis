@@ -37,7 +37,7 @@
         <opentracing.version>0.22.0</opentracing.version>
         <rocketmq.version>4.3.15.2</rocketmq.version>
         <schedulis.version>1.50.0</schedulis.version>
-        <assertj.version>3.8.0</assertj.version>
+        <assertj.version>3.27.7</assertj.version>
         <awaitility.version>3.0.0</awaitility.version>
         <hadoop.version>2.7.2</hadoop.version>
         <codahale.metrics.core.version>3.0.2</codahale.metrics.core.version>
